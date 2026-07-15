@@ -13,6 +13,10 @@ const state = {
 	providerPresets: [],
 	modelPresets: [],
 	providerUsage: {},
+	modelTests: {},
+	activeModelTestRequestId: "",
+	modelTestProgress: undefined,
+	modelTestSummary: undefined,
 	modelFormMode: "quick",
 	selectedModelPresetIds: new Set(),
 };
@@ -37,6 +41,8 @@ const checkAllProviderUsageBtn = document.getElementById("checkAllProviderUsage"
 
 // Model management elements
 const modelTableBody = document.getElementById("modelTableBody");
+const testAllModelsBtn = document.getElementById("testAllModels");
+const modelTestSummary = document.getElementById("modelTestSummary");
 const modelFormSection = document.getElementById("modelFormSection");
 const modelFormTitle = document.getElementById("modelFormTitle");
 const addModelModeTabs = document.getElementById("addModelModeTabs");
@@ -154,6 +160,10 @@ document.getElementById("importConfig").addEventListener("click", () => {
 document.getElementById("refreshGlobalConfig").addEventListener("click", handleRefresh);
 document.getElementById("refreshProviders").addEventListener("click", handleRefresh);
 document.getElementById("refreshModels").addEventListener("click", handleRefresh);
+testAllModelsBtn.addEventListener("click", () => {
+	const modelIds = state.models.filter((model) => !isProviderPlaceholderModel(model)).map(getFullModelId);
+	startModelTestRequest("testAllModels", modelIds);
+});
 checkAllProviderUsageBtn.addEventListener("click", () => {
 	const usageTargets = getProviderUsageTargets();
 	if (!usageTargets.length) {
@@ -338,6 +348,103 @@ function getFullModelId(model) {
 		return "";
 	}
 	return `${model.id || ""}${model.configId ? "::" + model.configId : ""}`;
+}
+
+function createModelTestRequestId() {
+	return `model-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function startModelTestRequest(type, modelIds, modelId) {
+	if (state.activeModelTestRequestId || !modelIds.length) {
+		return;
+	}
+
+	const requestId = createModelTestRequestId();
+	state.activeModelTestRequestId = requestId;
+	state.modelTestProgress = {
+		total: modelIds.length,
+		completed: 0,
+		passed: 0,
+		failed: 0,
+	};
+	state.modelTestSummary = {
+		status: "loading",
+		text: `Testing 0 of ${modelIds.length} model(s)...`,
+	};
+
+	if (type === "testAllModels") {
+		state.modelTests = {};
+	}
+	for (const targetModelId of modelIds) {
+		state.modelTests[targetModelId] = { status: "loading" };
+	}
+	renderModels();
+
+	vscode.postMessage({
+		type,
+		requestId,
+		...(modelId ? { modelId } : {}),
+	});
+}
+
+function formatModelTestDuration(durationMs) {
+	if (!Number.isFinite(durationMs)) {
+		return "";
+	}
+	if (durationMs < 1000) {
+		return `${Math.max(0, Math.round(durationMs))} ms`;
+	}
+	return `${(durationMs / 1000).toFixed(1)} s`;
+}
+
+function truncateModelTestError(error, maxLength = 220) {
+	const normalized = String(error || "Connection test failed.").replace(/\s+/g, " ").trim();
+	return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized;
+}
+
+function renderModelTestFeedback(modelId) {
+	const test = state.modelTests[modelId];
+	if (!test) {
+		return "";
+	}
+	if (test.status === "loading") {
+		return `
+			<div class="model-test-feedback">
+				<span class="status-pill loading">Testing</span>
+			</div>`;
+	}
+
+	const duration = formatModelTestDuration(test.durationMs);
+	if (test.status === "success") {
+		return `
+			<div class="model-test-feedback">
+				<span class="status-pill success">Passed</span>
+				<div class="model-test-detail muted">Connected in ${escapeHtml(duration)}</div>
+			</div>`;
+	}
+
+	const fullError = String(test.error || "Connection test failed.");
+	return `
+		<div class="model-test-feedback" title="${escapeHtml(fullError)}">
+			<span class="status-pill error">Failed</span>
+			<div class="model-test-detail error-text">${escapeHtml(truncateModelTestError(fullError))}${
+				duration ? ` (${escapeHtml(duration)})` : ""
+			}</div>
+		</div>`;
+}
+
+function renderModelTestSummary() {
+	const summary = state.modelTestSummary;
+	if (!summary?.text) {
+		modelTestSummary.hidden = true;
+		modelTestSummary.textContent = "";
+		modelTestSummary.className = "model-test-summary";
+		return;
+	}
+
+	modelTestSummary.hidden = false;
+	modelTestSummary.textContent = summary.text;
+	modelTestSummary.className = `model-test-summary ${summary.status || ""}`.trim();
 }
 
 function getSelectedModelPresets() {
@@ -1424,6 +1531,63 @@ window.addEventListener("message", (event) => {
 			};
 			renderProviderUsageChecks();
 			break;
+		case "modelTestsStarted":
+			if (message.requestId !== state.activeModelTestRequestId) {
+				break;
+			}
+			state.modelTestProgress = {
+				total: message.modelIds.length,
+				completed: 0,
+				passed: 0,
+				failed: 0,
+			};
+			for (const modelId of message.modelIds) {
+				state.modelTests[modelId] = { status: "loading" };
+			}
+			state.modelTestSummary = {
+				status: "loading",
+				text: `Testing 0 of ${message.modelIds.length} model(s)...`,
+			};
+			renderModels();
+			break;
+		case "modelTestResult":
+			if (message.requestId !== state.activeModelTestRequestId) {
+				break;
+			}
+			state.modelTests[message.result.modelId] = {
+				status: message.result.success ? "success" : "error",
+				durationMs: message.result.durationMs,
+				error: message.result.error,
+			};
+			if (state.modelTestProgress) {
+				state.modelTestProgress.completed += 1;
+				if (message.result.success) {
+					state.modelTestProgress.passed += 1;
+				} else {
+					state.modelTestProgress.failed += 1;
+				}
+				state.modelTestSummary = {
+					status: "loading",
+					text: `Testing ${state.modelTestProgress.completed} of ${state.modelTestProgress.total} model(s)...`,
+				};
+			}
+			renderModels();
+			break;
+		case "modelTestsCompleted":
+			if (message.requestId !== state.activeModelTestRequestId) {
+				break;
+			}
+			state.activeModelTestRequestId = "";
+			state.modelTestProgress = undefined;
+			state.modelTestSummary = {
+				status: message.failed > 0 ? "error" : "success",
+				text:
+					message.total === 0
+						? "No configured models to test."
+						: `${message.passed} passed, ${message.failed} failed in ${formatModelTestDuration(message.durationMs)}.`,
+			};
+			renderModels();
+			break;
 		case "confirmResponse":
 			// Handle confirmation responses
 			const pendingAction = pendingConfirmations.get(message.id);
@@ -1551,6 +1715,10 @@ function renderProviders() {
 
 function renderModels() {
 	const models = state.models.filter((m) => !isProviderPlaceholderModel(m)).sort((a, b) => a.id.localeCompare(b.id));
+	const testRunActive = Boolean(state.activeModelTestRequestId);
+	testAllModelsBtn.disabled = models.length === 0 || testRunActive;
+	testAllModelsBtn.textContent = testRunActive ? "Testing..." : "Test all";
+	renderModelTestSummary();
 	if (!models.length) {
 		modelTableBody.innerHTML = '<tr><td colspan="7" class="no-data">No models</td></tr>';
 		return;
@@ -1558,17 +1726,24 @@ function renderModels() {
 
 	const rows = models
 		.map((model) => {
+			const modelId = getFullModelId(model);
+			const modelIdAttr = escapeHtml(modelId);
+			const isTesting = state.modelTests[modelId]?.status === "loading";
 			return `
-			<tr data-model-id="${model.id}${model.configId ? "::" + model.configId : ""}">
-				<td>${model.id}</td>
-				<td>${model.owned_by}</td>
-				<td>${model.displayName || ""}</td>
-				<td>${model.context_length || ""}</td>
-				<td>${model.max_tokens || model.max_completion_tokens || ""}</td>
+			<tr data-model-id="${modelIdAttr}">
+				<td>${escapeHtml(model.id)}</td>
+				<td>${escapeHtml(model.owned_by)}</td>
+				<td>${escapeHtml(model.displayName || "")}</td>
+				<td>${escapeHtml(model.context_length || "")}</td>
+				<td>${escapeHtml(model.max_tokens || model.max_completion_tokens || "")}</td>
 				<td>${model.vision ? "True" : ""}</td>
-				<td class="action-buttons">
-					<button class="update-model-btn" data-model-id="${model.id}${model.configId ? "::" + model.configId : ""}">Edit</button>
-					<button class="delete-model-btn danger" data-model-id="${model.id}${model.configId ? "::" + model.configId : ""}">Delete</button>
+				<td class="model-action-cell">
+					<div class="action-buttons">
+						<button class="test-model-btn compact" data-model-id="${modelIdAttr}" ${testRunActive ? "disabled" : ""}>${isTesting ? "Testing..." : "Test"}</button>
+						<button class="update-model-btn compact" data-model-id="${modelIdAttr}">Edit</button>
+						<button class="delete-model-btn danger compact" data-model-id="${modelIdAttr}">Delete</button>
+					</div>
+					${renderModelTestFeedback(modelId)}
 				</td>
 			</tr>`;
 		})
@@ -1577,20 +1752,19 @@ function renderModels() {
 	modelTableBody.innerHTML = rows;
 
 	// Add event listeners for model rows
+	document.querySelectorAll(".test-model-btn").forEach((btn) => {
+		btn.addEventListener("click", (event) => {
+			const modelId = event.currentTarget.getAttribute("data-model-id");
+			if (modelId) {
+				startModelTestRequest("testModel", [modelId], modelId);
+			}
+		});
+	});
+
 	document.querySelectorAll(".update-model-btn").forEach((btn) => {
 		btn.addEventListener("click", (event) => {
-			const modelId = event.target.getAttribute("data-model-id");
-			// Find the model in state
-			const parsedModelId = modelId.includes("::")
-				? { baseId: modelId.split("::")[0], configId: modelId.split("::")[1] }
-				: { baseId: modelId, configId: null };
-
-			const model = state.models.find(
-				(m) =>
-					m.id === parsedModelId.baseId &&
-					((parsedModelId.configId && m.configId === parsedModelId.configId) ||
-						(!parsedModelId.configId && !m.configId))
-			);
+			const modelId = event.currentTarget.getAttribute("data-model-id");
+			const model = state.models.find((item) => getFullModelId(item) === modelId);
 
 			if (model) {
 				// Show the model form in edit mode
@@ -1603,7 +1777,7 @@ function renderModels() {
 
 	document.querySelectorAll(".delete-model-btn").forEach((btn) => {
 		btn.addEventListener("click", (event) => {
-			const modelId = event.target.getAttribute("data-model-id");
+			const modelId = event.currentTarget.getAttribute("data-model-id");
 			requestDeleteModel(modelId);
 		});
 	});

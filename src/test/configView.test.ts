@@ -1,9 +1,58 @@
 import * as assert from "assert";
-import { resolveBatchAddModels, resolveBatchDeleteModels, resolveProviderApiKeyChange } from "../views/configView";
+import {
+	resolveBatchAddModels,
+	resolveBatchDeleteModels,
+	resolveProviderApiKeyChange,
+	runModelConnectionTests,
+	sanitizeModelConnectionTestError,
+} from "../views/configView";
 import { getMissingProviderSetupMessage, resolveProviderBackedModel } from "../providerTransport";
 import type { HFModelItem } from "../types";
+import type { CancellationToken } from "vscode";
 
 suite("configView", () => {
+	test("runs model connection tests with bounded concurrency and isolated failures", async () => {
+		let active = 0;
+		let maxActive = 0;
+		const reported: string[] = [];
+		const token = cancellationToken();
+		const modelIds = Array.from({ length: 9 }, (_, index) => `model-${index}`);
+
+		const results = await runModelConnectionTests(
+			modelIds,
+			async (modelId) => {
+				active += 1;
+				maxActive = Math.max(maxActive, active);
+				await new Promise<void>((resolve) => setTimeout(resolve, 5));
+				active -= 1;
+				if (modelId === "model-4") {
+					throw new Error("provider rejected model");
+				}
+				return { durationMs: 5 };
+			},
+			token,
+			4,
+			(result) => reported.push(result.modelId)
+		);
+
+		assert.strictEqual(maxActive, 4);
+		assert.strictEqual(results.length, modelIds.length);
+		assert.strictEqual(results.filter((result) => result.success).length, 8);
+		assert.strictEqual(results.find((result) => result.modelId === "model-4")?.error, "provider rejected model");
+		assert.deepStrictEqual(new Set(reported), new Set(modelIds));
+	});
+
+	test("sanitizes credentials and whitespace from model connection errors", () => {
+		const error = new Error(
+			"Request failed\nAuthorization: Bearer secret-token, x-api-key=private-key; x-goog-api-key: google-key"
+		);
+
+		assert.strictEqual(
+			sanitizeModelConnectionTestError(error),
+			"Request failed Authorization: Bearer [REDACTED], x-api-key=[REDACTED]; x-goog-api-key: [REDACTED]"
+		);
+	});
+
 	test("stores trimmed provider API keys under the lowercase provider secret", () => {
 		assert.deepStrictEqual(resolveProviderApiKeyChange("OpenAI", "  sk-test  "), {
 			kind: "store",
@@ -315,6 +364,13 @@ suite("configView", () => {
 		]);
 	});
 });
+
+function cancellationToken(): CancellationToken {
+	return {
+		isCancellationRequested: false,
+		onCancellationRequested: () => ({ dispose: () => undefined }),
+	};
+}
 
 function model(overrides: Partial<HFModelItem>): HFModelItem {
 	return {

@@ -35,7 +35,7 @@ import { updateContextStatusBar } from "./statusBar";
 import { OllamaApi } from "./ollama/ollamaApi";
 import { OpenaiApi } from "./openai/openaiApi";
 import { OpenaiResponsesApi } from "./openai/openaiResponsesApi";
-import { OpenAIResponsesStateStore } from "./openai/openaiResponsesState";
+import { createOpenAIResponsesInputSignatures, OpenAIResponsesStateStore } from "./openai/openaiResponsesState";
 import { LiteLLMApi } from "./litellm/litellmApi";
 import { AnthropicApi } from "./anthropic/anthropicApi";
 import { AnthropicRequestBody } from "./anthropic/anthropicTypes";
@@ -45,12 +45,24 @@ import { CommonApi } from "./commonApi";
 import { logger } from "./logger";
 import { getRequestedReasoningEffort, normalizeReasoningEffortForModel } from "./reasoningEffort";
 import { applyOpenAIPromptCache, hasCacheControl } from "./promptCache";
-import { getTokenBudgetErrorMessage } from "./tokenUsage";
+import { createTokenUsageReport, getTokenBudgetErrorMessage } from "./tokenUsage";
+import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "./vscodeCompat";
 
 interface ChatInformationOptions {
 	readonly silent?: boolean;
 	readonly configuration?: Readonly<Record<string, unknown>>;
 }
+
+interface ChatExecutionOptions {
+	readonly diagnostic?: boolean;
+}
+
+export interface ModelConnectionTestResult {
+	readonly durationMs: number;
+}
+
+const MODEL_CONNECTION_TEST_TIMEOUT_MS = 60_000;
+const MODEL_CONNECTION_TEST_PROMPT = "Reply only with OK.";
 
 /**
  * VS Code Chat provider backed by Hugging Face Inference Providers.
@@ -132,6 +144,104 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		progress: Progress<LanguageModelResponsePart2>,
 		token: CancellationToken
 	): Promise<void> {
+		return this.executeLanguageModelChatResponse(model, messages, options, progress, token);
+	}
+
+	async testModelConnection(
+		modelId: string,
+		token: CancellationToken,
+		timeoutMs = MODEL_CONNECTION_TEST_TIMEOUT_MS
+	): Promise<ModelConnectionTestResult> {
+		const startedAt = Date.now();
+		const cancellationSource = new vscode.CancellationTokenSource();
+		let timedOut = false;
+		const cancellationListener = token.onCancellationRequested(() => cancellationSource.cancel());
+		if (token.isCancellationRequested) {
+			cancellationSource.cancel();
+		}
+		let timeout: NodeJS.Timeout | undefined;
+		const timeoutPromise = new Promise<never>((_, reject) => {
+			timeout = setTimeout(() => {
+				timedOut = true;
+				cancellationSource.cancel();
+				reject(new Error(`Connection test timed out after ${Math.round(timeoutMs / 1000)} seconds.`));
+			}, timeoutMs);
+		});
+
+		logger.info("modelTest.start", { modelId, timeoutMs });
+		try {
+			const models = await this.provideLanguageModelChatInformation({ silent: true }, cancellationSource.token);
+			const model = models.find((item) => item.id === modelId);
+			if (!model) {
+				throw new Error(`Configured model ${modelId} was not found.`);
+			}
+
+			let hasOutput = false;
+			const progress: Progress<LanguageModelResponsePart2> = {
+				report: (part) => {
+					if (part instanceof vscode.LanguageModelTextPart && part.value.trim()) {
+						hasOutput = true;
+					} else if (isLanguageModelThinkingPart(part) && getLanguageModelThinkingText(part).trim()) {
+						hasOutput = true;
+					}
+				},
+			};
+			const messages = [vscode.LanguageModelChatMessage.User(MODEL_CONNECTION_TEST_PROMPT)];
+			await Promise.race([
+				this.executeLanguageModelChatResponse(
+					model,
+					messages,
+					{
+						requestInitiator: "oaiproxy.modelTest",
+						toolMode: vscode.LanguageModelChatToolMode.Auto,
+					},
+					progress,
+					cancellationSource.token,
+					{ diagnostic: true }
+				),
+				timeoutPromise,
+			]);
+
+			if (timedOut) {
+				throw new Error(`Connection test timed out after ${Math.round(timeoutMs / 1000)} seconds.`);
+			}
+			if (token.isCancellationRequested) {
+				throw new vscode.CancellationError();
+			}
+			if (!hasOutput) {
+				throw new Error("The model returned no text or thinking output.");
+			}
+
+			const durationMs = Date.now() - startedAt;
+			logger.info("modelTest.success", { modelId, durationMs });
+			return { durationMs };
+		} catch (error) {
+			const resolvedError = timedOut
+				? new Error(`Connection test timed out after ${Math.round(timeoutMs / 1000)} seconds.`)
+				: error;
+			logger.error("modelTest.error", {
+				modelId,
+				durationMs: Date.now() - startedAt,
+				error: resolvedError instanceof Error ? resolvedError.message : String(resolvedError),
+			});
+			throw resolvedError;
+		} finally {
+			if (timeout) {
+				clearTimeout(timeout);
+			}
+			cancellationListener.dispose();
+			cancellationSource.dispose();
+		}
+	}
+
+	private async executeLanguageModelChatResponse(
+		model: LanguageModelChatInformation,
+		messages: readonly LanguageModelChatRequestMessage[],
+		options: ProvideLanguageModelChatResponseOptions,
+		progress: Progress<LanguageModelResponsePart2>,
+		token: CancellationToken,
+		executionOptions: ChatExecutionOptions = {}
+	): Promise<void> {
 		const trackingProgress: Progress<LanguageModelResponsePart2> = {
 			report: (part) => {
 				try {
@@ -201,7 +311,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			};
 
 			// Update Token Usage
-			const tokenUsageReport = await updateContextStatusBar(messages, options.tools, model, this.statusBarItem, modelConfig);
+			const tokenUsageReport = executionOptions.diagnostic
+				? await createTokenUsageReport({ messages, tools: options.tools, model, modelConfig })
+				: await updateContextStatusBar(messages, options.tools, model, this.statusBarItem, modelConfig);
 			const tokenBudgetError = getTokenBudgetErrorMessage(tokenUsageReport);
 			if (tokenBudgetError) {
 				logger.warn("request.contextTooLarge", {
@@ -220,7 +332,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			const globalDelay = config.get<number>("oaicopilot.delay", 0);
 			const delayMs = modelDelay !== undefined ? modelDelay : globalDelay;
 
-			if (delayMs > 0 && this._lastRequestTime !== null) {
+			if (!executionOptions.diagnostic && delayMs > 0 && this._lastRequestTime !== null) {
 				const elapsed = Date.now() - this._lastRequestTime;
 				if (elapsed < delayMs) {
 					const remainingDelay = delayMs - elapsed;
@@ -239,13 +351,23 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			// Get API key for the model's provider
 			const provider = um?.owned_by;
 			const useGenericKey = !um?.baseUrl;
-			const modelApiKey = await this.ensureApiKey(useGenericKey, provider, baseUrl, apiMode);
+			const modelApiKey = await this.ensureApiKey(
+				useGenericKey,
+				provider,
+				baseUrl,
+				apiMode,
+				!executionOptions.diagnostic
+			);
 			if (!modelApiKey) {
 				logger.warn("apiKey.missing", {
 					provider: provider ?? "",
 					useGenericKey,
 				});
-				throw new Error("OAIProxy API key not found");
+				throw new Error(
+					executionOptions.diagnostic && provider
+						? `No API key found for provider ${provider}.`
+						: "OAIProxy API key not found"
+				);
 			}
 
 			// send chat request
@@ -296,7 +418,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				}
 			}
 
-			this._lastRequestTime = Date.now();
+			if (!executionOptions.diagnostic) {
+				this._lastRequestTime = Date.now();
+			}
 			if (apiMode === "ollama") {
 				// Ollama native API mode
 				const ollamaApi = new OllamaApi(model.id);
@@ -388,7 +512,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				// Convert full history once (also extracts system `instructions`).
 				const fullInput = openaiResponsesApi.convertMessages(workingMessages, modelConfig);
 
-				const marker = findLastOpenAIResponsesStatefulMarker(statefulModelId, workingMessages);
+				const marker = executionOptions.diagnostic
+					? undefined
+					: findLastOpenAIResponsesStatefulMarker(statefulModelId, workingMessages);
 				let markerDeltaInput: unknown[] | null = null;
 				if (marker && marker.index >= 0 && marker.index < workingMessages.length - 1) {
 					const deltaMessages = workingMessages.slice(marker.index + 1);
@@ -407,20 +533,30 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 
 				const previousResponseIdUnsupported = this._openaiResponsesPreviousResponseIdUnsupportedBaseUrls.has(normalizedBaseUrl);
 				const explicitPreviousResponseId = preparedFullRequestBody.previous_response_id !== undefined;
-				const memoryState = this._openaiResponsesState.resolve({
-					identity: {
-						normalizedBaseUrl,
-						modelId: statefulModelId,
-						modelInfoId: model.id,
-						configId: parsedModelId.configId,
-						requestInitiator: options.requestInitiator,
-						instructions: preparedFullRequestBody.instructions,
-						tools: preparedFullRequestBody.tools,
-						toolChoice: preparedFullRequestBody.tool_choice,
-					},
-					fullInput,
-					previousResponseIdUnsupported,
-				});
+				const memoryState = executionOptions.diagnostic
+					? {
+							stateKey: "",
+							inputSignatures: createOpenAIResponsesInputSignatures(fullInput),
+							deltaInput: null,
+							memoryStateFound: false,
+							memoryStateExpired: false,
+							memoryPrefixMatched: false,
+							currentInputCount: fullInput.length,
+						}
+					: this._openaiResponsesState.resolve({
+							identity: {
+								normalizedBaseUrl,
+								modelId: statefulModelId,
+								modelInfoId: model.id,
+								configId: parsedModelId.configId,
+								requestInitiator: options.requestInitiator,
+								instructions: preparedFullRequestBody.instructions,
+								tools: preparedFullRequestBody.tools,
+								toolChoice: preparedFullRequestBody.tool_choice,
+							},
+							fullInput,
+							previousResponseIdUnsupported,
+						});
 
 				const canUseMarkerPreviousResponseId =
 					!!marker?.marker &&
@@ -558,7 +694,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 						previousResponseIdFallback: true,
 					});
 					response = await sendRequest(fallbackBody);
-					this._openaiResponsesState.clear(memoryState.stateKey);
+					if (!executionOptions.diagnostic) {
+						this._openaiResponsesState.clear(memoryState.stateKey);
+					}
 					requestBody = fallbackBody;
 					addedPreviousResponseId = false;
 					finalStateSource = "none";
@@ -572,7 +710,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 
 				// Append a stateful marker so future requests can reuse `previous_response_id` (Copilot Chat style).
 				const responseId = openaiResponsesApi.responseId;
-				const memoryStateStored = !!responseId && !explicitPreviousResponseId && !previousResponseIdFallback &&
+				const memoryStateStored = !executionOptions.diagnostic && !!responseId && !explicitPreviousResponseId && !previousResponseIdFallback &&
 					!this._openaiResponsesPreviousResponseIdUnsupportedBaseUrls.has(normalizedBaseUrl) &&
 					this._openaiResponsesState.update({
 						stateKey: memoryState.stateKey,
@@ -582,7 +720,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				logger.debug("responses.state", {
 					modelId: model.id,
 					responseIdCaptured: !!responseId,
-					statefulMarkerEmitted: !!responseId,
+					statefulMarkerEmitted: !!responseId && !executionOptions.diagnostic,
 					addedPreviousResponseId,
 					explicitPreviousResponseId,
 					usedStatefulDeltaInput: addedPreviousResponseId,
@@ -593,7 +731,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					fullInputCount: fullInput.length,
 					requestInputCount: getArrayLength(requestBody.input),
 				});
-				if (responseId) {
+				if (responseId && !executionOptions.diagnostic) {
 					trackingProgress.report(createOpenAIResponsesStatefulMarkerPart(statefulModelId, responseId));
 				}
 			} else if (apiMode === "gemini") {
@@ -737,7 +875,8 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		useGenericKey: boolean,
 		provider?: string,
 		baseUrl?: string,
-		apiMode?: string
+		apiMode?: string,
+		allowPrompt = true
 	): Promise<string | undefined> {
 		let apiKey: string | undefined;
 		const normalizedProvider = provider?.trim().toLowerCase();
@@ -756,6 +895,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				provider: normalizedProvider,
 				baseUrl,
 				apiMode,
+				allowPrompt,
 			});
 			return apiKey;
 		}
@@ -770,6 +910,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			provider: normalizedProvider,
 			baseUrl,
 			apiMode,
+			allowPrompt,
 		});
 	}
 
@@ -781,6 +922,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		provider?: string;
 		baseUrl?: string;
 		apiMode?: string;
+		allowPrompt: boolean;
 	}): Promise<string | undefined> {
 		let apiKey = options.apiKey?.trim();
 		if (apiKey && apiKey !== options.apiKey) {
@@ -796,14 +938,16 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				keyPrefix: apiKey.slice(0, 4),
 				keyLength: apiKey.length,
 			});
-			await this.secrets.delete(options.secretKey);
 			apiKey = undefined;
-			void vscode.window.showWarningMessage(
-				"Stored OpenAI API key is malformed. OAIProxy removed it; enter a valid OpenAI key starting with sk-."
-			);
+			if (options.allowPrompt) {
+				await this.secrets.delete(options.secretKey);
+				void vscode.window.showWarningMessage(
+					"Stored OpenAI API key is malformed. OAIProxy removed it; enter a valid OpenAI key starting with sk-."
+				);
+			}
 		}
 
-		if (!apiKey) {
+		if (!apiKey && options.allowPrompt) {
 			const entered = await vscode.window.showInputBox({
 				title: options.title,
 				prompt: options.prompt,

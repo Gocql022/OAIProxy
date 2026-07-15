@@ -10,6 +10,7 @@ import {
 	deleteProviderConfig,
 	findProviderPlaceholderModel,
 	findProviderTransportModel,
+	isProviderPlaceholderModel,
 	normalizeProviderConfigs,
 	PROVIDER_CONFIG_STORAGE_KEY,
 	resolveInheritedProviderModels,
@@ -45,6 +46,76 @@ interface InitPayload {
 	providerUsageKeys: Record<string, string>;
 	providerPresets: readonly ProviderPreset[];
 	modelPresets: readonly ModelPreset[];
+}
+
+export interface ModelConnectionTestResult {
+	modelId: string;
+	success: boolean;
+	durationMs: number;
+	error?: string;
+}
+
+export type ModelConnectionTester = (
+	modelId: string,
+	token: vscode.CancellationToken
+) => Promise<{ durationMs: number }>;
+
+export async function runModelConnectionTests(
+	modelIds: readonly string[],
+	tester: ModelConnectionTester,
+	token: vscode.CancellationToken,
+	concurrency = 4,
+	onResult?: (result: ModelConnectionTestResult) => void
+): Promise<ModelConnectionTestResult[]> {
+	const results: ModelConnectionTestResult[] = new Array(modelIds.length);
+	const workerCount = Math.min(Math.max(1, concurrency), modelIds.length);
+	let nextIndex = 0;
+
+	const worker = async () => {
+		while (!token.isCancellationRequested) {
+			const index = nextIndex++;
+			if (index >= modelIds.length) {
+				return;
+			}
+
+			const modelId = modelIds[index];
+			const startedAt = Date.now();
+			let result: ModelConnectionTestResult;
+			try {
+				const testResult = await tester(modelId, token);
+				result = {
+					modelId,
+					success: true,
+					durationMs: testResult.durationMs,
+				};
+			} catch (error) {
+				if (token.isCancellationRequested) {
+					return;
+				}
+				result = {
+					modelId,
+					success: false,
+					durationMs: Date.now() - startedAt,
+					error: sanitizeModelConnectionTestError(error),
+				};
+			}
+
+			results[index] = result;
+			onResult?.(result);
+		}
+	};
+
+	await Promise.all(Array.from({ length: workerCount }, () => worker()));
+	return results.filter((result): result is ModelConnectionTestResult => result !== undefined);
+}
+
+export function sanitizeModelConnectionTestError(error: unknown): string {
+	const message = error instanceof Error ? error.message : String(error);
+	return message
+		.replace(/(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s,;]+/gi, "$1[REDACTED]")
+		.replace(/((?:api[_ -]?key|x-api-key|x-goog-api-key)\s*[:=]\s*)[^\s,;]+/gi, "$1[REDACTED]")
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
 export type ProviderApiKeyChange =
@@ -238,6 +309,8 @@ type IncomingMessage =
 	  }
 	| { type: "deleteModel"; modelId: string }
 	| { type: "deleteModels"; modelIds: string[] }
+	| { type: "testModel"; requestId: string; modelId: string }
+	| { type: "testAllModels"; requestId: string }
 	| { type: "requestConfirm"; id: string; message: string; action: string }
 	| { type: "exportConfig" }
 	| { type: "importConfig" };
@@ -247,6 +320,16 @@ type OutgoingMessage =
 	| { type: "modelsFetched"; models: HFModelItem[] }
 	| { type: "providerUsageResult"; provider: string; result: ProviderUsageResult }
 	| { type: "providerUsageError"; provider: string; error: string }
+	| { type: "modelTestsStarted"; requestId: string; modelIds: string[] }
+	| { type: "modelTestResult"; requestId: string; result: ModelConnectionTestResult }
+	| {
+			type: "modelTestsCompleted";
+			requestId: string;
+			total: number;
+			passed: number;
+			failed: number;
+			durationMs: number;
+	  }
 	| { type: "confirmResponse"; id: string; confirmed: boolean };
 
 export class ConfigViewPanel {
@@ -254,13 +337,16 @@ export class ConfigViewPanel {
 	private readonly panel: vscode.WebviewPanel;
 	private readonly extensionUri: vscode.Uri;
 	private readonly secrets: vscode.SecretStorage;
+	private readonly modelConnectionTester: ModelConnectionTester;
 	private readonly onConfigurationChanged?: () => void;
+	private activeModelTestRun?: { requestId: string; cancellationSource: vscode.CancellationTokenSource };
 	private disposables: vscode.Disposable[] = [];
 
 	public static openPanel(
 		extensionUri: vscode.Uri,
 		secrets: vscode.SecretStorage,
 		globalState: vscode.Memento,
+		modelConnectionTester: ModelConnectionTester,
 		onConfigurationChanged?: () => void
 	) {
 		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
@@ -282,7 +368,14 @@ export class ConfigViewPanel {
 		);
 		panel.iconPath = vscode.Uri.joinPath(extensionUri, "assets", "icon.png");
 
-		ConfigViewPanel.currentPanel = new ConfigViewPanel(panel, extensionUri, secrets, globalState, onConfigurationChanged);
+		ConfigViewPanel.currentPanel = new ConfigViewPanel(
+			panel,
+			extensionUri,
+			secrets,
+			globalState,
+			modelConnectionTester,
+			onConfigurationChanged
+		);
 	}
 
 	private constructor(
@@ -290,11 +383,13 @@ export class ConfigViewPanel {
 		extensionUri: vscode.Uri,
 		secrets: vscode.SecretStorage,
 		private readonly globalState: vscode.Memento,
+		modelConnectionTester: ModelConnectionTester,
 		onConfigurationChanged?: () => void
 	) {
 		this.panel = panel;
 		this.extensionUri = extensionUri;
 		this.secrets = secrets;
+		this.modelConnectionTester = modelConnectionTester;
 		this.onConfigurationChanged = onConfigurationChanged;
 
 		this.update();
@@ -327,6 +422,9 @@ export class ConfigViewPanel {
 
 	public dispose() {
 		ConfigViewPanel.currentPanel = undefined;
+		this.activeModelTestRun?.cancellationSource.cancel();
+		this.activeModelTestRun?.cancellationSource.dispose();
+		this.activeModelTestRun = undefined;
 
 		this.panel.dispose();
 
@@ -415,6 +513,12 @@ export class ConfigViewPanel {
 			case "deleteModels":
 				await this.deleteModels(message.modelIds);
 				break;
+			case "testModel":
+				await this.startModelTests(message.requestId, [message.modelId]);
+				break;
+			case "testAllModels":
+				await this.startModelTests(message.requestId, this.getConfiguredModelIds());
+				break;
 			case "exportConfig":
 				await this.exportConfig();
 				break;
@@ -423,6 +527,59 @@ export class ConfigViewPanel {
 				break;
 			default:
 				break;
+		}
+	}
+
+	private getConfiguredModelIds(): string[] {
+		const config = vscode.workspace.getConfiguration();
+		return normalizeUserModels(config.get<unknown>("oaicopilot.models", []))
+			.filter((model) => !isProviderPlaceholderModel(model))
+			.map(getModelConfigKey);
+	}
+
+	private async startModelTests(requestId: string, modelIds: string[]): Promise<void> {
+		this.activeModelTestRun?.cancellationSource.cancel();
+		this.activeModelTestRun?.cancellationSource.dispose();
+
+		const cancellationSource = new vscode.CancellationTokenSource();
+		this.activeModelTestRun = { requestId, cancellationSource };
+		const startedAt = Date.now();
+		this.panel.webview.postMessage({
+			type: "modelTestsStarted",
+			requestId,
+			modelIds,
+		} as OutgoingMessage);
+
+		try {
+			const results = await runModelConnectionTests(
+				modelIds,
+				this.modelConnectionTester,
+				cancellationSource.token,
+				4,
+				(result) => {
+					if (this.activeModelTestRun?.requestId === requestId && !cancellationSource.token.isCancellationRequested) {
+						this.panel.webview.postMessage({ type: "modelTestResult", requestId, result } as OutgoingMessage);
+					}
+				}
+			);
+			if (cancellationSource.token.isCancellationRequested || this.activeModelTestRun?.requestId !== requestId) {
+				return;
+			}
+
+			const passed = results.filter((result) => result.success).length;
+			this.panel.webview.postMessage({
+				type: "modelTestsCompleted",
+				requestId,
+				total: results.length,
+				passed,
+				failed: results.length - passed,
+				durationMs: Date.now() - startedAt,
+			} as OutgoingMessage);
+		} finally {
+			if (this.activeModelTestRun?.requestId === requestId) {
+				this.activeModelTestRun = undefined;
+			}
+			cancellationSource.dispose();
 		}
 	}
 

@@ -47,8 +47,12 @@ export function activate(context: vscode.ExtensionContext) {
 	refreshLanguageModels(chatProvider);
 	scheduleLanguageModelWarmup(context);
 	const openConfigurationPanel = () => {
-		ConfigViewPanel.openPanel(context.extensionUri, context.secrets, context.globalState, () =>
-			refreshLanguageModels(chatProvider)
+		ConfigViewPanel.openPanel(
+			context.extensionUri,
+			context.secrets,
+			context.globalState,
+			(modelId, token) => chatProvider.testModelConnection(modelId, token),
+			() => refreshLanguageModels(chatProvider)
 		);
 	};
 

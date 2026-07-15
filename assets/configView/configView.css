@@ -377,6 +377,42 @@ tr:hover {
 	margin-right: 0;
 }
 
+.model-action-cell {
+	min-width: 220px;
+}
+
+.model-test-feedback {
+	min-width: 0;
+	margin-top: 7px;
+}
+
+.model-test-detail {
+	max-width: 320px;
+	margin-top: 4px;
+	font-size: 12px;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.model-test-summary {
+	margin-bottom: 10px;
+	padding: 8px 10px;
+	border-left: 3px solid var(--vscode-progressBar-background, #0e70c0);
+	background: color-mix(in srgb, var(--vscode-progressBar-background, #0e70c0) 10%, transparent);
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.model-test-summary.success {
+	border-left-color: var(--vscode-testing-iconPassed, #4ade80);
+	background: color-mix(in srgb, var(--vscode-testing-iconPassed, #4ade80) 10%, transparent);
+}
+
+.model-test-summary.error {
+	border-left-color: var(--vscode-errorForeground);
+	background: color-mix(in srgb, var(--vscode-errorForeground) 10%, transparent);
+}
+
 .provider-id-cell {
 	overflow-wrap: anywhere;
 }

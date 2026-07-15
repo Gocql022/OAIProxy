@@ -156,7 +156,7 @@ suite("openaiApi", () => {
 		assert.strictEqual(body.top_p, undefined);
 	});
 
-	test("keeps Fireworks presets free of undocumented thinking controls", () => {
+	test("preserves documented Fireworks request controls", () => {
 		const presets = MODEL_PRESETS.filter((item) => item.model.owned_by === "fireworks");
 		assert.strictEqual(presets.length, 3);
 
@@ -173,7 +173,7 @@ suite("openaiApi", () => {
 
 			assert.strictEqual(body.max_tokens, preset.model.max_tokens);
 			assert.strictEqual(body.max_completion_tokens, undefined);
-			assert.strictEqual(body.reasoning_effort, undefined);
+			assert.strictEqual(body.reasoning_effort, preset.model.reasoning_effort);
 			assert.strictEqual(body.thinking, undefined);
 		}
 	});

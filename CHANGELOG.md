@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.1.26 (2026-07-15)
+
+- Add per-model `Test` and `Test all` actions to Model Management with inline status, failure details, elapsed time, and bounded parallel execution.
+- Exercise each model's saved provider configuration through the normal request pipeline with silent credential handling, a 60-second timeout, cancellation, and isolated diagnostic state.
+- Add regression coverage and documentation for diagnostic execution, concurrent result reporting, and credential-safe error messages.
+
 ## 0.1.25 (2026-06-24)
 
 - Fix the VS Code 1.126 model picker failing to open by removing the retired object-valued language-model category metadata.
