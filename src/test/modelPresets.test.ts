@@ -41,6 +41,35 @@ suite("modelPresets", () => {
 		assert.deepStrictEqual(mimoIds, ["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-flash"]);
 	});
 
+	test("contains Kimi K3 quick setup preset", () => {
+		const preset = MODEL_PRESETS.find((item) => item.id === "kimi-k3");
+
+		assert.ok(preset);
+		assert.strictEqual(preset.label, "Kimi K3");
+		assert.strictEqual(preset.providerPresetId, "kimi");
+		assert.strictEqual(preset.category, "latest");
+		assert.deepStrictEqual(preset.tags, ["Kimi", "Code", "Vision", "Thinking", "Tools", "Prompt Cache"]);
+		assert.strictEqual(preset.model.id, "kimi-k3");
+		assert.ok(preset.model._comment?.includes("https://platform.kimi.ai/docs/guide/kimi-k3-quickstart"));
+		assert.strictEqual(preset.model.displayName, "Kimi K3");
+		assert.strictEqual(preset.model.owned_by, "kimi");
+		assert.strictEqual(preset.model.baseUrl, "https://api.moonshot.ai/v1");
+		assert.strictEqual(preset.model.apiMode, "openai");
+		assert.strictEqual(preset.model.context_length, 1048576);
+		assert.strictEqual(preset.model.max_completion_tokens, 131072);
+		assert.strictEqual(preset.model.max_tokens, undefined);
+		assert.strictEqual(preset.model.reasoning_effort, "max");
+		assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["max"]);
+		assert.strictEqual(preset.model.default_reasoning_effort, "max");
+		assert.strictEqual(preset.model.vision, true);
+		assert.strictEqual(preset.model.toolCalling, true);
+		assert.strictEqual(preset.model.include_reasoning_in_request, true);
+		assert.strictEqual(preset.model.thinking, undefined);
+		assert.strictEqual(preset.model.temperature, undefined);
+		assert.strictEqual(preset.model.top_p, undefined);
+		assert.strictEqual(preset.model.prompt_cache, undefined);
+	});
+
 	test("contains Kimi K2.7 Code quick setup preset", () => {
 		const preset = MODEL_PRESETS.find((item) => item.id === "kimi-k2-7-code");
 

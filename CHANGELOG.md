@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.1.27 (2026-07-18)
+
+- Add a Kimi K3 Quick Setup preset using Moonshot's official model ID and endpoint, 1M-token context, 131,072-token default output reserve, vision and tool support, always-on max reasoning, preserved reasoning history, and automatic prompt caching.
+- Update the Kimi example and add regression coverage for K3 preset metadata and OpenAI-compatible request shaping.
+- Document the VS Code 1.128+ BYOK utility-model requirement, the `copilot` and `mainAgent` routing choices, and explicit utility-model override precedence in the English and Chinese READMEs.
+
 ## 0.1.26 (2026-07-15)
 
 - Add per-model `Test` and `Test all` actions to Model Management with inline status, failure details, elapsed time, and bounded parallel execution.

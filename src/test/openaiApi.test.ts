@@ -135,6 +135,45 @@ suite("openaiApi", () => {
 		assert.strictEqual(messages[0].reasoning_content, undefined);
 	});
 
+	test("uses Kimi K3 request controls and preserves assistant reasoning", () => {
+		const preset = MODEL_PRESETS.find((item) => item.id === "kimi-k3");
+		assert.ok(preset);
+
+		const api = new OpenaiApi("kimi-k3");
+		const body = api.prepareRequestBody(
+			{
+				model: preset.model.id,
+				messages: [],
+				stream: true,
+			},
+			preset.model
+		);
+		const messages = api.convertMessages(
+			[
+				{
+					role: vscode.LanguageModelChatMessageRole.Assistant,
+					name: undefined,
+					content: [
+						new vscode.LanguageModelThinkingPart("Preserved reasoning."),
+						new vscode.LanguageModelTextPart("Visible answer."),
+					],
+				} as unknown as vscode.LanguageModelChatRequestMessage,
+			],
+			{ includeReasoningInRequest: preset.model.include_reasoning_in_request === true }
+		);
+
+		assert.strictEqual(body.max_completion_tokens, 131072);
+		assert.strictEqual(body.max_tokens, undefined);
+		assert.strictEqual(body.reasoning_effort, "max");
+		assert.strictEqual(body.thinking, undefined);
+		assert.strictEqual(body.temperature, undefined);
+		assert.strictEqual(body.top_p, undefined);
+		assert.strictEqual(messages.length, 1);
+		assert.strictEqual(messages[0].role, "assistant");
+		assert.strictEqual(messages[0].content, "Visible answer.");
+		assert.strictEqual(messages[0].reasoning_content, "Preserved reasoning.");
+	});
+
 	test("keeps Kimi K2.7 Code request body on official defaults", () => {
 		const preset = MODEL_PRESETS.find((item) => item.id === "kimi-k2-7-code");
 		assert.ok(preset);

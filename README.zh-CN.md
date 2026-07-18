@@ -49,6 +49,20 @@
 
 > 兼容性说明：OAIProxy 仍使用现有的 `oaicopilot.*` 设置键，因此已有 JSON 模型配置可以继续使用。由于扩展 ID 已改为 `lqdflying.oaiproxy`，VS Code 可能需要你在新扩展下重新输入一次 API Key。
 
+> [!IMPORTANT]
+> **在 VS Code 1.128+ 中使用 OAIProxy/BYOK 模型时，请配置辅助模型（utility model）。** VS Code 默认不会为 BYOK 配置辅助模型，因此 Agent 模式可能会提示：`No utility model is configured for 'copilot-utility-small' while the selected main agent model is BYOK.` 这是 VS Code 的模型路由提示，并不表示 Kimi K3 或 OAIProxy 请求失败。
+>
+> 请在用户 `settings.json` 中添加推荐选项：
+>
+> ```jsonc
+> "chat.byokUtilityModelDefault": "copilot"
+> ```
+>
+> - `"copilot"`（可使用 GitHub Copilot 辅助模型时推荐）：OAIProxy/Kimi K3 继续作为主 Agent 模型，由 Copilot 处理意图识别、聊天标题、摘要和提交信息等轻量后台任务。
+> - `"mainAgent"`：当前选中的 OAIProxy/BYOK 主模型也会处理这些辅助任务。无法使用 Copilot 辅助模型时请选择此项；这会向模型供应商发送更多请求，速度可能更慢，费用也可能更高。
+>
+> 显式设置的 `chat.utilityModel` 或 `chat.utilitySmallModel` 会优先于此默认值。详情请参阅 [VS Code BYOK 辅助模型文档](https://code.visualstudio.com/updates/v1_128#_configure-the-default-utility-model-for-byok)。
+
 ### 配置示例
 
 ```json

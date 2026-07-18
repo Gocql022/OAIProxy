@@ -51,6 +51,20 @@ English | [简体中文](README.zh-CN.md)
 
 > Compatibility note: OAIProxy keeps the existing `oaicopilot.*` settings keys, so your JSON model configuration stays valid. Because the extension ID changed to `lqdflying.oaiproxy`, VS Code may require entering API keys once under the new extension.
 
+> [!IMPORTANT]
+> **Configure a utility model when using OAIProxy/BYOK models in VS Code 1.128+.** VS Code leaves BYOK utility routing unconfigured by default, so Agent mode can report: `No utility model is configured for 'copilot-utility-small' while the selected main agent model is BYOK.` This is a VS Code routing message, not a Kimi K3 or OAIProxy request failure.
+>
+> Add the recommended option to your User Settings JSON:
+>
+> ```jsonc
+> "chat.byokUtilityModelDefault": "copilot"
+> ```
+>
+> - `"copilot"` (recommended when GitHub Copilot utility models are available) keeps OAIProxy/Kimi K3 as the main agent model while Copilot handles lightweight background tasks such as intent detection, chat titles, summaries, and commit messages.
+> - `"mainAgent"` uses the currently selected OAIProxy/BYOK main model for those utility tasks too. Choose this when Copilot utility models are unavailable; it can send more requests to your provider and may be slower or cost more.
+>
+> Explicit `chat.utilityModel` or `chat.utilitySmallModel` selections take precedence over this default. See the [VS Code BYOK utility-model documentation](https://code.visualstudio.com/updates/v1_128#_configure-the-default-utility-model-for-byok).
+
 ### Settings Example
 
 ```json
