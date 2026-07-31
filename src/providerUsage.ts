@@ -1,3 +1,5 @@
+import * as vscode from "vscode";
+
 export type ProviderUsageAdapter = "anthropic" | "deepseek" | "fireworks" | "kimi" | "litellm" | "minimax" | "openai";
 
 export interface ProviderUsageResult {
@@ -37,10 +39,12 @@ const MINIMAX_TOKEN_PLAN_ENDPOINT = "https://api.minimax.io/v1/token_plan/remain
 const OPENAI_COSTS_ENDPOINT = "https://api.openai.com/v1/organization/costs";
 const ANTHROPIC_COST_REPORT_ENDPOINT = "https://api.anthropic.com/v1/organizations/cost_report";
 const FIREWORKS_ACCOUNTS_ENDPOINT = "https://api.fireworks.ai/v1/accounts";
-const MIMO_USAGE_UNSUPPORTED_REASON =
-	"Xiaomi MiMo usage checks are unavailable because Xiaomi only exposes balance/usage through web Console endpoints; no public API-key usage endpoint is documented.";
-const ZAI_USAGE_UNSUPPORTED_REASON =
-	"Z.AI usage checks are unavailable because Z.AI currently documents API keys and console billing/usage pages, but not a public API-key usage or balance endpoint.";
+const MIMO_USAGE_UNSUPPORTED_REASON = vscode.l10n.t(
+	"Xiaomi MiMo usage checks are unavailable because Xiaomi only exposes balance/usage through web Console endpoints; no public API-key usage endpoint is documented."
+);
+const ZAI_USAGE_UNSUPPORTED_REASON = vscode.l10n.t(
+	"Z.AI usage checks are unavailable because Z.AI currently documents API keys and console billing/usage pages, but not a public API-key usage or balance endpoint."
+);
 
 export function getProviderSecretKey(provider: string): string {
 	return `oaicopilot.apiKey.${provider.trim().toLowerCase()}`;

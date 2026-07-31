@@ -75,7 +75,7 @@ export async function generateCommitMsg(
 		await orchestrateWorkspaceCommitMsgGeneration(secrets, globalState, git.repositories);
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
-		vscode.window.showErrorMessage(`[Commit Generation Failed] ${errorMessage}`);
+		vscode.window.showErrorMessage(vscode.l10n.t("[Commit Generation Failed] {0}", errorMessage));
 	}
 }
 
@@ -87,7 +87,7 @@ async function orchestrateWorkspaceCommitMsgGeneration(
 	const reposWithChanges = await filterForReposWithChanges(repos);
 
 	if (reposWithChanges.length === 0) {
-		vscode.window.showInformationMessage(`No changes found in any workspace repositories.`);
+		vscode.window.showInformationMessage(vscode.l10n.t("No changes found in any workspace repositories."));
 		return;
 	}
 
@@ -146,13 +146,13 @@ async function promptRepoSelection(repos: GitRepository[]) {
 	}));
 
 	repoItems.unshift({
-		label: "$(git-commit) Generate for all repositories with changes",
-		description: `Generate commit messages for ${repos.length} repositories`,
+		label: "$(git-commit) " + vscode.l10n.t("Generate for all repositories with changes"),
+		description: vscode.l10n.t("Generate commit messages for {0} repositories", repos.length),
 		repo: null,
 	});
 
 	return await vscode.window.showQuickPick(repoItems, {
-		placeHolder: "Select repository for commit message generation",
+		placeHolder: vscode.l10n.t("Select repository for commit message generation"),
 	});
 }
 
@@ -166,16 +166,24 @@ async function generateCommitMsgForRepository(
 	const gitDiff = await getGitDiff(repoPath);
 
 	if (!gitDiff) {
-		throw new Error(`No changes in repository ${repoPath.split(path.sep).pop() || "repository"} for commit message`);
+		throw new Error(
+			vscode.l10n.t(
+				"No changes in repository {0} for commit message",
+				repoPath.split(path.sep).pop() || "repository"
+			)
+		);
 	}
 
 	await vscode.window.withProgress(
 		{
-			location: vscode.ProgressLocation.SourceControl,
-			title: `Generating commit message for ${repoPath.split(path.sep).pop() || "repository"}...`,
+			location: vscode.ProgressLocation.Notification,
+			title: vscode.l10n.t(
+				"Generating commit message for {0}...",
+				repoPath.split(path.sep).pop() || "repository"
+			),
 			cancellable: true,
 		},
-			() => performCommitMsgGeneration(secrets, globalState, gitDiff, inputBox)
+		() => performCommitMsgGeneration(secrets, globalState, gitDiff, inputBox)
 	);
 }
 
@@ -290,7 +298,7 @@ async function performCommitMsgGeneration(
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		logger.error("commit.error", { modelId: modelId ?? "unknown", error: errorMessage });
-		vscode.window.showErrorMessage(`Failed to generate commit message: ${errorMessage}`);
+		vscode.window.showErrorMessage(vscode.l10n.t("Failed to generate commit message: {0}", errorMessage));
 	} finally {
 		vscode.commands.executeCommand("setContext", "oaiproxy.isGeneratingCommit", false);
 	}

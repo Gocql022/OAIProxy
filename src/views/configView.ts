@@ -358,7 +358,7 @@ export class ConfigViewPanel {
 
 		const panel = vscode.window.createWebviewPanel(
 			"oaiproxy.config",
-			"OAIProxy Configuration",
+			vscode.l10n.t("OAIProxy Configuration"),
 			column || vscode.ViewColumn.One,
 			{
 				enableScripts: true,
@@ -403,7 +403,7 @@ export class ConfigViewPanel {
 					vscode.window.showErrorMessage(
 						err instanceof Error
 							? err.message
-							: `Unexpected error while handling configuration message[${message.type}].`
+							: vscode.l10n.t("Unexpected error while handling configuration message[{0}].", message.type)
 					);
 				});
 			},
@@ -592,14 +592,16 @@ export class ConfigViewPanel {
 			confirmed = true;
 		} else {
 			// For confirmation requests, show Yes/No dialog
-			confirmed = await vscode.window.showInformationMessage(message, { modal: true }, "Yes", "No");
+			const yesLabel = vscode.l10n.t("Yes");
+			const noLabel = vscode.l10n.t("No");
+			confirmed = await vscode.window.showInformationMessage(message, { modal: true }, yesLabel, noLabel);
 		}
 
 		// Send response back to webview
 		this.panel.webview.postMessage({
 			type: "confirmResponse",
 			id: id,
-			confirmed: action === "showInfo" ? true : confirmed === "Yes",
+			confirmed: action === "showInfo" ? true : confirmed === vscode.l10n.t("Yes"),
 		} as OutgoingMessage);
 	}
 
@@ -735,6 +737,7 @@ export class ConfigViewPanel {
 		const templatePath = vscode.Uri.joinPath(assetsRoot, "configView.html");
 		const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(assetsRoot, "configView.css"));
 		const jsUri = webview.asWebviewUri(vscode.Uri.joinPath(assetsRoot, "configView.js"));
+		const i18nJsUri = webview.asWebviewUri(vscode.Uri.joinPath(assetsRoot, "i18n.js"));
 		const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "logo.png"));
 		const csp = [
 			`default-src 'none'`,
@@ -748,8 +751,10 @@ export class ConfigViewPanel {
 		html = html
 			.replaceAll("%CSP_SOURCE%", csp)
 			.replaceAll("%NONCE%", nonce)
+			.replace("%LANG%", vscode.env.language || "en")
 			.replace("%LOGO_URI%", logoUri.toString())
 			.replace("%CSS_URI%", cssUri.toString())
+			.replace("%I18N_SCRIPT_URI%", i18nJsUri.toString())
 			.replace("%SCRIPT_URI%", jsUri.toString());
 		return html;
 	}
@@ -797,7 +802,7 @@ export class ConfigViewPanel {
 	) {
 		const trimmedProvider = provider.trim();
 		if (!trimmedProvider) {
-			vscode.window.showErrorMessage("Provider ID is required.");
+			vscode.window.showErrorMessage(vscode.l10n.t("Provider ID is required."));
 			return;
 		}
 		await this.applyProviderApiKeyChange(trimmedProvider, apiKey, clearApiKey);
@@ -816,7 +821,7 @@ export class ConfigViewPanel {
 			await config.update("oaicopilot.models", migrated.models, vscode.ConfigurationTarget.Global);
 		}
 		await this.updateProviderConfigs(updatedProviders);
-		vscode.window.showInformationMessage(`Provider ${provider} has been added.`);
+		vscode.window.showInformationMessage(vscode.l10n.t("Provider {0} has been added.", provider));
 		this.refreshConfiguration();
 		// Send refresh signal to frontend
 		await this.sendInit();
@@ -832,7 +837,7 @@ export class ConfigViewPanel {
 	) {
 		const trimmedProvider = provider.trim();
 		if (!trimmedProvider) {
-			vscode.window.showErrorMessage("Provider ID is required.");
+			vscode.window.showErrorMessage(vscode.l10n.t("Provider ID is required."));
 			return;
 		}
 		await this.applyProviderApiKeyChange(trimmedProvider, apiKey, clearApiKey);
@@ -852,7 +857,7 @@ export class ConfigViewPanel {
 			await config.update("oaicopilot.models", migrated.models, vscode.ConfigurationTarget.Global);
 		}
 		await this.updateProviderConfigs(updatedProviders);
-		vscode.window.showInformationMessage(`Provider ${provider} has been updated.`);
+		vscode.window.showInformationMessage(vscode.l10n.t("Provider {0} has been updated.", provider));
 		this.refreshConfiguration();
 		// Send refresh signal to frontend
 		await this.sendInit();
@@ -861,7 +866,7 @@ export class ConfigViewPanel {
 	private async deleteProvider(provider: string) {
 		const trimmedProvider = provider.trim();
 		if (!trimmedProvider) {
-			vscode.window.showErrorMessage("Provider ID is required.");
+			vscode.window.showErrorMessage(vscode.l10n.t("Provider ID is required."));
 			return;
 		}
 		const normalizedProvider = trimmedProvider.toLowerCase();
@@ -880,7 +885,9 @@ export class ConfigViewPanel {
 
 		await config.update("oaicopilot.models", filteredModels, vscode.ConfigurationTarget.Global);
 		await this.updateProviderConfigs(updatedProviders);
-		vscode.window.showInformationMessage(`Provider ${provider} and all its models have been deleted.`);
+		vscode.window.showInformationMessage(
+			vscode.l10n.t("Provider {0} and all its models have been deleted.", provider)
+		);
 		this.refreshConfiguration();
 		// Send refresh signal to frontend
 		await this.sendInit();
@@ -977,18 +984,16 @@ export class ConfigViewPanel {
 				((modelToAdd.configId && m.configId === modelToAdd.configId) || (!modelToAdd.configId && !m.configId))
 		);
 		if (existingIndex !== -1) {
-			vscode.window.showErrorMessage(
-				`Model ${modelToAdd.id}${modelToAdd.configId ? "::" + modelToAdd.configId : ""} already exists.`
-			);
+			const modelKey = `${modelToAdd.id}${modelToAdd.configId ? "::" + modelToAdd.configId : ""}`;
+			vscode.window.showErrorMessage(vscode.l10n.t("Model {0} already exists.", modelKey));
 			return;
 		}
 
 		await this.applyModelApiKey(modelToAdd, providerApiKey, inheritProvider);
 		models.push(modelToAdd);
 		await config.update("oaicopilot.models", models, vscode.ConfigurationTarget.Global);
-		vscode.window.showInformationMessage(
-			`Model ${modelToAdd.id}${modelToAdd.configId ? "::" + modelToAdd.configId : ""} has been added.`
-		);
+		const addedModelKey = `${modelToAdd.id}${modelToAdd.configId ? "::" + modelToAdd.configId : ""}`;
+		vscode.window.showInformationMessage(vscode.l10n.t("Model {0} has been added.", addedModelKey));
 		this.refreshConfiguration();
 		// Send refresh signal to frontend
 		await this.sendInit();
@@ -1005,7 +1010,7 @@ export class ConfigViewPanel {
 		const result = resolveBatchAddModels(models, modelsToAdd, { inheritProvider, providerConfigs: providers });
 
 		if (result.added.length === 0) {
-			vscode.window.showInformationMessage("No new models were added.");
+			vscode.window.showInformationMessage(vscode.l10n.t("No new models were added."));
 			await this.sendInit();
 			return;
 		}
@@ -1015,8 +1020,12 @@ export class ConfigViewPanel {
 		}
 
 		await config.update("oaicopilot.models", result.models, vscode.ConfigurationTarget.Global);
-		const skippedSuffix = result.skipped.length ? ` ${result.skipped.length} already configured.` : "";
-		vscode.window.showInformationMessage(`${result.added.length} model(s) have been added.${skippedSuffix}`);
+		const skippedSuffix = result.skipped.length
+			? ` ${vscode.l10n.t("{0} already configured.", result.skipped.length)}`
+			: "";
+		vscode.window.showInformationMessage(
+			vscode.l10n.t("{0} model(s) have been added.{1}", result.added.length, skippedSuffix)
+		);
 		this.refreshConfiguration();
 		await this.sendInit();
 	}
@@ -1055,9 +1064,8 @@ export class ConfigViewPanel {
 
 		await this.applyModelApiKey(modelToUpdate, providerApiKey, shouldInheritProvider);
 		await config.update("oaicopilot.models", updatedModels, vscode.ConfigurationTarget.Global);
-		vscode.window.showInformationMessage(
-			`Model ${modelToUpdate.id}${modelToUpdate.configId ? "::" + modelToUpdate.configId : ""} has been updated.`
-		);
+		const updatedModelKey = `${modelToUpdate.id}${modelToUpdate.configId ? "::" + modelToUpdate.configId : ""}`;
+		vscode.window.showInformationMessage(vscode.l10n.t("Model {0} has been updated.", updatedModelKey));
 		this.refreshConfiguration();
 		// Send refresh signal to frontend
 		await this.sendInit();
@@ -1077,7 +1085,7 @@ export class ConfigViewPanel {
 		});
 
 		await config.update("oaicopilot.models", filteredModels, vscode.ConfigurationTarget.Global);
-		vscode.window.showInformationMessage(`Model ${modelId} has been deleted.`);
+		vscode.window.showInformationMessage(vscode.l10n.t("Model {0} has been deleted.", modelId));
 		this.refreshConfiguration();
 		// Send refresh signal to frontend
 		await this.sendInit();
@@ -1089,13 +1097,13 @@ export class ConfigViewPanel {
 		const result = resolveBatchDeleteModels(models, modelIds);
 
 		if (result.removedIds.length === 0) {
-			vscode.window.showInformationMessage("No matching models were deleted.");
+			vscode.window.showInformationMessage(vscode.l10n.t("No matching models were deleted."));
 			await this.sendInit();
 			return;
 		}
 
 		await config.update("oaicopilot.models", result.models, vscode.ConfigurationTarget.Global);
-		vscode.window.showInformationMessage(`${result.removedIds.length} model(s) have been deleted.`);
+		vscode.window.showInformationMessage(vscode.l10n.t("{0} model(s) have been deleted.", result.removedIds.length));
 		this.refreshConfiguration();
 		await this.sendInit();
 	}
@@ -1160,21 +1168,21 @@ export class ConfigViewPanel {
 			const uri = await vscode.window.showSaveDialog({
 				defaultUri: vscode.Uri.file(`oaiproxy-config-${new Date().toISOString().split("T")[0]}.json`),
 				filters: { "JSON Files": ["json"] },
-				title: "Export OAIProxy Configuration",
+				title: vscode.l10n.t("Export OAIProxy Configuration"),
 			});
 
 			if (!uri) {
-				vscode.window.showInformationMessage("Export configuration cancelled.");
+				vscode.window.showInformationMessage(vscode.l10n.t("Export configuration cancelled."));
 				return;
 			}
 
 			const encoder = new TextEncoder();
 			await vscode.workspace.fs.writeFile(uri, encoder.encode(JSON.stringify(exportData, null, 2)));
 
-			vscode.window.showInformationMessage(`Configuration exported to ${uri.fsPath}`);
+			vscode.window.showInformationMessage(vscode.l10n.t("Configuration exported to {0}", uri.fsPath));
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : "Unknown error";
-			vscode.window.showErrorMessage(`Failed to export configuration: ${errorMessage}`);
+			vscode.window.showErrorMessage(vscode.l10n.t("Failed to export configuration: {0}", errorMessage));
 		}
 	}
 
@@ -1185,11 +1193,11 @@ export class ConfigViewPanel {
 				canSelectFolders: false,
 				canSelectMany: false,
 				filters: { "JSON Files": ["json"] },
-				title: "Import OAIProxy Configuration",
+				title: vscode.l10n.t("Import OAIProxy Configuration"),
 			});
 
 			if (!uri || uri.length === 0) {
-				vscode.window.showInformationMessage("Import configuration cancelled.");
+				vscode.window.showInformationMessage(vscode.l10n.t("Import configuration cancelled."));
 				return;
 			}
 
@@ -1199,7 +1207,7 @@ export class ConfigViewPanel {
 			const importData = JSON.parse(jsonContent) as ExportConfig;
 
 			if (!Array.isArray(importData.models)) {
-				throw new Error("Invalid configuration file: models must be an array");
+				throw new Error(vscode.l10n.t("Invalid configuration file: models must be an array"));
 			}
 			const importedProviders = normalizeProviderConfigs(importData.providers ?? []);
 			const migratedImport = migrateProviderPlaceholderModels(normalizeUserModels(importData.models), importedProviders);
@@ -1238,12 +1246,12 @@ export class ConfigViewPanel {
 				}
 			}
 
-			vscode.window.showInformationMessage("Configuration imported successfully.");
+			vscode.window.showInformationMessage(vscode.l10n.t("Configuration imported successfully."));
 			this.refreshConfiguration();
 			await this.sendInit();
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : "Unknown error";
-			vscode.window.showErrorMessage(`Failed to import configuration: ${errorMessage}`);
+			vscode.window.showErrorMessage(vscode.l10n.t("Failed to import configuration: {0}", errorMessage));
 		}
 	}
 }

@@ -16,8 +16,8 @@ export function initStatusBar(context: vscode.ExtensionContext): vscode.StatusBa
 	// Create status bar item for token count display
 	const tokenCountStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
 	tokenCountStatusBarItem.name = "OAIProxy Usage";
-	tokenCountStatusBarItem.text = "$(server-process) OAIProxy Ready";
-	tokenCountStatusBarItem.tooltip = "Current model token usage - Click to Open Configuration UI";
+	tokenCountStatusBarItem.text = "$(server-process) " + vscode.l10n.t("OAIProxy Ready");
+	tokenCountStatusBarItem.tooltip = vscode.l10n.t("Current model token usage - Click to Open Configuration UI");
 	tokenCountStatusBarItem.command = "oaiproxy.openConfig";
 	context.subscriptions.push(tokenCountStatusBarItem);
 	context.subscriptions.push(

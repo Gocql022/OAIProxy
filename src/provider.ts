@@ -887,11 +887,12 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		// Falling back to the generic key can accidentally send another provider's credential.
 		if (shouldUseProviderKey) {
 			apiKey = await this.secrets.get(providerKey);
+			const providerLabel = normalizedProvider ?? "";
 			apiKey = await this.normalizeStoredApiKey({
 				apiKey,
 				secretKey: providerKey,
-				title: `OAIProxy API Key for ${normalizedProvider}`,
-				prompt: `Enter your OAIProxy API key for ${normalizedProvider}`,
+				title: vscode.l10n.t("OAIProxy API Key for {0}", providerLabel),
+				prompt: vscode.l10n.t("Enter your OAIProxy API key for {0}", providerLabel),
 				provider: normalizedProvider,
 				baseUrl,
 				apiMode,
@@ -905,8 +906,8 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		return await this.normalizeStoredApiKey({
 			apiKey,
 			secretKey: "oaicopilot.apiKey",
-			title: "OAIProxy API Key",
-			prompt: "Enter your OAIProxy API key",
+			title: vscode.l10n.t("OAIProxy API Key"),
+			prompt: vscode.l10n.t("Enter your OAIProxy API key"),
 			provider: normalizedProvider,
 			baseUrl,
 			apiMode,
@@ -942,7 +943,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			if (options.allowPrompt) {
 				await this.secrets.delete(options.secretKey);
 				void vscode.window.showWarningMessage(
-					"Stored OpenAI API key is malformed. OAIProxy removed it; enter a valid OpenAI key starting with sk-."
+					vscode.l10n.t(
+						"Stored OpenAI API key is malformed. OAIProxy removed it; enter a valid OpenAI key starting with sk-."
+					)
 				);
 			}
 		}
@@ -957,7 +960,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			if (entered && entered.trim()) {
 				apiKey = entered.trim();
 				if (this.isInvalidOfficialOpenAIApiKey(apiKey, options.provider, options.baseUrl, options.apiMode)) {
-					throw new Error("Invalid OpenAI API key format. Enter an OpenAI API key that starts with sk-.");
+					throw new Error(
+						vscode.l10n.t("Invalid OpenAI API key format. Enter an OpenAI API key that starts with sk-.")
+					);
 				}
 				await this.secrets.store(options.secretKey, apiKey);
 			}

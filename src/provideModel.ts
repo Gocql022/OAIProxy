@@ -160,11 +160,11 @@ function createModelConfigurationSchema(
 		properties: {
 			reasoningEffort: {
 				type: "string",
-				title: "Thinking Effort",
-				description: "Controls how much reasoning the model should use before answering.",
+					title: vscode.l10n.t("Thinking Effort"),
+					description: vscode.l10n.t("Controls how much reasoning the model should use before answering."),
 				enum: enumValues,
 				enumItemLabels: enumValues.map(formatReasoningEffortLabel),
-				enumDescriptions: enumValues.map(getReasoningEffortDescription),
+				enumDescriptions: enumValues.map((value) => vscode.l10n.t(getReasoningEffortDescription(value))),
 				group: "navigation",
 				...(defaultValue ? { default: defaultValue } : {}),
 			},
@@ -243,8 +243,8 @@ async function ensureApiKey(silent: boolean, secrets: vscode.SecretStorage): Pro
 
 	if (!apiKey && !silent) {
 		const entered = await vscode.window.showInputBox({
-			title: "OAIProxy API Key",
-			prompt: "Enter your OAIProxy API key",
+			title: vscode.l10n.t("OAIProxy API Key"),
+			prompt: vscode.l10n.t("Enter your OAIProxy API key"),
 			ignoreFocusOut: true,
 			password: true,
 		});

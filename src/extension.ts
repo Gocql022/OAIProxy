@@ -75,18 +75,18 @@ export function activate(context: vscode.ExtensionContext) {
 					[
 						...providerTargets.map((target) => ({
 							label: `$(key) ${target.label}`,
-							description: `Provider key: ${target.provider}`,
+							description: vscode.l10n.t("Provider key: {0}", target.provider),
 							provider: target.provider,
 						})),
 						{
-							label: "$(globe) Generic OAIProxy key",
-							description: "Used by models without a custom baseUrl",
+							label: "$(globe) " + vscode.l10n.t("Generic OAIProxy key"),
+							description: vscode.l10n.t("Used by models without a custom baseUrl"),
 							provider: undefined,
 						},
 					],
 					{
-						title: "Select API Key Scope",
-						placeHolder: "Choose which API key to configure",
+						title: vscode.l10n.t("Select API Key Scope"),
+						placeHolder: vscode.l10n.t("Choose which API key to configure"),
 					}
 				);
 				if (!selectedTarget) {
@@ -111,7 +111,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			if (providers.length === 0) {
 				vscode.window.showErrorMessage(
-					"No providers found. Add a provider in OAIProxy Provider Management first."
+					vscode.l10n.t("No providers found. Add a provider in OAIProxy Provider Management first.")
 				);
 				return;
 			}
@@ -120,12 +120,12 @@ export function activate(context: vscode.ExtensionContext) {
 			const selectedProvider = await vscode.window.showQuickPick(
 				providers.map((target) => ({
 					label: target.label,
-					description: `Provider key: ${target.provider}`,
+					description: vscode.l10n.t("Provider key: {0}", target.provider),
 					provider: target.provider,
 				})),
 				{
-					title: "Select Provider",
-					placeHolder: "Select a provider to configure API key",
+					title: vscode.l10n.t("Select Provider"),
+					placeHolder: vscode.l10n.t("Select a provider to configure API key"),
 				}
 			);
 
@@ -152,7 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			if (providers.length === 0) {
 				vscode.window.showInformationMessage(
-					"No configured OpenAI, Anthropic, DeepSeek, Fireworks, Kimi/Moonshot, or MiniMax providers found."
+					vscode.l10n.t("No configured OpenAI, Anthropic, DeepSeek, Fireworks, Kimi/Moonshot, or MiniMax providers found.")
 				);
 				return;
 			}
@@ -165,8 +165,8 @@ export function activate(context: vscode.ExtensionContext) {
 					baseUrl: target.baseUrl,
 				})),
 				{
-					title: "Check Provider Balance / Usage",
-					placeHolder: "Select a provider to check",
+					title: vscode.l10n.t("Check Provider Balance / Usage"),
+					placeHolder: vscode.l10n.t("Select a provider to check"),
 				}
 			);
 
@@ -224,10 +224,16 @@ async function configureApiKey(
 	const normalizedProvider = providerId?.trim().toLowerCase();
 	const secretKey = normalizedProvider ? `oaicopilot.apiKey.${normalizedProvider}` : "oaicopilot.apiKey";
 	const existing = await context.secrets.get(secretKey);
-	const title = normalizedProvider ? `OAIProxy API Key for ${normalizedProvider}` : "OAIProxy API Key";
+	const title = normalizedProvider
+		? vscode.l10n.t("OAIProxy API Key for {0}", normalizedProvider)
+		: vscode.l10n.t("OAIProxy API Key");
 	const prompt = existing
-		? `Update ${normalizedProvider ? `API key for ${normalizedProvider}` : "your OAIProxy API key"}`
-		: `Enter ${normalizedProvider ? `API key for ${normalizedProvider}` : "your OAIProxy API key"}`;
+		? normalizedProvider
+			? vscode.l10n.t("Update API key for {0}", normalizedProvider)
+			: vscode.l10n.t("Update your OAIProxy API key")
+		: normalizedProvider
+			? vscode.l10n.t("Enter API key for {0}", normalizedProvider)
+			: vscode.l10n.t("Enter your OAIProxy API key");
 	const apiKey = await vscode.window.showInputBox({
 		title,
 		prompt,
@@ -243,7 +249,9 @@ async function configureApiKey(
 		await context.secrets.delete(secretKey);
 		refreshLanguageModels(provider);
 		vscode.window.showInformationMessage(
-			normalizedProvider ? `API key for ${normalizedProvider} cleared.` : "OAIProxy API key cleared."
+			normalizedProvider
+				? vscode.l10n.t("API key for {0} cleared.", normalizedProvider)
+				: vscode.l10n.t("OAIProxy API key cleared.")
 		);
 		return;
 	}
@@ -251,7 +259,9 @@ async function configureApiKey(
 	await context.secrets.store(secretKey, apiKey.trim());
 	refreshLanguageModels(provider);
 	vscode.window.showInformationMessage(
-		normalizedProvider ? `API key for ${normalizedProvider} saved.` : "OAIProxy API key saved."
+		normalizedProvider
+			? vscode.l10n.t("API key for {0} saved.", normalizedProvider)
+			: vscode.l10n.t("OAIProxy API key saved.")
 	);
 }
 
@@ -320,7 +330,8 @@ async function runProviderUsageCheck(
 		const adapter = getProviderUsageAdapter(provider, baseUrl);
 		if (!adapter) {
 			vscode.window.showErrorMessage(
-				getProviderUsageUnsupportedReason(provider, baseUrl) ?? `Provider ${provider} does not support usage checks yet.`
+				getProviderUsageUnsupportedReason(provider, baseUrl) ??
+					vscode.l10n.t("Provider {0} does not support usage checks yet.", provider)
 			);
 			return;
 		}
@@ -334,8 +345,8 @@ async function runProviderUsageCheck(
 		if (!apiKey) {
 			vscode.window.showErrorMessage(
 				providerRequiresUsageApiKey(adapter)
-					? `No usage/admin API key found for provider ${provider}.`
-					: `No API key found for provider ${provider}. Configure its provider API key first.`
+					? vscode.l10n.t("No usage/admin API key found for provider {0}.", provider)
+					: vscode.l10n.t("No API key found for provider {0}. Configure its provider API key first.", provider)
 			);
 			return;
 		}
@@ -359,11 +370,18 @@ async function promptForUsageApiKey(
 	provider: string,
 	adapter: ProviderUsageAdapter
 ): Promise<string | undefined> {
-	const title = adapter === "openai" ? "OpenAI Admin API Key for Usage" : "Anthropic Admin API Key for Usage";
+	const title =
+		adapter === "openai"
+			? vscode.l10n.t("OpenAI Admin API Key for Usage")
+			: vscode.l10n.t("Anthropic Admin API Key for Usage");
 	const prompt =
 		adapter === "openai"
-			? "OpenAI usage/cost checks require an Admin API key. It is stored separately from the chat API key."
-			: "Anthropic usage/cost checks require an Admin API key (sk-ant-admin...). It is stored separately from the chat API key.";
+			? vscode.l10n.t(
+					"OpenAI usage/cost checks require an Admin API key. It is stored separately from the chat API key."
+				)
+			: vscode.l10n.t(
+					"Anthropic usage/cost checks require an Admin API key (sk-ant-admin...). It is stored separately from the chat API key."
+				);
 	const apiKey = await vscode.window.showInputBox({
 		title,
 		prompt,

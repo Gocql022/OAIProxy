@@ -56,8 +56,9 @@ export interface TokenUsageEstimator {
 	countToolDefinitions(tools: readonly LanguageModelChatTool[]): Promise<number>;
 }
 
-const DEFAULT_NOTE =
-	"Best-effort estimate. VS Code exposes the assembled request, so project context is grouped with system/context messages when it is not separately labeled.";
+const DEFAULT_NOTE = vscode.l10n.t(
+	"Best-effort estimate. VS Code exposes the assembled request, so project context is grouped with system/context messages when it is not separately labeled."
+);
 
 const CORE_CATEGORY_IDS = new Set<TokenUsageCategoryId>([
 	"systemContext",
@@ -163,17 +164,32 @@ export function formatTokenUsageTooltip(report: TokenUsageReport): vscode.Markdo
 	const markdown = new vscode.MarkdownString(undefined, true);
 	markdown.supportThemeIcons = true;
 	markdown.appendMarkdown(`$(server-process) **OAIProxy**\n\n`);
-	markdown.appendMarkdown(`**${formatTokenPercentage(report.inputTokens, report.maxContextTokens)}** of context used\n\n`);
 	markdown.appendMarkdown(
-		`${formatTokenCount(report.inputTokens)} / ${formatTokenCount(report.maxContextTokens)} context · ${formatTokenCount(report.maxOutputTokens)} output reserve\n\n`
+		vscode.l10n.t(
+			"**{0}** of context used",
+			formatTokenPercentage(report.inputTokens, report.maxContextTokens)
+		) + "\n\n"
+	);
+	markdown.appendMarkdown(
+		vscode.l10n.t(
+			"{0} / {1} context · {2} output reserve",
+			formatTokenCount(report.inputTokens),
+			formatTokenCount(report.maxContextTokens),
+			formatTokenCount(report.maxOutputTokens)
+		) + "\n\n"
 	);
 	markdown.appendMarkdown("---\n\n");
 	markdown.appendMarkdown(
-		`$(graph-line) **Input budget** ${formatTokenPercentage(report.inputTokens, report.maxInputTokens)} · ${formatTokenCount(report.inputTokens)} / ${formatTokenCount(report.maxInputTokens)}\n\n`
+		vscode.l10n.t(
+			"$(graph-line) **Input budget** {0} · {1} / {2}",
+			formatTokenPercentage(report.inputTokens, report.maxInputTokens),
+			formatTokenCount(report.inputTokens),
+			formatTokenCount(report.maxInputTokens)
+		) + "\n\n"
 	);
 	markdown.appendMarkdown(`${formatCacheUsageSummary(cacheUsage, report)}\n\n`);
 	markdown.appendMarkdown("---\n\n");
-	markdown.appendMarkdown(`$(list-tree) **Breakdown**\n\n`);
+	markdown.appendMarkdown(vscode.l10n.t("$(list-tree) **Breakdown**") + "\n\n");
 	for (const line of formatTooltipBreakdownLines(report)) {
 		markdown.appendMarkdown(`${line}\n\n`);
 	}
@@ -182,25 +198,35 @@ export function formatTokenUsageTooltip(report: TokenUsageReport): vscode.Markdo
 		markdown.appendMarkdown(`\n$(warning) ${warning}\n`);
 	}
 
-	markdown.appendMarkdown(`$(gear) Click to open OAIProxy Configuration`);
+	markdown.appendMarkdown(vscode.l10n.t("$(gear) Click to open OAIProxy Configuration"));
 	return markdown;
 }
 
 export function formatTokenUsageDetails(report: TokenUsageReport): string {
 	const lines = [
-		"OAIProxy Token Usage",
-		`Model: ${report.modelName} (${report.modelId})`,
-		`Generated: ${report.generatedAt}`,
+		vscode.l10n.t("OAIProxy Token Usage"),
+		vscode.l10n.t("Model: {0} ({1})", report.modelName, report.modelId),
+		vscode.l10n.t("Generated: {0}", report.generatedAt),
 		"",
-		`Input Tokens: ${formatTokenCount(report.inputTokens)} / ${formatTokenCount(report.maxInputTokens)} (${formatTokenPercentage(report.inputTokens, report.maxInputTokens)})`,
-		`Context Window: ${formatTokenCount(report.inputTokens)} / ${formatTokenCount(report.maxContextTokens)} (${formatTokenPercentage(report.inputTokens, report.maxContextTokens)})`,
-		`Output Reserve: ${formatTokenCount(report.maxOutputTokens)}`,
-		`Messages: ${report.messageCount}`,
-		`Tools: ${report.toolCount}`,
+		vscode.l10n.t(
+			"Input Tokens: {0} / {1} ({2})",
+			formatTokenCount(report.inputTokens),
+			formatTokenCount(report.maxInputTokens),
+			formatTokenPercentage(report.inputTokens, report.maxInputTokens)
+		),
+		vscode.l10n.t(
+			"Context Window: {0} / {1} ({2})",
+			formatTokenCount(report.inputTokens),
+			formatTokenCount(report.maxContextTokens),
+			formatTokenPercentage(report.inputTokens, report.maxContextTokens)
+		),
+		vscode.l10n.t("Output Reserve: {0}", formatTokenCount(report.maxOutputTokens)),
+		vscode.l10n.t("Messages: {0}", report.messageCount),
+		vscode.l10n.t("Tools: {0}", report.toolCount),
 		"",
 		...formatCacheUsageLines(report),
 		"",
-		"Breakdown:",
+		vscode.l10n.t("Breakdown:"),
 		...getVisibleCategories(report).map((category) => formatCategoryLine(category, report.maxInputTokens)),
 	];
 
@@ -209,12 +235,17 @@ export function formatTokenUsageDetails(report: TokenUsageReport): string {
 		lines.push("", warning);
 	}
 
-	lines.push("", "Notes:", `- ${report.note}`);
+	lines.push("", vscode.l10n.t("Notes:"), `- ${report.note}`);
 	return lines.join("\n");
 }
 
 export function formatTokenUsageSummary(report: TokenUsageReport): string {
-	return `OAIProxy token usage: ${formatTokenCount(report.inputTokens)} input (${report.inputUsagePercent.toFixed(1)}% input budget, ${report.contextUsagePercent.toFixed(1)}% context).`;
+	return vscode.l10n.t(
+		"OAIProxy token usage: {0} input ({1}% input budget, {2}% context).",
+		formatTokenCount(report.inputTokens),
+		report.inputUsagePercent.toFixed(1),
+		report.contextUsagePercent.toFixed(1)
+	);
 }
 
 export function getTokenBudgetErrorMessage(report: TokenUsageReport): string | undefined {
@@ -232,22 +263,30 @@ export function getTokenBudgetErrorMessage(report: TokenUsageReport): string | u
 	const categorySuffix = largestCategories ? ` Largest categories: ${largestCategories}.` : "";
 
 	return [
-		`OAIProxy blocked this request before contacting the provider because Copilot assembled ${formatTokenCount(report.inputTokens)} input tokens for ${report.modelName}, which is ${formatTokenCount(overBy)} over the advertised input budget of ${formatTokenCount(report.maxInputTokens)}.`,
-		`Output reserve is ${formatTokenCount(report.maxOutputTokens)} tokens.`,
-		"Run /compact in this Copilot chat, start a new chat, or remove large attached files/tool output/terminal output before retrying.",
+		vscode.l10n.t(
+			"OAIProxy blocked this request before contacting the provider because Copilot assembled {0} input tokens for {1}, which is {2} over the advertised input budget of {3}.",
+			formatTokenCount(report.inputTokens),
+			report.modelName,
+			formatTokenCount(overBy),
+			formatTokenCount(report.maxInputTokens)
+		),
+		vscode.l10n.t("Output reserve is {0} tokens.", formatTokenCount(report.maxOutputTokens)),
+		vscode.l10n.t(
+			"Run /compact in this Copilot chat, start a new chat, or remove large attached files/tool output/terminal output before retrying."
+		),
 		categorySuffix,
 	].join(" ");
 }
 
 function createTokenUsageCategories(): TokenUsageCategory[] {
 	return [
-		{ id: "systemContext", label: "System / Project Context", tokens: 0 },
-		{ id: "currentPrompt", label: "Current User Prompt", tokens: 0 },
-		{ id: "conversationHistory", label: "Conversation History", tokens: 0 },
-		{ id: "toolDefinitions", label: "Tool Definitions", tokens: 0 },
-		{ id: "toolTraffic", label: "Tool Calls / Results", tokens: 0 },
-		{ id: "media", label: "Images / Binary", tokens: 0 },
-		{ id: "reasoning", label: "Reasoning History", tokens: 0 },
+		{ id: "systemContext", label: vscode.l10n.t("System / Project Context"), tokens: 0 },
+		{ id: "currentPrompt", label: vscode.l10n.t("Current User Prompt"), tokens: 0 },
+		{ id: "conversationHistory", label: vscode.l10n.t("Conversation History"), tokens: 0 },
+		{ id: "toolDefinitions", label: vscode.l10n.t("Tool Definitions"), tokens: 0 },
+		{ id: "toolTraffic", label: vscode.l10n.t("Tool Calls / Results"), tokens: 0 },
+		{ id: "media", label: vscode.l10n.t("Images / Binary"), tokens: 0 },
+		{ id: "reasoning", label: vscode.l10n.t("Reasoning History"), tokens: 0 },
 	];
 }
 
@@ -333,26 +372,26 @@ function formatCategoryLine(category: TokenUsageCategory, maxInputTokens: number
 function formatTooltipCategoryLabel(category: TokenUsageCategory): string {
 	switch (category.id) {
 		case "systemContext":
-			return "$(project) System / Project Context";
+			return vscode.l10n.t("$(project) System / Project Context");
 		case "currentPrompt":
-			return "$(account) User Prompt";
+			return vscode.l10n.t("$(account) User Prompt");
 		case "conversationHistory":
-			return "$(comment-discussion) Conversation";
+			return vscode.l10n.t("$(comment-discussion) Conversation");
 		case "toolDefinitions":
-			return "$(code) Tool Definitions";
+			return vscode.l10n.t("$(code) Tool Definitions");
 		case "toolTraffic":
-			return "$(tools) Tool Calls / Results";
+			return vscode.l10n.t("$(tools) Tool Calls / Results");
 		case "media":
-			return "$(file-media) Images / Binary";
+			return vscode.l10n.t("$(file-media) Images / Binary");
 		case "reasoning":
-			return "$(sparkle) Reasoning";
+			return vscode.l10n.t("$(sparkle) Reasoning");
 	}
 }
 
 function formatTooltipBreakdownLines(report: TokenUsageReport): string[] {
 	const visibleCategories = getVisibleCategories(report);
 	if (visibleCategories.length === 0) {
-		return ["$(circle-slash) No request tokens counted yet"];
+		return [vscode.l10n.t("$(circle-slash) No request tokens counted yet")];
 	}
 
 	const lines: string[] = [];
@@ -373,24 +412,30 @@ function formatTooltipBreakdownLines(report: TokenUsageReport): string[] {
 function formatCacheUsageLines(report: TokenUsageReport): string[] {
 	const cacheUsage = getLatestCacheUsage(report.modelId) ?? getLatestCacheUsage();
 	if (!cacheUsage) {
-		return ["Cache:", "  - Status: no provider cache telemetry yet"];
+		return [vscode.l10n.t("Cache:"), vscode.l10n.t("  - Status: no provider cache telemetry yet")];
 	}
 
-	const source = cacheUsage.modelId === report.modelId
-		? cacheUsage.apiMode
-		: `${cacheUsage.apiMode} / ${cacheUsage.modelId}`;
+	const source =
+		cacheUsage.modelId === report.modelId
+			? cacheUsage.apiMode
+			: `${cacheUsage.apiMode} / ${cacheUsage.modelId}`;
 	const lines = [
-		"Cache:",
-		`  - Status: ${formatCacheStatus(cacheUsage)}`,
-		`  - Source: ${source}`,
+		vscode.l10n.t("Cache:"),
+		vscode.l10n.t("  - Status: {0}", formatCacheStatus(cacheUsage)),
+		vscode.l10n.t("  - Source: {0}", source),
 	];
 
 	if (cacheUsage.cacheHitRate !== undefined) {
 		lines.push(
-			`  - Hit Rate: ${(cacheUsage.cacheHitRate * 100).toFixed(1)}% (${formatTokenCount(cacheUsage.cacheHitTokens ?? 0)} / ${formatTokenCount(cacheUsage.cacheEligibleTokens ?? 0)} input tokens)`
+			vscode.l10n.t(
+				"  - Hit Rate: {0}% ({1} / {2} input tokens)",
+				(cacheUsage.cacheHitRate * 100).toFixed(1),
+				formatTokenCount(cacheUsage.cacheHitTokens ?? 0),
+				formatTokenCount(cacheUsage.cacheEligibleTokens ?? 0)
+			)
 		);
 	} else if (cacheUsage.cacheHitTokens !== undefined) {
-		lines.push(`  - Cached Input: ${formatTokenCount(cacheUsage.cacheHitTokens)}`);
+		lines.push(vscode.l10n.t("  - Cached Input: {0}", formatTokenCount(cacheUsage.cacheHitTokens)));
 	}
 
 	return lines;
@@ -398,38 +443,57 @@ function formatCacheUsageLines(report: TokenUsageReport): string[] {
 
 function formatCacheUsageSummary(cacheUsage: CacheUsageRecord | undefined, report: TokenUsageReport): string {
 	if (!cacheUsage) {
-		return "$(database) **Cache** No provider telemetry yet";
+		return vscode.l10n.t("$(database) **Cache** No provider telemetry yet");
 	}
 
 	const status = formatCacheStatus(cacheUsage);
-	const source = cacheUsage.modelId === report.modelId
-		? cacheUsage.apiMode
-		: `${cacheUsage.apiMode} / ${cacheUsage.modelId}`;
+	const source =
+		cacheUsage.modelId === report.modelId
+			? cacheUsage.apiMode
+			: `${cacheUsage.apiMode} / ${cacheUsage.modelId}`;
 	if (cacheUsage.cacheHitRate !== undefined) {
-		return `$(database) **Cache** **${(cacheUsage.cacheHitRate * 100).toFixed(1)}% hit** · ${status} · ${formatTokenCount(cacheUsage.cacheHitTokens ?? 0)} / ${formatTokenCount(cacheUsage.cacheEligibleTokens ?? 0)} · ${source}`;
+		return vscode.l10n.t(
+			"$(database) **Cache** **{0}% hit** · {1} · {2} / {3} · {4}",
+			(cacheUsage.cacheHitRate * 100).toFixed(1),
+			status,
+			formatTokenCount(cacheUsage.cacheHitTokens ?? 0),
+			formatTokenCount(cacheUsage.cacheEligibleTokens ?? 0),
+			source
+		);
 	}
 	if (cacheUsage.cacheHitTokens !== undefined) {
-		return `$(database) **Cache** ${formatTokenCount(cacheUsage.cacheHitTokens)} cached input · ${status} · ${source}`;
+		return vscode.l10n.t(
+			"$(database) **Cache** {0} cached input · {1} · {2}",
+			formatTokenCount(cacheUsage.cacheHitTokens),
+			status,
+			source
+		);
 	}
-	return `$(database) **Cache** ${status} · ${source}`;
+	return vscode.l10n.t("$(database) **Cache** {0} · {1}", status, source);
 }
 
 function formatCacheStatus(cacheUsage: CacheUsageRecord): string {
 	if (cacheUsage.status === "hit") {
-		return "working";
+		return vscode.l10n.t("working");
 	}
 	if (cacheUsage.status === "miss") {
-		return "no hit yet";
+		return vscode.l10n.t("no hit yet");
 	}
-	return "provider reported";
+	return vscode.l10n.t("provider reported");
 }
 
 function getWarningText(report: TokenUsageReport): string | undefined {
 	if (report.status === "error") {
-		return `Warning: input estimate is high (${report.inputUsagePercent.toFixed(1)}% of the advertised input budget).`;
+		return vscode.l10n.t(
+			"Warning: input estimate is high ({0}% of the advertised input budget).",
+			report.inputUsagePercent.toFixed(1)
+		);
 	}
 	if (report.status === "warning") {
-		return `Warning: input estimate is elevated (${report.inputUsagePercent.toFixed(1)}% of the advertised input budget).`;
+		return vscode.l10n.t(
+			"Warning: input estimate is elevated ({0}% of the advertised input budget).",
+			report.inputUsagePercent.toFixed(1)
+		);
 	}
 	return undefined;
 }
