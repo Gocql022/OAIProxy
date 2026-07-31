@@ -107,29 +107,52 @@
 					</div>
 				</div>
 			</div>
+			<div class="retry-config">
+				<h3 data-i18n="Vision Bridge">Vision Bridge</h3>
+				<div class="row">
+					<div class="field">
+						<label for="visionBridgeModel" data-i18n="Vision Bridge Model">Vision Bridge Model</label>
+						<div class="field-description" data-i18n="Model used to describe images for text-only models. Pick one from the list or type any registered model id. Leave empty for automatic selection.">
+							Model used to describe images for text-only models. Pick one from the list or type any
+							registered model id. Leave empty for automatic selection.
+						</div>
+						<input id="visionBridgeModel" type="text" list="visionBridgeModelOptions" placeholder="Auto (first configured vision model)" data-i18n-placeholder="Auto (first configured vision model)" />
+						<datalist id="visionBridgeModelOptions"></datalist>
+					</div>
+				</div>
+				<div class="row">
+					<div class="field">
+						<label for="visionBridgePrompt" data-i18n="Vision Bridge Prompt">Vision Bridge Prompt</label>
+						<div class="field-description" data-i18n="Custom prompt used to describe images. Leave empty to use the default prompt.">
+							Custom prompt used to describe images. Leave empty to use the default prompt.
+						</div>
+						<textarea id="visionBridgePrompt" rows="4" placeholder="Describe this image. Include visible text, code, UI, diagrams, and other important details." data-i18n-placeholder="Describe this image. Include visible text, code, UI, diagrams, and other important details."></textarea>
+					</div>
+				</div>
+			</div>
 			<div class="block-gap">
-				<button id="saveBase">Save Global Configuration</button>
+				<button id="saveBase" data-i18n="Save Global Configuration">Save Global Configuration</button>
 			</div>
 		</section>
 
 		<section id="providerManagementSection">
 			<div class="section-header">
-				<h2>Provider Management</h2>
+				<h2 data-i18n="Provider Management">Provider Management</h2>
 				<div class="section-actions">
-					<button id="addProvider">Add Provider</button>
-					<button id="refreshProviders" class="secondary">Refresh</button>
+					<button id="addProvider" data-i18n="Add Provider">Add Provider</button>
+					<button id="refreshProviders" class="secondary" data-i18n="Refresh">Refresh</button>
 				</div>
 			</div>
 			<div class="table-container">
 				<table id="providerTable">
 					<thead>
 						<tr>
-							<th>Provider ID</th>
-							<th>Base URL</th>
-							<th>API Key</th>
-							<th>API Mode</th>
-							<th>Custom Headers (JSON)</th>
-							<th>Actions</th>
+							<th data-i18n="Provider ID">Provider ID</th>
+							<th data-i18n="Base URL">Base URL</th>
+							<th data-i18n="API Key">API Key</th>
+							<th data-i18n="API Mode">API Mode</th>
+							<th data-i18n="Custom Headers (JSON)">Custom Headers (JSON)</th>
+							<th data-i18n="Actions">Actions</th>
 						</tr>
 					</thead>
 					<tbody id="providerTableBody">

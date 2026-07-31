@@ -106,6 +106,9 @@ const cancelModelBtn = document.getElementById("cancelModel");
 const toggleAdvancedSettingsBtn = document.getElementById("toggleAdvancedSettings");
 const commitModelInput = document.getElementById("commitModel");
 const commitLanguageInput = document.getElementById("commitLanguage");
+const visionBridgeModelInput = document.getElementById("visionBridgeModel");
+const visionBridgeModelOptions = document.getElementById("visionBridgeModelOptions");
+const visionBridgePromptInput = document.getElementById("visionBridgePrompt");
 const advancedSettingsContent = document.getElementById("advancedSettingsContent");
 
 // Error message element
@@ -138,6 +141,8 @@ document.getElementById("saveBase").addEventListener("click", () => {
 		retry: retry,
 		commitModel: commitModelInput.value,
 		commitLanguage: commitLanguageInput.value,
+		visionBridgeModel: visionBridgeModelInput.value,
+		visionBridgePrompt: visionBridgePromptInput.value,
 	});
 });
 
@@ -1478,6 +1483,8 @@ window.addEventListener("message", (event) => {
 				providerPresets,
 				modelPresets,
 				commitLanguage,
+				visionBridgeModel,
+				visionBridgePrompt,
 			} = message.payload;
 			state.baseUrl = baseUrl;
 			state.apiKey = apiKey;
@@ -1511,6 +1518,11 @@ window.addEventListener("message", (event) => {
 			populateCommitModelDropdown();
 			commitModelInput.value = state.commitModel || "";
 			commitLanguageInput.value = commitLanguage;
+
+			// Populate vision bridge model options and current values
+			populateVisionBridgeModelOptions();
+			visionBridgeModelInput.value = visionBridgeModel || "";
+			visionBridgePromptInput.value = visionBridgePrompt || "";
 
 			// Render provider and model management
 			renderProviders();
@@ -2196,6 +2208,26 @@ function populateCommitModelDropdown() {
 		option.value = fullModelId;
 		option.textContent = model.displayName || fullModelId;
 		commitModelInput.appendChild(option);
+	});
+}
+
+// Function to populate the vision bridge model datalist with vision-capable models
+function populateVisionBridgeModelOptions() {
+	// Clear existing options
+	while (visionBridgeModelOptions.children.length > 0) {
+		visionBridgeModelOptions.removeChild(visionBridgeModelOptions.lastChild);
+	}
+
+	const visionModels = state.models
+		.filter((model) => model.vision === true && !isProviderPlaceholderModel(model))
+		.sort((a, b) => a.id.localeCompare(b.id));
+
+	visionModels.forEach((model) => {
+		const option = document.createElement("option");
+		const fullModelId = `${model.id}${model.configId ? "::" + model.configId : ""}`;
+		option.value = fullModelId;
+		option.textContent = model.displayName || fullModelId;
+		visionBridgeModelOptions.appendChild(option);
 	});
 }
 

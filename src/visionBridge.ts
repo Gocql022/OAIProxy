@@ -2,15 +2,36 @@ import * as vscode from "vscode";
 import * as crypto from "crypto";
 import type { HFModelItem } from "./types";
 import { isImageMimeType, normalizeUserModels } from "./utils";
+import { isBridgeableImageData } from "./tokenizer/imageUtils";
 import { logger } from "./logger";
 
 const CACHE_MAX_ENTRIES = 50;
 const CACHE_MAX_SIZE_BYTES = 512_000; // ~500KB of description text
 
-const VISION_PROMPT = "Describe this image. Include visible text, code, UI, diagrams, and other important details.";
+export const DEFAULT_VISION_PROMPT =
+	"Describe this image. Include visible text, code, UI, diagrams, and other important details.";
 export const VISION_BRIDGE_REQUEST_OPTION = "oaiproxyVisionBridge";
 
 const LANGUAGE_MODEL_VENDOR = "oaiproxy";
+
+/**
+ * Resolve the vision bridge prompt. Uses the user-configured
+ * `oaicopilot.visionBridgePrompt` when set, otherwise the default prompt.
+ */
+export function getVisionPrompt(): string {
+	const config = vscode.workspace.getConfiguration();
+	const custom = (config.get<string>("oaicopilot.visionBridgePrompt", "") ?? "").trim();
+	return custom || DEFAULT_VISION_PROMPT;
+}
+
+/**
+ * Resolve the explicitly configured vision bridge model id
+ * (`oaicopilot.visionBridgeModel`), trimmed. Empty means automatic selection.
+ */
+export function getConfiguredVisionBridgeModel(): string {
+	const config = vscode.workspace.getConfiguration();
+	return (config.get<string>("oaicopilot.visionBridgeModel", "") ?? "").trim();
+}
 
 // ---------------------------------------------------------------------------
 // In-memory LRU cache for image descriptions
@@ -66,19 +87,45 @@ function hashImageData(data: Uint8Array): string {
 	return crypto.createHash("sha256").update(data).digest("hex");
 }
 
-function createVisionBridgeMessages(imagePart: vscode.LanguageModelDataPart): vscode.LanguageModelChatMessage[] {
+function createVisionBridgeMessages(
+	imagePart: vscode.LanguageModelDataPart,
+	prompt: string
+): vscode.LanguageModelChatMessage[] {
 	// Keep the bridge request intentionally minimal: fixed instruction plus image only.
 	const ChatMessageCtor: typeof vscode.LanguageModelChatMessage =
 		(vscode as Record<string, unknown>).LanguageModelChatMessage2 as typeof vscode.LanguageModelChatMessage ??
 		vscode.LanguageModelChatMessage;
 
 	return [
-		ChatMessageCtor.User([new vscode.LanguageModelTextPart(VISION_PROMPT), imagePart] as never),
+		ChatMessageCtor.User([new vscode.LanguageModelTextPart(prompt), imagePart] as never),
 	] as vscode.LanguageModelChatMessage[];
 }
 
 /**
+ * Minimum image dimension (px) for the vision bridge. Host-injected
+ * placeholder images are typically tiny (e.g. 7x27), and some providers
+ * reject images smaller than 14px, so anything below this is treated as
+ * an invalid image and dropped instead of being described.
+ */
+const MIN_IMAGE_DIMENSION = 14;
+
+/**
+ * Check whether a data part is a usable image for the vision bridge.
+ * Tiny or unparseable images (e.g. placeholders injected by the host) are
+ * ignored so text-only requests are not routed through the vision model
+ * for them.
+ */
+function isBridgeImage(part: vscode.LanguageModelDataPart): boolean {
+	return (
+		part instanceof vscode.LanguageModelDataPart &&
+		isBridgeableImageData(part.data, part.mimeType, MIN_IMAGE_DIMENSION)
+	);
+}
+
+/**
  * Check whether any message in the array contains an image data part.
+ * This includes invalid (tiny/unparseable) images because they still need
+ * to be stripped before the request reaches a text-only model.
  */
 export function messagesContainImages(messages: readonly vscode.LanguageModelChatRequestMessage[]): boolean {
 	for (const m of messages) {
@@ -100,18 +147,51 @@ function fullModelId(m: HFModelItem): string {
 }
 
 /**
- * Check whether any user-configured model has `vision: true`, excluding
- * a given model by its full ID (`baseId` or `baseId::configId`).
+ * Check whether a vision bridge is available: either a bridge model was
+ * explicitly configured, or any user-configured model has `vision: true`
+ * (excluding a given model by its full ID — `baseId` or `baseId::configId`).
  * Used by provideModel to decide whether to advertise imageInput for
  * bridge-eligible models.
  */
 export function hasVisionModelAvailable(userModels: HFModelItem[], excludeFullId: string): boolean {
+	const configuredKey = getConfiguredVisionBridgeModel();
+	if (configuredKey && configuredKey !== excludeFullId) {
+		return true;
+	}
 	return userModels.some((m) => m.vision === true && fullModelId(m) !== excludeFullId);
 }
 
 async function findVisionModel(excludeFullId: string): Promise<vscode.LanguageModelChat> {
 	const config = vscode.workspace.getConfiguration();
 	const userModels = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
+
+	const configuredKey = getConfiguredVisionBridgeModel();
+
+	// Explicitly configured bridge model takes priority. It may be any model
+	// registered in VS Code (not necessarily from the oaiproxy vendor), so
+	// users can also type a model id provided by another extension.
+	if (configuredKey) {
+		const allModels = await vscode.lm.selectChatModels();
+		const configuredBase = configuredKey.split("::")[0];
+		const hasConfigId = configuredKey.includes("::");
+		let chatModel = allModels.find((m) => m.id === configuredKey);
+		if (!chatModel && !hasConfigId) {
+			chatModel = allModels.find((m) => m.id === configuredBase);
+		}
+		if (!chatModel) {
+			throw new Error(
+				`Vision bridge model "${configuredKey}" configured but not available. ` +
+					"Check oaicopilot.visionBridgeModel or pick a model registered in VS Code."
+			);
+		}
+		if (chatModel.id === excludeFullId) {
+			throw new Error(
+				`Vision bridge model "${configuredKey}" is the same as the target model. ` +
+					"Choose a different model in oaicopilot.visionBridgeModel."
+			);
+		}
+		return chatModel;
+	}
 
 	// Exclude by full ID so multi-config setups (foo::text, foo::vision) work.
 	const visionModelConfigs = userModels.filter(
@@ -172,22 +252,23 @@ async function describeImage(
 		mimeType: imagePart.mimeType,
 		dataSize: imagePart.data.byteLength,
 		visionModel: visionModel.id,
-		promptLength: VISION_PROMPT.length,
+		promptLength: getVisionPrompt().length,
 	});
 	logger.debug("visionBridge.cache.miss", {
 		cacheKey: cacheKey.substring(0, 16),
 		mimeType: imagePart.mimeType,
 		dataSize: imagePart.data.byteLength,
 		visionModel: visionModel.id,
-		promptLength: VISION_PROMPT.length,
+		promptLength: getVisionPrompt().length,
 	});
 
-	const messages = createVisionBridgeMessages(imagePart);
+	const prompt = getVisionPrompt();
+	const messages = createVisionBridgeMessages(imagePart, prompt);
 	logger.debug("visionBridge.request", {
 		visionModel: visionModel.id,
 		messageCount: messages.length,
 		contentParts: 2,
-		promptLength: VISION_PROMPT.length,
+		promptLength: prompt.length,
 		mimeType: imagePart.mimeType,
 		dataSize: imagePart.data.byteLength,
 	});
@@ -226,12 +307,36 @@ async function describeImage(
 /**
  * Scan messages for image parts and replace them with text descriptions
  * obtained from a vision-capable model. Non-image parts are kept as-is.
+ * Invalid (tiny/unparseable) image parts are dropped so a text-only request
+ * never fails because of a host-injected placeholder image.
  */
 export async function processMessagesForVision(
 	messages: readonly vscode.LanguageModelChatRequestMessage[],
 	targetModelId: string,
 	token: vscode.CancellationToken
 ): Promise<vscode.LanguageModelChatRequestMessage[]> {
+	let hasValidImage = false;
+	let invalidImageCount = 0;
+	for (const message of messages) {
+		for (const part of message.content ?? []) {
+			if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
+				if (isBridgeImage(part)) {
+					hasValidImage = true;
+				} else {
+					invalidImageCount++;
+				}
+			}
+		}
+	}
+
+	// Only invalid (tiny or unparseable) images, e.g. placeholders injected
+	// by the host. Drop them so the text-only request stays clean, without
+	// needing a vision model at all.
+	if (!hasValidImage && invalidImageCount > 0) {
+		logger.info("visionBridge.dropInvalidImages", { droppedImages: invalidImageCount });
+		return removeImageParts(messages);
+	}
+
 	const visionModel = await findVisionModel(targetModelId);
 
 	logger.info("visionBridge.processing", {
@@ -245,27 +350,35 @@ export async function processMessagesForVision(
 
 	for (const message of messages) {
 		const content = message.content ?? [];
-		let hasImages = false;
+		let hasValidImages = false;
 
 		for (const part of content) {
-			if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
-				hasImages = true;
+			if (part instanceof vscode.LanguageModelDataPart && isBridgeImage(part)) {
+				hasValidImages = true;
 				break;
 			}
 		}
 
-		if (!hasImages) {
-			result.push(message);
+		if (!hasValidImages) {
+			// No bridgeable images in this message. If it still carries
+			// invalid image parts, strip them; otherwise keep it as-is.
+			result.push(hasImageParts(content) ? removeImageParts([message])[0] : message);
 			continue;
 		}
 
 		const newContent: unknown[] = [];
 
 		for (const part of content) {
-			if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
+			if (part instanceof vscode.LanguageModelDataPart && isBridgeImage(part)) {
 				const description = await describeImage(part, visionModel, token);
 				newContent.push(new vscode.LanguageModelTextPart(`\n[Image description: ${description}]\n`));
 				convertedCount++;
+			} else if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
+				// Invalid/too-small image — drop it for text-only targets.
+				logger.debug("visionBridge.dropInvalidImage", {
+					mimeType: part.mimeType,
+					dataSize: part.data.byteLength,
+				});
 			} else {
 				newContent.push(part);
 			}
@@ -281,5 +394,31 @@ export async function processMessagesForVision(
 	}
 
 	logger.info("visionBridge.complete", { convertedImages: convertedCount });
+	return result;
+}
+
+function hasImageParts(content: readonly unknown[]): boolean {
+	return content.some((p) => p instanceof vscode.LanguageModelDataPart && isImageMimeType(p.mimeType));
+}
+
+function removeImageParts(
+	messages: readonly vscode.LanguageModelChatRequestMessage[]
+): vscode.LanguageModelChatRequestMessage[] {
+	const result: vscode.LanguageModelChatRequestMessage[] = [];
+	for (const message of messages) {
+		const content = message.content ?? [];
+		if (!hasImageParts(content)) {
+			result.push(message);
+			continue;
+		}
+		const newContent = content.filter(
+			(p) => !(p instanceof vscode.LanguageModelDataPart && isImageMimeType(p.mimeType))
+		);
+		result.push({
+			role: message.role,
+			content: newContent,
+			name: (message as { name?: string }).name,
+		} as vscode.LanguageModelChatRequestMessage);
+	}
 	return result;
 }

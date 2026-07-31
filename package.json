@@ -560,19 +560,29 @@
 						"Turkish",
 						"Polish"
 					],
-					"description": "Language for generated Git commit messages. Default is English."
+					"description": "%config.commitLanguage.description%"
 				},
 				"oaicopilot.commitMessagePrompt": {
 					"type": "string",
 					"default": "",
-					"description": "Custom system prompt for commit message generation. If not provided, uses the default prompt."
+					"description": "%config.commitMessagePrompt.description%"
 				},
 				"oaicopilot.readFileLines": {
 					"type": "number",
 					"default": 0,
 					"minimum": 0,
 					"maximum": 10000,
-					"description": "Number of lines to read when using `read_file` tool. Large lines may cost more tokens. Default is 0, let model decide lines."
+					"description": "%config.readFileLines.description%"
+				},
+				"oaicopilot.visionBridgeModel": {
+					"type": "string",
+					"default": "",
+					"description": "%config.visionBridgeModel.description%"
+				},
+				"oaicopilot.visionBridgePrompt": {
+					"type": "string",
+					"default": "",
+					"description": "%config.visionBridgePrompt.description%"
 				}
 			}
 		}

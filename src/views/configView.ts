@@ -40,6 +40,8 @@ interface InitPayload {
 	};
 	commitModel: string;
 	commitLanguage: string;
+	visionBridgeModel: string;
+	visionBridgePrompt: string;
 	models: HFModelItem[];
 	providers: ProviderConfigItem[];
 	providerKeys: Record<string, string>;
@@ -269,6 +271,8 @@ type IncomingMessage =
 			retry: { enabled?: boolean; max_attempts?: number; interval_ms?: number; status_codes?: number[] };
 			commitModel: string;
 			commitLanguage: string;
+			visionBridgeModel: string;
+			visionBridgePrompt: string;
 	  }
 	| {
 			type: "fetchModels";
@@ -449,7 +453,9 @@ export class ConfigViewPanel {
 					message.readFileLines,
 					message.retry,
 					message.commitModel,
-					message.commitLanguage
+					message.commitLanguage,
+					message.visionBridgeModel,
+					message.visionBridgePrompt
 				);
 				break;
 			case "fetchModels": {
@@ -666,6 +672,8 @@ export class ConfigViewPanel {
 		const commitModel = foundModel ? `${foundModel.id}${foundModel.configId ? "::" + foundModel.configId : ""}` : "";
 		const commitLanguage = config.get<string>("oaicopilot.commitLanguage", "English");
 		const readFileLines = config.get<number>("oaicopilot.readFileLines", 0);
+		const visionBridgeModel = config.get<string>("oaicopilot.visionBridgeModel", "");
+		const visionBridgePrompt = config.get<string>("oaicopilot.visionBridgePrompt", "");
 		const payload: InitPayload = {
 			baseUrl,
 			apiKey,
@@ -674,6 +682,8 @@ export class ConfigViewPanel {
 			retry,
 			commitModel,
 			commitLanguage,
+			visionBridgeModel,
+			visionBridgePrompt,
 			models,
 			providers: providerConfigs,
 			providerKeys,
@@ -691,7 +701,9 @@ export class ConfigViewPanel {
 		readFileLines: number,
 		retry: { enabled?: boolean; max_attempts?: number; interval_ms?: number; status_codes?: number[] },
 		commitModel: string,
-		commitLanguage: string
+		commitLanguage: string,
+		visionBridgeModel: string,
+		visionBridgePrompt: string
 	) {
 		const baseUrl = rawBaseUrl.trim();
 		const apiKey = rawApiKey.trim();
@@ -701,6 +713,16 @@ export class ConfigViewPanel {
 		await config.update("oaicopilot.readFileLines", readFileLines, vscode.ConfigurationTarget.Global);
 		await config.update("oaicopilot.retry", retry, vscode.ConfigurationTarget.Global);
 		await config.update("oaicopilot.commitLanguage", commitLanguage, vscode.ConfigurationTarget.Global);
+		await config.update(
+			"oaicopilot.visionBridgeModel",
+			visionBridgeModel.trim(),
+			vscode.ConfigurationTarget.Global
+		);
+		await config.update(
+			"oaicopilot.visionBridgePrompt",
+			visionBridgePrompt.trim(),
+			vscode.ConfigurationTarget.Global
+		);
 		if (apiKey) {
 			await this.secrets.store("oaicopilot.apiKey", apiKey);
 		} else {
@@ -724,7 +746,7 @@ export class ConfigViewPanel {
 		}
 
 		vscode.window.showInformationMessage(
-			"OAIProxy base URL, Delay, Retry and API Key have been saved to global settings."
+			vscode.l10n.t("OAIProxy base URL, Delay, Retry , API Key and Vision Bridge have been saved to global settings.")
 		);
 		this.refreshConfiguration();
 		// Send refresh signal to frontend

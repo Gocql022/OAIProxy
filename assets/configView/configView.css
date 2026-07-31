@@ -53,7 +53,8 @@ label {
 input[type="text"],
 input[type="password"],
 input[type="number"],
-select {
+select,
+textarea {
 	width: 100%;
 	padding: 10px 12px;
 	box-sizing: border-box;
@@ -62,9 +63,17 @@ select {
 	border: 1px solid var(--vscode-editorWidget-border);
 	background: var(--vscode-editor-background);
 	color: var(--vscode-foreground);
+	font-family: inherit;
+	font-size: inherit;
+}
+textarea {
+	resize: vertical;
+	min-height: 80px;
+	line-height: 1.4;
 }
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
 	outline: 2px solid var(--vscode-focusBorder);
 	border-color: var(--vscode-focusBorder);
 }

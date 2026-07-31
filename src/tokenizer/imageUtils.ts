@@ -18,6 +18,28 @@ export function getImageDimensions(base64: string) {
 	}
 }
 
+const BRIDGE_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+/**
+ * Check whether raw binary data is a usable image for the vision bridge.
+ * Tiny or unparseable images (e.g. placeholder images injected by the host,
+ * which are typically a few pixels wide) are rejected so text-only requests
+ * are not routed through the vision model for them. `minDimension` aligns
+ * with the smallest image dimension accepted by common vision providers.
+ */
+export function isBridgeableImageData(data: Uint8Array, mimeType: string, minDimension = 14): boolean {
+	if (!BRIDGE_IMAGE_MIME_TYPES.includes(mimeType)) {
+		return false;
+	}
+	try {
+		const base64 = Buffer.from(data).toString("base64");
+		const size = getImageDimensions(`data:${mimeType};base64,${base64}`);
+		return size.width >= minDimension && size.height >= minDimension;
+	} catch {
+		return false;
+	}
+}
+
 export function getPngDimensions(base64: string) {
 	const header = atob(base64.slice(0, 50)).slice(16, 24);
 	const uint8 = Uint8Array.from(header, (c) => c.charCodeAt(0));
