@@ -593,7 +593,7 @@
 		"download-api": "dts dev && mv vscode.proposed.*.ts src",
 		"compile": "tsc -p ./",
 		"lint": "eslint",
-		"format": "prettier --write .",--
+		"format": "prettier --write .",
 		"watch": "tsc -watch -p ./",
 		"test": "npm run compile && vscode-test",
 		"build": "npm exec --yes --package @vscode/vsce -- vsce package"
