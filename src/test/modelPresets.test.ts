@@ -36,6 +36,17 @@ suite("modelPresets", () => {
 		}
 	});
 
+	test("sets max reasoning as the DeepSeek V4 Quick Setup default", () => {
+		for (const presetId of ["deepseek-v4-pro", "deepseek-v4-flash"]) {
+			const preset = MODEL_PRESETS.find((item) => item.id === presetId);
+
+			assert.ok(preset);
+			assert.strictEqual(preset.model.reasoning_effort, "max");
+			assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["high", "max"]);
+			assert.strictEqual(preset.model.default_reasoning_effort, "max");
+		}
+	});
+
 	test("contains the approved MiMo chat presets", () => {
 		const mimoIds = MODEL_PRESETS.filter((preset) => preset.model.owned_by === "mimo").map((preset) => preset.model.id);
 		assert.deepStrictEqual(mimoIds, ["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-flash"]);

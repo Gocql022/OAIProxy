@@ -149,7 +149,7 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "DeepSeek V4 Pro with thinking mode enabled for agentic coding workflows.",
 		model: {
 			id: "deepseek-v4-pro",
-			_comment: "Quick Setup defaults based on official DeepSeek model docs: https://api-docs.deepseek.com/quick_start/pricing",
+			_comment: "Quick Setup defaults based on official DeepSeek V4 model and Thinking Mode docs: https://api-docs.deepseek.com/quick_start/pricing and https://api-docs.deepseek.com/guides/thinking_mode; OAIProxy selects max reasoning effort by default.",
 			displayName: "DeepSeek V4 Pro",
 			owned_by: "deepseek",
 			baseUrl: "https://api.deepseek.com",
@@ -157,9 +157,9 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 			vision: false,
 			context_length: 1048576,
 			max_tokens: 65536,
-			reasoning_effort: "high",
+			reasoning_effort: "max",
 			supported_reasoning_efforts: ["high", "max"],
-			default_reasoning_effort: "high",
+			default_reasoning_effort: "max",
 			thinking: {
 				type: "enabled",
 			},
@@ -176,7 +176,7 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Fast DeepSeek V4 option with the same OpenAI-compatible endpoint.",
 		model: {
 			id: "deepseek-v4-flash",
-			_comment: "Quick Setup defaults based on official DeepSeek model docs: https://api-docs.deepseek.com/quick_start/pricing",
+			_comment: "Quick Setup defaults based on official DeepSeek V4 model and Thinking Mode docs: https://api-docs.deepseek.com/quick_start/pricing and https://api-docs.deepseek.com/guides/thinking_mode; OAIProxy selects max reasoning effort by default.",
 			displayName: "DeepSeek V4 Flash",
 			owned_by: "deepseek",
 			baseUrl: "https://api.deepseek.com",
@@ -184,9 +184,9 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 			vision: false,
 			context_length: 1048576,
 			max_tokens: 65536,
-			reasoning_effort: "high",
+			reasoning_effort: "max",
 			supported_reasoning_efforts: ["high", "max"],
-			default_reasoning_effort: "high",
+			default_reasoning_effort: "max",
 			thinking: {
 				type: "enabled",
 			},

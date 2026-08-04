@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.1.28 (2026-08-04)
+
+- Set the DeepSeek V4 Pro and V4 Flash Quick Setup cards to use `max` as the default reasoning effort while retaining `high` as an available choice.
+- Record the official DeepSeek Thinking Mode source and add regression coverage for both preset defaults.
+
 ## 0.1.27 (2026-07-18)
 
 - Add a Kimi K3 Quick Setup preset using Moonshot's official model ID and endpoint, 1M-token context, 131,072-token default output reserve, vision and tool support, always-on max reasoning, preserved reasoning history, and automatic prompt caching.
