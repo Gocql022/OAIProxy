@@ -22,6 +22,7 @@ import {
 	tryParseJSONObject,
 } from "../utils";
 import { logCacheUsage } from "../promptCache";
+import { ResponseUsageAccumulator } from "../responseUsage";
 
 import type {
 	GeminiGenerateContentRequest,
@@ -775,6 +776,9 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 		const reader = responseBody.getReader();
 		const decoder = new TextDecoder();
 		let buffer = "";
+		const responseUsage = new ResponseUsageAccumulator("gemini");
+		let completed = false;
+		let sawProviderError = false;
 
 		let textSoFar = "";
 		const toolCallKeyToId = new Map<string, string>();
@@ -821,6 +825,10 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 					}
 					if (!payload) {
 						continue;
+					}
+					responseUsage.record(payload);
+					if (payload.error !== undefined && payload.error !== null) {
+						sawProviderError = true;
 					}
 					logCacheUsage("gemini", modelId, payload);
 
@@ -1002,6 +1010,7 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 					}
 				}
 			}
+			completed = !token.isCancellationRequested && !sawProviderError;
 			logger.debug("gemini.stream.done", { modelId });
 		} catch (e) {
 			console.error("[Gemini Provider] Streaming response error:", e);
@@ -1010,6 +1019,12 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 		} finally {
 			reader.releaseLock();
 			this.reportEndThinking(progress);
+			if (completed) {
+				const usagePart = responseUsage.toDataPart();
+				if (usagePart) {
+					progress.report(usagePart);
+				}
+			}
 		}
 	}
 

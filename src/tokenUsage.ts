@@ -3,6 +3,7 @@ import { LanguageModelChatInformation, LanguageModelChatRequestMessage, Language
 import { type CacheUsageRecord, getLatestCacheUsage } from "./cacheUsage";
 import { countMessageTokenDetails, countToolTokens, type MessageTokenDetails } from "./provideToken";
 import { isToolResultPart, mapRole } from "./utils";
+import { isResponseUsagePart } from "./responseUsage";
 
 export type TokenUsageCategoryId =
 	| "systemContext"
@@ -312,7 +313,11 @@ function hasDirectPromptContent(message: LanguageModelChatRequestMessage): boole
 		if (part instanceof vscode.LanguageModelTextPart && part.value.trim()) {
 			return true;
 		}
-		if (part instanceof vscode.LanguageModelDataPart && part.mimeType !== "cache_control") {
+		if (
+			part instanceof vscode.LanguageModelDataPart &&
+			part.mimeType !== "cache_control" &&
+			!isResponseUsagePart(part)
+		) {
 			return true;
 		}
 		if (isToolResultPart(part)) {

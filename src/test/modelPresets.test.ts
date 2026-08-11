@@ -180,22 +180,64 @@ suite("modelPresets", () => {
 		});
 	});
 
-	test("contains LiteLLM GLM-5.1 quick setup preset", () => {
-		const preset = MODEL_PRESETS.find((item) => item.id === "litellm-glm-5-1");
+	test("contains LiteLLM DeepSeek V4 Flash quick setup preset", () => {
+		const preset = MODEL_PRESETS.find((item) => item.id === "litellm-deepseek-v4-flash");
 
 		assert.ok(preset);
+		assert.strictEqual(preset.label, "DeepSeek V4 Flash (LiteLLM)");
 		assert.strictEqual(preset.providerPresetId, "litellm");
-		assert.strictEqual(preset.model.id, "GLM-5.1");
-		assert.ok(preset.model._comment?.includes("https://docs.z.ai/guides/llm/glm-5.1"));
+		assert.strictEqual(preset.category, "fast");
+		assert.deepStrictEqual(preset.tags, ["LiteLLM", "DeepSeek", "Fast", "Reasoning", "Tools"]);
+		assert.strictEqual(preset.model.id, "DeepSeek-V4-Flash");
+		assert.ok(preset.model._comment?.includes("https://api-docs.deepseek.com/quick_start/pricing"));
+		assert.ok(preset.model._comment?.includes("https://api-docs.deepseek.com/guides/thinking_mode"));
+		assert.strictEqual(preset.model.displayName, "DeepSeek V4 Flash (LiteLLM)");
 		assert.strictEqual(preset.model.owned_by, "litellm");
 		assert.strictEqual(preset.model.baseUrl, "https://ai.nube.sh/api/v1");
 		assert.strictEqual(preset.model.apiMode, "litellm");
-		assert.strictEqual(preset.model.context_length, 200000);
-		assert.strictEqual(preset.model.max_tokens, 128000);
+		assert.strictEqual(preset.model.context_length, 1048576);
+		assert.strictEqual(preset.model.max_tokens, 65536);
+		assert.strictEqual(preset.model.max_completion_tokens, undefined);
+		assert.strictEqual(preset.model.reasoning_effort, "max");
+		assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["high", "max"]);
+		assert.strictEqual(preset.model.default_reasoning_effort, "max");
 		assert.deepStrictEqual(preset.model.thinking, {
 			type: "enabled",
 		});
+		assert.strictEqual(preset.model.vision, false);
 		assert.strictEqual(preset.model.toolCalling, true);
+		assert.strictEqual(preset.model.include_reasoning_in_request, true);
+	});
+
+	test("contains LiteLLM GLM-5.2 quick setup preset", () => {
+		const preset = MODEL_PRESETS.find((item) => item.id === "litellm-glm-5-2");
+
+		assert.ok(preset);
+		assert.strictEqual(preset.label, "GLM-5.2 (LiteLLM)");
+		assert.strictEqual(preset.providerPresetId, "litellm");
+		assert.strictEqual(preset.category, "latest");
+		assert.deepStrictEqual(preset.tags, ["LiteLLM", "Z.AI", "GLM", "Coding", "Thinking", "Tools"]);
+		assert.strictEqual(preset.model.id, "GLM-5.2");
+		assert.ok(preset.model._comment?.includes("https://docs.z.ai/devpack/quick-start"));
+		assert.ok(preset.model._comment?.includes("https://docs.z.ai/devpack/latest-model"));
+		assert.ok(preset.model._comment?.includes("https://docs.z.ai/api-reference/llm/chat-completion"));
+		assert.strictEqual(preset.model.displayName, "GLM-5.2 (LiteLLM)");
+		assert.strictEqual(preset.model.owned_by, "litellm");
+		assert.strictEqual(preset.model.baseUrl, "https://ai.nube.sh/api/v1");
+		assert.strictEqual(preset.model.apiMode, "litellm");
+		assert.strictEqual(preset.model.context_length, 1000000);
+		assert.strictEqual(preset.model.max_tokens, 131072);
+		assert.strictEqual(preset.model.max_completion_tokens, undefined);
+		assert.strictEqual(preset.model.reasoning_effort, "max");
+		assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
+		assert.strictEqual(preset.model.default_reasoning_effort, "max");
+		assert.deepStrictEqual(preset.model.thinking, {
+			type: "enabled",
+			clear_thinking: false,
+		});
+		assert.strictEqual(preset.model.vision, false);
+		assert.strictEqual(preset.model.toolCalling, true);
+		assert.strictEqual(preset.model.include_reasoning_in_request, true);
 	});
 
 	test("contains Z.AI GLM-5.2 quick setup preset", () => {
@@ -228,32 +270,39 @@ suite("modelPresets", () => {
 		assert.strictEqual(preset.model.include_reasoning_in_request, true);
 	});
 
-	test("contains LiteLLM Qwen3.5 122B A10B quick setup preset", () => {
-		const preset = MODEL_PRESETS.find((item) => item.id === "litellm-qwen3-5-122b-a10b");
+	test("contains LiteLLM Kimi K3 quick setup preset", () => {
+		const preset = MODEL_PRESETS.find((item) => item.id === "litellm-kimi-k3");
 
 		assert.ok(preset);
+		assert.strictEqual(preset.label, "Kimi K3 (LiteLLM)");
 		assert.strictEqual(preset.providerPresetId, "litellm");
-		assert.strictEqual(preset.model.id, "Qwen3.5-122B-A10B");
-		assert.ok(preset.model._comment?.includes("https://huggingface.co/Qwen/Qwen3.5-122B-A10B"));
+		assert.strictEqual(preset.category, "latest");
+		assert.deepStrictEqual(preset.tags, ["LiteLLM", "Kimi", "Code", "Vision", "Thinking", "Tools", "Prompt Cache"]);
+		assert.strictEqual(preset.model.id, "Kimi-K3");
+		assert.ok(preset.model._comment?.includes("https://platform.kimi.ai/docs/guide/kimi-k3-quickstart"));
+		assert.strictEqual(preset.model.displayName, "Kimi K3 (LiteLLM)");
 		assert.strictEqual(preset.model.owned_by, "litellm");
 		assert.strictEqual(preset.model.baseUrl, "https://ai.nube.sh/api/v1");
 		assert.strictEqual(preset.model.apiMode, "litellm");
-		assert.strictEqual(preset.model.context_length, 262144);
-		assert.strictEqual(preset.model.max_tokens, 32768);
-		assert.strictEqual(preset.model.temperature, 0.6);
-		assert.strictEqual(preset.model.top_p, 0.95);
-		assert.strictEqual(preset.model.presence_penalty, 0.0);
-		assert.strictEqual(preset.model.include_reasoning_in_request, true);
-		assert.deepStrictEqual(preset.model.extra_body, {
-			chat_template_kwargs: {
-				enable_thinking: true,
-			},
-			min_p: 0.0,
-			top_k: 20,
-			repetition_penalty: 1.0,
-		});
+		assert.strictEqual(preset.model.context_length, 1048576);
+		assert.strictEqual(preset.model.max_completion_tokens, 131072);
+		assert.strictEqual(preset.model.max_tokens, undefined);
+		assert.strictEqual(preset.model.reasoning_effort, "max");
+		assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["max"]);
+		assert.strictEqual(preset.model.default_reasoning_effort, "max");
 		assert.strictEqual(preset.model.vision, true);
 		assert.strictEqual(preset.model.toolCalling, true);
+		assert.strictEqual(preset.model.include_reasoning_in_request, true);
+		assert.strictEqual(preset.model.thinking, undefined);
+		assert.strictEqual(preset.model.temperature, undefined);
+		assert.strictEqual(preset.model.top_p, undefined);
+		assert.strictEqual(preset.model.prompt_cache, undefined);
+	});
+
+	test("omits retired LiteLLM quick setup presets", () => {
+		for (const presetId of ["litellm-glm-5-1", "litellm-qwen3-5-122b-a10b"]) {
+			assert.strictEqual(MODEL_PRESETS.some((preset) => preset.id === presetId), false);
+		}
 	});
 
 	test("uses config IDs to keep duplicate model IDs saveable", () => {

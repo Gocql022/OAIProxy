@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { MODEL_PRESETS } from "../modelPresets";
 import { OpenaiApi } from "../openai/openaiApi";
+import { COPILOT_USAGE_MIME } from "../responseUsage";
 import type { HFModelItem } from "../types";
 
 suite("openaiApi", () => {
@@ -327,6 +328,52 @@ suite("openaiApi", () => {
 				const toolCall = part as { callId?: unknown; name?: unknown; input?: unknown };
 				return toolCall.callId === "call_1" && toolCall.name === "read_file";
 			})
+		);
+	});
+
+	test("does not emit collected usage after cancellation", async () => {
+		const api = new OpenaiApi("cancelled-usage-model");
+		const parts: vscode.LanguageModelResponsePart2[] = [];
+		let cancelled = false;
+		const stream = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(
+					new TextEncoder().encode(
+						[
+							"data: {\"choices\":[{\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":5,\"total_tokens\":105}}",
+							"",
+							"data: [DONE]",
+							"",
+						].join("\n")
+					)
+				);
+				controller.close();
+			},
+		});
+
+		await api.processStreamingResponse(
+			stream,
+			{
+				report(part) {
+					parts.push(part);
+					if (part instanceof vscode.LanguageModelTextPart && part.value === "answer") {
+						cancelled = true;
+					}
+				},
+			},
+			{
+				get isCancellationRequested() {
+					return cancelled;
+				},
+				onCancellationRequested: () => ({ dispose() {} }),
+			} as unknown as vscode.CancellationToken
+		);
+
+		assert.ok(parts.some((part) => part instanceof vscode.LanguageModelTextPart && part.value === "answer"));
+		assert.ok(
+			!parts.some(
+				(part) => part instanceof vscode.LanguageModelDataPart && part.mimeType === COPILOT_USAGE_MIME
+			)
 		);
 	});
 });

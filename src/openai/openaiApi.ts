@@ -32,6 +32,7 @@ import { CommonApi } from "../commonApi";
 import { logger } from "../logger";
 import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "../vscodeCompat";
 import { logCacheUsage } from "../promptCache";
+import { ResponseUsageAccumulator } from "../responseUsage";
 
 interface OpenAIStreamStats {
 	chunkCount: number;
@@ -324,6 +325,9 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 		const reader = responseBody.getReader();
 		const decoder = new TextDecoder();
 		let buffer = "";
+		const responseUsage = new ResponseUsageAccumulator("openai");
+		let completed = false;
+		let sawProviderError = false;
 		const stats: OpenAIStreamStats = {
 			chunkCount: 0,
 			contentChunks: 0,
@@ -365,7 +369,11 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 					}
 
 					try {
-						const parsed = JSON.parse(data);
+						const parsed = JSON.parse(data) as Record<string, unknown>;
+						responseUsage.record(parsed);
+						if (hasErrorPayload(parsed)) {
+							sawProviderError = true;
+						}
 						this.updateOpenAIStreamStats(parsed, stats);
 						logCacheUsage(this._cacheUsageApiMode, modelId, parsed);
 						await this.processDelta(parsed, progress);
@@ -379,6 +387,7 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 					}
 				}
 			}
+			completed = !token.isCancellationRequested && !sawProviderError;
 			logger.debug("openai.stream.summary", { modelId, ...stats });
 			logger.debug("openai.stream.done", { modelId });
 		} catch (e) {
@@ -389,6 +398,12 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 			reader.releaseLock();
 			// If there's an active thinking sequence, end it first
 			this.reportEndThinking(progress);
+			if (completed) {
+				const usagePart = responseUsage.toDataPart();
+				if (usagePart) {
+					progress.report(usagePart);
+				}
+			}
 		}
 	}
 
@@ -831,4 +846,12 @@ function shouldOmitOpenAIChatCompletionsReasoningEffortWithTools(
 	} catch {
 		return false;
 	}
+}
+
+function hasErrorPayload(value: unknown): boolean {
+	if (value === null || typeof value !== "object" || Array.isArray(value)) {
+		return false;
+	}
+	const error = (value as Record<string, unknown>).error;
+	return error !== undefined && error !== null && error !== false && error !== "";
 }
