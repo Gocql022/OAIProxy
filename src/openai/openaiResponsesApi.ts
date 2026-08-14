@@ -23,6 +23,7 @@ import { CommonApi } from "../commonApi";
 import { logger } from "../logger";
 import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "../vscodeCompat";
 import { logCacheUsage } from "../promptCache";
+import { ResponseUsageAccumulator } from "../responseUsage";
 
 export interface ResponsesInputMessage {
 	role: "user" | "assistant" | "system";
@@ -307,6 +308,9 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 		const reader = responseBody.getReader();
 		const decoder = new TextDecoder();
 		let buffer = "";
+		const responseUsage = new ResponseUsageAccumulator("openai-responses");
+		let completed = false;
+		let sawProviderError = false;
 
 		try {
 			while (true) {
@@ -336,6 +340,11 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 
 					try {
 						const parsed = JSON.parse(data) as Record<string, unknown>;
+						responseUsage.record(parsed);
+						const eventType = typeof parsed.type === "string" ? parsed.type : "";
+						if (eventType === "error" || eventType === "response.failed" || eventType === "response.cancelled") {
+							sawProviderError = true;
+						}
 						logCacheUsage("openai-responses", modelId, parsed);
 						await this.processEvent(parsed, progress);
 					} catch (e) {
@@ -348,6 +357,7 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 					}
 				}
 			}
+			completed = !token.isCancellationRequested && !sawProviderError;
 			logger.debug("responses.stream.done", { modelId, responseId: this._responseId ?? "" });
 		} catch (e) {
 			console.error("[OpenAI-Responses Provider] Streaming response error:", e);
@@ -356,6 +366,12 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 		} finally {
 			reader.releaseLock();
 			this.reportEndThinking(progress);
+			if (completed) {
+				const usagePart = responseUsage.toDataPart();
+				if (usagePart) {
+					progress.report(usagePart);
+				}
+			}
 		}
 	}
 

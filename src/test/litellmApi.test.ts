@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { LiteLLMApi } from "../litellm/litellmApi";
 import { getLatestCacheUsage, resetCacheUsageForTests } from "../cacheUsage";
+import { COPILOT_USAGE_MIME } from "../responseUsage";
 import type { HFModelItem } from "../types";
 
 suite("litellmApi", () => {
@@ -100,12 +101,15 @@ suite("litellmApi", () => {
 
 	test("records cache usage with LiteLLM API mode label", async () => {
 		const api = new LiteLLMApi("litellm-cache-test");
+		const parts: vscode.LanguageModelResponsePart2[] = [];
 		const stream = new ReadableStream<Uint8Array>({
 			start(controller) {
 				controller.enqueue(
 					new TextEncoder().encode(
 						[
-							"data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"prompt_tokens_details\":{\"cached_tokens\":80}}}",
+							"data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}],\"usage\":{\"prompt_tokens\":90,\"completion_tokens\":4,\"total_tokens\":94}}",
+							"",
+							"data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":5,\"total_tokens\":105,\"prompt_tokens_details\":{\"cached_tokens\":80}}}",
 							"",
 							"data: [DONE]",
 							"",
@@ -119,7 +123,9 @@ suite("litellmApi", () => {
 		await api.processStreamingResponse(
 			stream,
 			{
-				report() {},
+				report(part) {
+					parts.push(part);
+				},
 			},
 			{
 				isCancellationRequested: false,
@@ -130,6 +136,18 @@ suite("litellmApi", () => {
 		const latest = getLatestCacheUsage("litellm-cache-test");
 		assert.strictEqual(latest?.apiMode, "litellm");
 		assert.strictEqual(latest?.cacheHitTokens, 80);
+
+		const usageParts = parts.filter(
+			(part): part is vscode.LanguageModelDataPart =>
+				part instanceof vscode.LanguageModelDataPart && part.mimeType === COPILOT_USAGE_MIME
+		);
+		assert.strictEqual(usageParts.length, 1);
+		assert.deepStrictEqual(JSON.parse(new TextDecoder().decode(usageParts[0].data)), {
+			prompt_tokens: 100,
+			completion_tokens: 5,
+			total_tokens: 105,
+			prompt_tokens_details: { cached_tokens: 80 },
+		});
 	});
 });
 

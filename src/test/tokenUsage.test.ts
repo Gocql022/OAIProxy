@@ -194,6 +194,20 @@ suite("tokenUsage", () => {
 				details.reasoningTokens
 		);
 	});
+
+	test("does not count Copilot usage metadata as prompt content", async () => {
+		const usageData = new TextEncoder().encode(
+			JSON.stringify({ prompt_tokens: 100, completion_tokens: 5, total_tokens: 105 })
+		);
+		const usageOnlyMessage = message(vscode.LanguageModelChatMessageRole.Assistant, [
+			new vscode.LanguageModelDataPart(usageData, "usage"),
+		]);
+
+		const details = await countMessageTokenDetails(usageOnlyMessage, { includeReasoningInRequest: false });
+
+		assert.strictEqual(details.binaryTokens, 0);
+		assert.strictEqual(details.totalTokens, details.overheadTokens);
+	});
 });
 
 function message(

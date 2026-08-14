@@ -5,6 +5,7 @@ import { getImageDimensions } from "./tokenizer/imageUtils";
 import { createDataUrl, isToolResultPart } from "./utils";
 import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "./vscodeCompat";
 import { logger } from "./logger";
+import { isResponseUsagePart } from "./responseUsage";
 
 /*
  * Each message comes with 3 tokens per message due to special characters
@@ -58,7 +59,7 @@ export async function countMessageTokenDetails(
 			// Estimate tokens for image or data parts based on type
 			if (part.mimeType.startsWith("image/")) {
 				details.imageTokens += calculateImageTokenCost(createDataUrl(part));
-			} else if (part.mimeType === "cache_control") {
+			} else if (part.mimeType === "cache_control" || isResponseUsagePart(part)) {
 				/* ignore */
 			} else {
 				// For other binary data, use a more conservative estimate

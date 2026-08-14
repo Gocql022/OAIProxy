@@ -32,6 +32,7 @@ import { CommonApi } from "../commonApi";
 import { logger } from "../logger";
 import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "../vscodeCompat";
 import { isAnthropicAdaptiveThinkingModel, normalizeReasoningEffortForModel } from "../reasoningEffort";
+import { ResponseUsageAccumulator } from "../responseUsage";
 import {
 	applyCacheControl,
 	createAnthropicCacheControl,
@@ -366,6 +367,9 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 		const reader = responseBody.getReader();
 		const decoder = new TextDecoder();
 		let buffer = "";
+		const responseUsage = new ResponseUsageAccumulator("anthropic");
+		let completed = false;
+		let sawProviderError = false;
 
 		try {
 			while (true) {
@@ -400,6 +404,10 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 
 					try {
 						const chunk: AnthropicStreamChunk = JSON.parse(data);
+						responseUsage.record(chunk);
+						if (chunk.type === "error") {
+							sawProviderError = true;
+						}
 						await this.processAnthropicChunk(chunk, progress);
 					} catch (e) {
 						console.error("[Anthropic Provider] Failed to parse SSE chunk:", e, "data:", data);
@@ -411,6 +419,7 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 					}
 				}
 			}
+			completed = !token.isCancellationRequested && !sawProviderError;
 			logger.debug("anthropic.stream.done", { modelId });
 		} catch (e) {
 			console.error("[Anthropic Provider] Streaming response error:", e);
@@ -420,6 +429,12 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 			reader.releaseLock();
 			// If there's an active thinking sequence, end it first
 			this.reportEndThinking(progress);
+			if (completed) {
+				const usagePart = responseUsage.toDataPart();
+				if (usagePart) {
+					progress.report(usagePart);
+				}
+			}
 		}
 	}
 
@@ -455,8 +470,7 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 		}
 
 		if (chunk.type === "message_delta" && chunk.delta) {
-			// Extract stop_reason and usage information
-			// We're not processing usage per user request, but could log if needed
+			// Usage is accumulated by the stream reader; this branch handles message metadata only.
 			return;
 		}
 

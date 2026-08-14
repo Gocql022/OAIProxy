@@ -58,7 +58,7 @@ export interface OllamaToolCall {
 export interface OllamaStreamChunk {
 	model: string;
 	created_at: string;
-	message: {
+	message?: {
 		role: string;
 		content: string;
 		thinking?: string;
@@ -66,6 +66,9 @@ export interface OllamaStreamChunk {
 	};
 	done: boolean;
 	done_reason?: string;
+	prompt_eval_count?: number;
+	eval_count?: number;
+	error?: string;
 }
 
 /**

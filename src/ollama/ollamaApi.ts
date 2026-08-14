@@ -16,6 +16,7 @@ import { isToolResultPart, collectToolResultText, convertToolsToOpenAI, mapRole 
 import { CommonApi } from "../commonApi";
 import { logger } from "../logger";
 import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "../vscodeCompat";
+import { ResponseUsageAccumulator } from "../responseUsage";
 
 export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 	constructor(modelId: string) {
@@ -173,6 +174,9 @@ export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 		const reader = responseBody.getReader();
 		const decoder = new TextDecoder();
 		let buffer = "";
+		const responseUsage = new ResponseUsageAccumulator("ollama");
+		let completed = false;
+		let sawProviderError = false;
 
 		try {
 			while (true) {
@@ -197,6 +201,10 @@ export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 					try {
 						const chunk: OllamaStreamChunk = JSON.parse(line);
 						logger.debug("ollama.stream.chunk", { modelId, data: chunk });
+						responseUsage.record(chunk);
+						if (chunk.error) {
+							sawProviderError = true;
+						}
 						await this.processOllamaDelta(chunk, progress);
 
 						// Check if this is the final chunk
@@ -214,6 +222,7 @@ export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 					}
 				}
 			}
+			completed = !token.isCancellationRequested && !sawProviderError;
 			logger.debug("ollama.stream.done", { modelId });
 		} catch (e) {
 			console.error("[Ollama Provider] Streaming response error:", e);
@@ -223,6 +232,12 @@ export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 			reader.releaseLock();
 			// End any active thinking sequence
 			this.reportEndThinking(progress);
+			if (completed) {
+				const usagePart = responseUsage.toDataPart();
+				if (usagePart) {
+					progress.report(usagePart);
+				}
+			}
 		}
 	}
 

@@ -1,5 +1,7 @@
 import * as assert from "assert";
+import * as vscode from "vscode";
 import { OpenaiResponsesApi } from "../openai/openaiResponsesApi";
+import { COPILOT_USAGE_MIME } from "../responseUsage";
 import type { HFModelItem } from "../types";
 
 suite("openaiResponsesApi", () => {
@@ -27,6 +29,69 @@ suite("openaiResponsesApi", () => {
 		assert.deepStrictEqual(body.thinking, { type: "enabled", clear_thinking: false });
 		assert.strictEqual(body.max_output_tokens, 131072);
 	});
+
+	test("emits nested response usage after a completed stream", async () => {
+		const api = new OpenaiResponsesApi("responses-usage-model");
+		const parts: vscode.LanguageModelResponsePart2[] = [];
+		const stream = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(
+					new TextEncoder().encode(
+						[
+							"data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_1\",\"usage\":{\"input_tokens\":700,\"output_tokens\":50,\"total_tokens\":750,\"input_tokens_details\":{\"cached_tokens\":500},\"output_tokens_details\":{\"reasoning_tokens\":30}}}}",
+							"",
+							"data: [DONE]",
+							"",
+						].join("\n")
+					)
+				);
+				controller.close();
+			},
+		});
+
+		await api.processStreamingResponse(stream, { report: (part) => parts.push(part) }, cancellationToken());
+
+		const usagePart = parts.find(
+			(part): part is vscode.LanguageModelDataPart =>
+				part instanceof vscode.LanguageModelDataPart && part.mimeType === COPILOT_USAGE_MIME
+		);
+		assert.ok(usagePart);
+		assert.deepStrictEqual(JSON.parse(new TextDecoder().decode(usagePart.data)), {
+			prompt_tokens: 700,
+			completion_tokens: 50,
+			total_tokens: 750,
+			prompt_tokens_details: { cached_tokens: 500 },
+			completion_tokens_details: { reasoning_tokens: 30 },
+		});
+	});
+
+	test("does not emit usage for a failed response stream", async () => {
+		const api = new OpenaiResponsesApi("failed-responses-model");
+		const parts: vscode.LanguageModelResponsePart2[] = [];
+		const stream = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(
+					new TextEncoder().encode(
+						[
+							"data: {\"type\":\"response.failed\",\"response\":{\"usage\":{\"input_tokens\":100,\"output_tokens\":5,\"total_tokens\":105}}}",
+							"",
+							"data: [DONE]",
+							"",
+						].join("\n")
+					)
+				);
+				controller.close();
+			},
+		});
+
+		await api.processStreamingResponse(stream, { report: (part) => parts.push(part) }, cancellationToken());
+
+		assert.ok(
+			!parts.some(
+				(part) => part instanceof vscode.LanguageModelDataPart && part.mimeType === COPILOT_USAGE_MIME
+			)
+		);
+	});
 });
 
 function model(overrides: Partial<HFModelItem>): HFModelItem {
@@ -35,4 +100,11 @@ function model(overrides: Partial<HFModelItem>): HFModelItem {
 		owned_by: "provider",
 		...overrides,
 	};
+}
+
+function cancellationToken(): vscode.CancellationToken {
+	return {
+		isCancellationRequested: false,
+		onCancellationRequested: () => ({ dispose() {} }),
+	} as unknown as vscode.CancellationToken;
 }
