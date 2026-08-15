@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.1.29 (2026-08-11)
+
+- Fix Copilot Session Info context usage for OAIProxy models by emitting normalized provider token counts from OpenAI/LiteLLM Chat Completions, OpenAI Responses, Anthropic, Gemini, and Ollama streams while suppressing cancelled or failed responses.
+- Replace the retired LiteLLM GLM-5.1 and Qwen3.5 122B A10B Quick Setup presets with DeepSeek V4 Flash, GLM-5.2, and Kimi K3 using documented context, output, reasoning, vision, and tool parameters.
+- Preserve provider cache and reasoning-token details in Copilot usage metadata, exclude that metadata from OAIProxy's local prompt estimate, and add cross-provider regression coverage.
+
 ## 0.1.28 (2026-08-04)
 
 - Set the DeepSeek V4 Pro and V4 Flash Quick Setup cards to use `max` as the default reasoning effort while retaining `high` as an available choice.
