@@ -16,6 +16,7 @@ npm run build          # Package extension to .vsix
 npm run download-api   # Download VS Code proposed API types (required after vscode.d.ts updates)
 ```
 
+- In this repository, unqualified requests such as "build a plugin", "build a test plugin", or "package the plugin" refer to the OAIProxy VS Code extension and its installable VSIX. For a test build, keep the current version, run `npm run build`, and return the generated `oaiproxy-<version>.vsix` path. Only use the Codex plugin scaffold/marketplace workflow when the user explicitly asks for a **Codex plugin** or names Codex plugin artifacts such as `.codex-plugin/plugin.json`; do not create `~/plugins` or personal marketplace entries from ambiguous "plugin" shorthand.
 - This workspace is a known headless host without an X server. Do not run `npm run test` or retry VS Code's desktop test runner here; it fails before loading tests with `Missing X server or $DISPLAY`. Run `npm run compile`, `npm run lint`, and the relevant compiled suites through Mocha with `--ui tdd`. For suites importing `vscode`, use a temporary minimal `vscode` module mock outside the repository, run the affected suites, then remove the mock. Report the desktop runner as not attempted due to this known environment constraint rather than as a new test failure.
 
 ## Architecture
