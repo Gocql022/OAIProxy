@@ -253,6 +253,14 @@ function getProviderUsageKind(provider, baseUrl) {
 	return "";
 }
 
+const TOKENROUTER_DASHBOARD_URL = "https://www.tokenrouter.com/console";
+
+function isTokenRouterProvider(provider, baseUrl) {
+	const normalizedProvider = (provider || "").trim().toLowerCase();
+	const normalizedBaseUrl = (baseUrl || "").trim().toLowerCase();
+	return normalizedProvider === "tokenrouter" || normalizedBaseUrl.includes("api.tokenrouter.com");
+}
+
 function isMimoProvider(provider, baseUrl) {
 	const normalizedProvider = (provider || "").trim().toLowerCase();
 	const normalizedBaseUrl = (baseUrl || "").trim().toLowerCase();
@@ -266,10 +274,17 @@ function isMimoProvider(provider, baseUrl) {
 }
 
 function getProviderUsageUnsupportedReason(provider, baseUrl) {
+	if (isTokenRouterProvider(provider, baseUrl)) {
+		return "TokenRouter usage checks are unavailable because its public API documentation does not expose a key-scoped balance or usage endpoint.";
+	}
 	if (isMimoProvider(provider, baseUrl)) {
 		return "Xiaomi MiMo usage checks are unavailable because Xiaomi only exposes balance/usage through web Console endpoints; no public API-key usage endpoint is documented.";
 	}
 	return "";
+}
+
+function getProviderUsageUnsupportedLink(provider, baseUrl) {
+	return isTokenRouterProvider(provider, baseUrl) ? TOKENROUTER_DASHBOARD_URL : "";
 }
 
 function providerUsageNeedsSeparateKey(usageKind) {
@@ -398,7 +413,9 @@ function formatModelTestDuration(durationMs) {
 }
 
 function truncateModelTestError(error, maxLength = 220) {
-	const normalized = String(error || "Connection test failed.").replace(/\s+/g, " ").trim();
+	const normalized = String(error || "Connection test failed.")
+		.replace(/\s+/g, " ")
+		.trim();
 	return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized;
 }
 
@@ -458,10 +475,7 @@ function getSelectedModelPreset() {
 
 function hasConfiguredModel(model) {
 	return state.models.some((m) => {
-		return (
-			m.id === model.id &&
-			((model.configId && m.configId === model.configId) || (!model.configId && !m.configId))
-		);
+		return m.id === model.id && ((model.configId && m.configId === model.configId) || (!model.configId && !m.configId));
 	});
 }
 
@@ -540,7 +554,9 @@ function showQuickSetupProviderBlocker(batch) {
 		);
 	}
 	if (batch.missingProviders.length) {
-		details.push(`API key is not saved for ${batch.missingProviders.map((provider) => getProviderLabel(provider)).join(", ")}`);
+		details.push(
+			`API key is not saved for ${batch.missingProviders.map((provider) => getProviderLabel(provider)).join(", ")}`
+		);
 	}
 
 	const confirmId = "quickSetupProviderReminder_" + Date.now();
@@ -603,7 +619,9 @@ function getProviderTransportModel(provider) {
 	if (!normalizedProvider) {
 		return undefined;
 	}
-	const providerConfig = state.providers.find((item) => (item.provider || "").trim().toLowerCase() === normalizedProvider);
+	const providerConfig = state.providers.find(
+		(item) => (item.provider || "").trim().toLowerCase() === normalizedProvider
+	);
 	if (providerConfig) {
 		return {
 			id: `__provider__${providerConfig.provider}`,
@@ -759,6 +777,7 @@ function getProviderUsageRows() {
 			...entry,
 			usageKind: getProviderUsageKind(entry.provider, entry.baseUrl),
 			unsupportedReason: getProviderUsageUnsupportedReason(entry.provider, entry.baseUrl),
+			unsupportedLink: getProviderUsageUnsupportedLink(entry.provider, entry.baseUrl),
 		}))
 		.filter((entry) => entry.usageKind || entry.unsupportedReason);
 }
@@ -788,9 +807,12 @@ function renderProviderUsageStatus(usageState, unsupportedReason) {
 	return '<span class="status-pill success">Checked</span>';
 }
 
-function renderProviderUsageValue(usageState, usageKind, unsupportedReason) {
+function renderProviderUsageValue(usageState, usageKind, unsupportedReason, unsupportedLink) {
 	if (unsupportedReason) {
-		return `<div class="usage-value muted">${escapeHtml(unsupportedReason)}</div>`;
+		const link = unsupportedLink
+			? `<div class="usage-value-link"><a href="${escapeHtml(unsupportedLink)}" target="_blank" rel="noopener noreferrer">Open TokenRouter dashboard</a></div>`
+			: "";
+		return `<div class="usage-value muted">${escapeHtml(unsupportedReason)}${link}</div>`;
 	}
 	if (usageState?.status === "success") {
 		return `<div class="usage-value">${escapeHtml(usageState.summary || "Usage check completed.")}</div>`;
@@ -817,7 +839,8 @@ function renderProviderUsageChecks() {
 	const rows = getProviderUsageRows();
 	const supportedTargets = rows.filter((target) => target.usageKind);
 	checkAllProviderUsageBtn.disabled =
-		supportedTargets.length === 0 || supportedTargets.some((target) => state.providerUsage[target.provider]?.status === "loading");
+		supportedTargets.length === 0 ||
+		supportedTargets.some((target) => state.providerUsage[target.provider]?.status === "loading");
 	if (!rows.length) {
 		providerUsageTableBody.innerHTML =
 			'<tr><td colspan="6" class="no-data">No configured providers have known usage-check behavior yet</td></tr>';
@@ -840,7 +863,7 @@ function renderProviderUsageChecks() {
 						<div class="usage-plan">${escapeHtml(isUnsupported ? "Unavailable" : getProviderUsagePlan(target.usageKind))}</div>
 						<div class="provider-meta">${escapeHtml(target.usageKind || "mimo")}</div>
 					</td>
-					<td>${renderProviderUsageValue(usageState, target.usageKind, target.unsupportedReason)}</td>
+					<td>${renderProviderUsageValue(usageState, target.usageKind, target.unsupportedReason, target.unsupportedLink)}</td>
 					<td>${renderProviderUsageKeyCell(target.provider, target.usageKind, target.unsupportedReason)}</td>
 					<td>${renderProviderUsageStatus(usageState, target.unsupportedReason)}</td>
 					<td class="action-cell">
@@ -892,9 +915,9 @@ function getModelOutputLimit(model) {
 
 function renderModelPresetFilters() {
 	const currentProvider = modelPresetProviderFilterInput.value;
-	const providers = Array.from(new Set(state.modelPresets.map((preset) => preset.model?.owned_by).filter(Boolean))).sort(
-		(a, b) => getProviderLabel(a).localeCompare(getProviderLabel(b))
-	);
+	const providers = Array.from(
+		new Set(state.modelPresets.map((preset) => preset.model?.owned_by).filter(Boolean))
+	).sort((a, b) => getProviderLabel(a).localeCompare(getProviderLabel(b)));
 	modelPresetProviderFilterInput.innerHTML =
 		'<option value="">All providers</option>' +
 		providers

@@ -17,6 +17,13 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
 		apiMode: "openai",
 	},
 	{
+		id: "tokenrouter",
+		label: "TokenRouter",
+		provider: "tokenrouter",
+		baseUrl: "https://api.tokenrouter.com/v1",
+		apiMode: "openai",
+	},
+	{
 		id: "litellm",
 		label: "LiteLLM Proxy",
 		provider: "litellm",

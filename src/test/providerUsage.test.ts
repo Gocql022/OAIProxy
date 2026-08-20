@@ -7,6 +7,8 @@ import {
 	getProviderUsageAdapter,
 	getProviderUsageSecretKey,
 	getProviderUsageUnsupportedReason,
+	isTokenRouterProvider,
+	TOKENROUTER_DASHBOARD_URL,
 	parseAnthropicCostReport,
 	parseDeepSeekBalance,
 	parseFireworksAccounts,
@@ -228,37 +230,43 @@ suite("providerUsage", () => {
 			const url = String(input);
 			requestedUrls.push(url);
 			if (url.startsWith("https://api.fireworks.ai/v1/accounts?")) {
-				return new Response(JSON.stringify({
-					accounts: [
-						{ name: "accounts/team-a", displayName: "Team A" },
-						{ name: "accounts/team-b" },
-					],
-				}), {
-					status: 200,
-					headers: { "content-type": "application/json" },
-				});
+				return new Response(
+					JSON.stringify({
+						accounts: [{ name: "accounts/team-a", displayName: "Team A" }, { name: "accounts/team-b" }],
+					}),
+					{
+						status: 200,
+						headers: { "content-type": "application/json" },
+					}
+				);
 			}
 			if (url.includes("/accounts/team-a/billingUsage?")) {
-				return new Response(JSON.stringify({
-					serverlessCosts: [
-						{
-							promptTokens: "1200",
-							completionTokens: "300",
-							group: { model_name: "accounts/fireworks/models/deepseek-v4-pro" },
-						},
-					],
-				}), { status: 200 });
+				return new Response(
+					JSON.stringify({
+						serverlessCosts: [
+							{
+								promptTokens: "1200",
+								completionTokens: "300",
+								group: { model_name: "accounts/fireworks/models/deepseek-v4-pro" },
+							},
+						],
+					}),
+					{ status: 200 }
+				);
 			}
 			if (url.includes("/accounts/team-b/billingUsage?")) {
-				return new Response(JSON.stringify({
-					serverlessCosts: [
-						{
-							promptTokens: "800",
-							completionTokens: "200",
-							group: { model_name: "accounts/fireworks/models/glm-5p2" },
-						},
-					],
-				}), { status: 200 });
+				return new Response(
+					JSON.stringify({
+						serverlessCosts: [
+							{
+								promptTokens: "800",
+								completionTokens: "200",
+								group: { model_name: "accounts/fireworks/models/glm-5p2" },
+							},
+						],
+					}),
+					{ status: 200 }
+				);
 			}
 			return new Response("not found", { status: 404, statusText: "Not Found" });
 		};
@@ -369,6 +377,37 @@ suite("providerUsage", () => {
 			}),
 			/Z\.AI usage checks are unavailable/
 		);
+	});
+
+	test("detects TokenRouter as unsupported without a usage request", async () => {
+		const originalFetch = globalThis.fetch;
+		let fetchCalls = 0;
+		globalThis.fetch = (async () => {
+			fetchCalls += 1;
+			throw new Error("TokenRouter usage test must not fetch");
+		}) as typeof fetch;
+
+		assert.strictEqual(isTokenRouterProvider("tokenrouter", "https://api.tokenrouter.com/v1"), true);
+		assert.strictEqual(isTokenRouterProvider("custom", "https://api.tokenrouter.com/v1"), true);
+		assert.strictEqual(getProviderUsageAdapter("tokenrouter", "https://api.tokenrouter.com/v1"), undefined);
+		assert.strictEqual(TOKENROUTER_DASHBOARD_URL, "https://www.tokenrouter.com/console");
+		try {
+			assert.match(
+				getProviderUsageUnsupportedReason("tokenrouter", "https://api.tokenrouter.com/v1") ?? "",
+				/TokenRouter usage checks are unavailable/
+			);
+			await assert.rejects(
+				checkProviderUsage({
+					provider: "tokenrouter",
+					baseUrl: "https://api.tokenrouter.com/v1",
+					apiKey: "test",
+				}),
+				/TokenRouter usage checks are unavailable/
+			);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+		assert.strictEqual(fetchCalls, 0);
 	});
 
 	test("formats non-positive reset times as now", () => {

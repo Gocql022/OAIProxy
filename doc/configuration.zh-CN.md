@@ -157,6 +157,7 @@ VS Code Copilot 针对特定模型优化了系统提示词。[详细介绍](http
 | 供应商 | 供应商 ID | Base URL | API 模式 |
 |---|---|---|---|
 | OpenAI | `openai` | `https://api.openai.com/v1` | `openai` |
+| TokenRouter | `tokenrouter` | `https://api.tokenrouter.com/v1` | `openai` |
 | Anthropic | `anthropic` | `https://api.anthropic.com` | `anthropic` |
 | Kimi (Moonshot AI) | `kimi` | `https://api.moonshot.ai/v1` | `openai` |
 | DeepSeek | `deepseek` | `https://api.deepseek.com` | `openai` |
@@ -166,7 +167,7 @@ VS Code Copilot 针对特定模型优化了系统提示词。[详细介绍](http
 | MiniMax (OpenAI) | `minimax` | `https://api.minimax.io/v1` | `openai` |
 | MiniMax (Anthropic) | `minimax-anthropic` | `https://api.minimax.io/anthropic` | `anthropic` |
 
-配置示例见 `examples/openai-responses.jsonc`、`examples/openai-chat-completions.jsonc`、`examples/anthropic.jsonc`、`examples/fireworks.jsonc`、`examples/zai-glm.jsonc`、`examples/mimo.jsonc`、`examples/minimax-openai.jsonc` 和 `examples/minimax-anthropic.jsonc`。Fireworks 用量检查复用普通供应商 key，并报告可访问账户的当月无服务器 token。OpenAI 和 Anthropic 的用量/费用检查需要单独的 admin key，请在配置界面的 `Usage Key` 字段中填写，不要写入 `settings.json`。Z.AI 和小米 MiMo 用量检查会显示为不可用，因为当前公开文档未提供 API key 用量或余额端点。
+配置示例见 `examples/openai-responses.jsonc`、`examples/openai-chat-completions.jsonc`、`examples/tokenrouter.jsonc`、`examples/anthropic.jsonc`、`examples/fireworks.jsonc`、`examples/zai-glm.jsonc`、`examples/mimo.jsonc`、`examples/minimax-openai.jsonc` 和 `examples/minimax-anthropic.jsonc`。TokenRouter 使用 `https://api.tokenrouter.com/v1`，供应商 key 保存为 `oaicopilot.apiKey.tokenrouter`，Quick Setup 提供四个精确的网关模型 ID。Fireworks 用量检查复用普通供应商 key，并报告可访问账户的当月无服务器 token。OpenAI 和 Anthropic 的用量/费用检查需要单独的 admin key，请在配置界面的 `Usage Key` 字段中填写，不要写入 `settings.json`。Z.AI、小米 MiMo 和 TokenRouter 用量检查会显示为不可用，因为当前公开文档未提供 API key 用量或余额端点；TokenRouter 条目会链接到控制台。
 
 ### Fireworks AI
 

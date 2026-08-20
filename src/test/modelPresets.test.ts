@@ -106,6 +106,84 @@ suite("modelPresets", () => {
 		assert.strictEqual(preset.model.top_p, undefined);
 	});
 
+	test("contains the four TokenRouter Quick Setup cards", () => {
+		const expected = [
+			{
+				presetId: "tokenrouter-deepseek-v4-pro-0813",
+				modelId: "deepseek/deepseek-v4-pro-0813",
+				label: "DeepSeek V4 Pro 0813 (TokenRouter)",
+				contextLength: 1048576,
+				maxTokens: 393216,
+				maxCompletionTokens: undefined,
+				vision: false,
+				effort: ["low", "high", "max"],
+				defaultEffort: "max",
+			},
+			{
+				presetId: "tokenrouter-qwen-3-8-max",
+				modelId: "qwen/qwen3.8-max",
+				label: "Qwen3.8-Max (TokenRouter)",
+				contextLength: 1000000,
+				maxTokens: undefined,
+				maxCompletionTokens: 65536,
+				vision: true,
+				effort: ["low", "medium", "xhigh"],
+				defaultEffort: "xhigh",
+			},
+			{
+				presetId: "tokenrouter-kimi-k3",
+				modelId: "moonshotai/kimi-k3",
+				label: "Kimi K3 (TokenRouter)",
+				contextLength: 1048576,
+				maxTokens: undefined,
+				maxCompletionTokens: 131072,
+				vision: true,
+				effort: ["low", "high", "max"],
+				defaultEffort: "max",
+			},
+			{
+				presetId: "tokenrouter-glm-5-3",
+				modelId: "z-ai/glm-5.3",
+				label: "GLM-5.3 (TokenRouter)",
+				contextLength: 1000000,
+				maxTokens: 131072,
+				maxCompletionTokens: undefined,
+				vision: false,
+				effort: ["low", "high", "max"],
+				defaultEffort: "max",
+			},
+		];
+
+		for (const item of expected) {
+			const preset = MODEL_PRESETS.find((candidate) => candidate.id === item.presetId);
+
+			assert.ok(preset);
+			assert.strictEqual(preset.label, item.label);
+			assert.strictEqual(preset.providerPresetId, "tokenrouter");
+			assert.strictEqual(preset.model.id, item.modelId);
+			assert.strictEqual(preset.model.owned_by, "tokenrouter");
+			assert.strictEqual(preset.model.baseUrl, "https://api.tokenrouter.com/v1");
+			assert.strictEqual(preset.model.apiMode, "openai");
+			assert.strictEqual(preset.model.context_length, item.contextLength);
+			assert.strictEqual(preset.model.max_tokens, item.maxTokens);
+			assert.strictEqual(preset.model.max_completion_tokens, item.maxCompletionTokens);
+			assert.strictEqual(preset.model.vision, item.vision);
+			assert.strictEqual(preset.model.toolCalling, true);
+			assert.strictEqual(preset.model.include_reasoning_in_request, true);
+			assert.strictEqual(preset.model.reasoning_effort, item.defaultEffort);
+			assert.deepStrictEqual(preset.model.supported_reasoning_efforts, item.effort);
+			assert.strictEqual(preset.model.default_reasoning_effort, item.defaultEffort);
+			assert.ok(preset.model._comment?.includes("https://www.tokenrouter.com/docs"));
+		}
+
+		const deepseek = MODEL_PRESETS.find((candidate) => candidate.id === "tokenrouter-deepseek-v4-pro-0813");
+		const glm = MODEL_PRESETS.find((candidate) => candidate.id === "tokenrouter-glm-5-3");
+		assert.ok(deepseek);
+		assert.deepStrictEqual(deepseek.model.thinking, { type: "enabled" });
+		assert.ok(glm);
+		assert.deepStrictEqual(glm.model.thinking, { type: "enabled", clear_thinking: false });
+	});
+
 	test("contains Fireworks open-model quick setup presets", () => {
 		const expected = [
 			{
@@ -229,7 +307,15 @@ suite("modelPresets", () => {
 		assert.strictEqual(preset.model.max_tokens, 131072);
 		assert.strictEqual(preset.model.max_completion_tokens, undefined);
 		assert.strictEqual(preset.model.reasoning_effort, "max");
-		assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
+		assert.deepStrictEqual(preset.model.supported_reasoning_efforts, [
+			"none",
+			"minimal",
+			"low",
+			"medium",
+			"high",
+			"xhigh",
+			"max",
+		]);
 		assert.strictEqual(preset.model.default_reasoning_effort, "max");
 		assert.deepStrictEqual(preset.model.thinking, {
 			type: "enabled",
@@ -259,7 +345,15 @@ suite("modelPresets", () => {
 		assert.strictEqual(preset.model.max_tokens, 131072);
 		assert.strictEqual(preset.model.max_completion_tokens, undefined);
 		assert.strictEqual(preset.model.reasoning_effort, "max");
-		assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
+		assert.deepStrictEqual(preset.model.supported_reasoning_efforts, [
+			"none",
+			"minimal",
+			"low",
+			"medium",
+			"high",
+			"xhigh",
+			"max",
+		]);
 		assert.strictEqual(preset.model.default_reasoning_effort, "max");
 		assert.deepStrictEqual(preset.model.thinking, {
 			type: "enabled",
@@ -301,7 +395,10 @@ suite("modelPresets", () => {
 
 	test("omits retired LiteLLM quick setup presets", () => {
 		for (const presetId of ["litellm-glm-5-1", "litellm-qwen3-5-122b-a10b"]) {
-			assert.strictEqual(MODEL_PRESETS.some((preset) => preset.id === presetId), false);
+			assert.strictEqual(
+				MODEL_PRESETS.some((preset) => preset.id === presetId),
+				false
+			);
 		}
 	});
 
@@ -318,11 +415,7 @@ suite("modelPresets", () => {
 		assert.ok(anthropicPresets.length > 0, "expected Anthropic-mode presets");
 
 		for (const preset of anthropicPresets) {
-			assert.strictEqual(
-				preset.model.prompt_cache?.enabled,
-				true,
-				`${preset.id} should enable prompt cache shaping`
-			);
+			assert.strictEqual(preset.model.prompt_cache?.enabled, true, `${preset.id} should enable prompt cache shaping`);
 			assert.strictEqual(
 				preset.model.prompt_cache?.anthropic?.enabled,
 				true,

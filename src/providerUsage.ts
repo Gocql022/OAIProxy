@@ -41,6 +41,9 @@ const MIMO_USAGE_UNSUPPORTED_REASON =
 	"Xiaomi MiMo usage checks are unavailable because Xiaomi only exposes balance/usage through web Console endpoints; no public API-key usage endpoint is documented.";
 const ZAI_USAGE_UNSUPPORTED_REASON =
 	"Z.AI usage checks are unavailable because Z.AI currently documents API keys and console billing/usage pages, but not a public API-key usage or balance endpoint.";
+export const TOKENROUTER_DASHBOARD_URL = "https://www.tokenrouter.com/console";
+const TOKENROUTER_USAGE_UNSUPPORTED_REASON =
+	"TokenRouter usage checks are unavailable because its public API documentation does not expose a key-scoped balance or usage endpoint.";
 
 export function getProviderSecretKey(provider: string): string {
 	return `oaicopilot.apiKey.${provider.trim().toLowerCase()}`;
@@ -80,7 +83,16 @@ export function isZaiProvider(provider: string, baseUrl?: string): boolean {
 	);
 }
 
+export function isTokenRouterProvider(provider: string, baseUrl?: string): boolean {
+	const normalizedProvider = provider.trim().toLowerCase();
+	const normalizedBaseUrl = (baseUrl ?? "").trim().toLowerCase();
+	return normalizedProvider === "tokenrouter" || normalizedBaseUrl.includes("api.tokenrouter.com");
+}
+
 export function getProviderUsageUnsupportedReason(provider: string, baseUrl?: string): string | undefined {
+	if (isTokenRouterProvider(provider, baseUrl)) {
+		return TOKENROUTER_USAGE_UNSUPPORTED_REASON;
+	}
 	if (isMimoProvider(provider, baseUrl)) {
 		return MIMO_USAGE_UNSUPPORTED_REASON;
 	}
@@ -147,13 +159,17 @@ export async function checkProviderUsage(request: ProviderUsageRequest): Promise
 
 	let parsed: ParsedProviderUsage;
 	if (adapter === "deepseek") {
-		parsed = parseDeepSeekBalance(await fetchJson(DEEPSEEK_BALANCE_ENDPOINT, "DeepSeek", bearerHeaders(request.apiKey)));
+		parsed = parseDeepSeekBalance(
+			await fetchJson(DEEPSEEK_BALANCE_ENDPOINT, "DeepSeek", bearerHeaders(request.apiKey))
+		);
 	} else if (adapter === "fireworks") {
 		parsed = await checkFireworksUsage(request.apiKey);
 	} else if (adapter === "kimi") {
 		parsed = parseKimiBalance(await fetchJson(KIMI_BALANCE_ENDPOINT, "Kimi", bearerHeaders(request.apiKey)));
 	} else if (adapter === "minimax") {
-		parsed = parseMiniMaxTokenPlan(await fetchJson(MINIMAX_TOKEN_PLAN_ENDPOINT, "MiniMax", bearerHeaders(request.apiKey)));
+		parsed = parseMiniMaxTokenPlan(
+			await fetchJson(MINIMAX_TOKEN_PLAN_ENDPOINT, "MiniMax", bearerHeaders(request.apiKey))
+		);
 	} else if (adapter === "openai") {
 		parsed = parseOpenAICosts(await fetchJson(buildOpenAICostsEndpoint(), "OpenAI", bearerHeaders(request.apiKey)));
 	} else if (adapter === "anthropic") {
@@ -162,10 +178,16 @@ export async function checkProviderUsage(request: ProviderUsageRequest): Promise
 		);
 	} else {
 		if (!request.targetApiKey) {
-			throw new Error("LiteLLM usage checks require the provider API key to inspect plus a separate master/admin Usage Key.");
+			throw new Error(
+				"LiteLLM usage checks require the provider API key to inspect plus a separate master/admin Usage Key."
+			);
 		}
 		parsed = parseLiteLLMKeyInfo(
-			await fetchJson(buildLiteLLMKeyInfoEndpoint(request.baseUrl, request.targetApiKey), "LiteLLM", bearerHeaders(request.apiKey))
+			await fetchJson(
+				buildLiteLLMKeyInfoEndpoint(request.baseUrl, request.targetApiKey),
+				"LiteLLM",
+				bearerHeaders(request.apiKey)
+			)
 		);
 	}
 
@@ -267,10 +289,7 @@ export function parseFireworksBillingUsage(payload: unknown): FireworksServerles
 	return asArray(obj.serverlessCosts, "Fireworks serverlessCosts").map((item) => {
 		const usage = asRecord(item, "Fireworks serverless usage entry");
 		const group = usage.group === undefined ? undefined : asRecord(usage.group, "Fireworks usage group");
-		const modelName =
-			optionalString(group?.model_name) ??
-			optionalString(usage.modelName) ??
-			"Unknown model";
+		const modelName = optionalString(group?.model_name) ?? optionalString(usage.modelName) ?? "Unknown model";
 		return {
 			modelName,
 			promptTokens: asNumber(usage.promptTokens, "Fireworks promptTokens"),
@@ -362,7 +381,8 @@ export function parseOpenAICosts(payload: unknown): ParsedProviderUsage {
 			const amount = asRecord(result.amount, "OpenAI costs amount");
 			const currency = asString(amount.currency, "OpenAI costs currency").toUpperCase();
 			const value = asNumber(amount.value, "OpenAI costs value");
-			const lineItem = typeof result.line_item === "string" && result.line_item.trim() ? result.line_item : "Ungrouped costs";
+			const lineItem =
+				typeof result.line_item === "string" && result.line_item.trim() ? result.line_item : "Ungrouped costs";
 			addCurrencyTotal(totals, currency, value);
 			addBreakdownTotal(lineTotals, lineItem, currency, value);
 		}
@@ -417,7 +437,8 @@ export function parseLiteLLMKeyInfo(payload: unknown): ParsedProviderUsage {
 	const obj = asRecord(payload, "LiteLLM key info response");
 	const info = obj.info !== undefined ? asRecord(obj.info, "LiteLLM key info") : obj;
 	const alias = optionalString(info.key_alias) ?? optionalString(info.alias) ?? "virtual key";
-	const spend = optionalNumber(info.spend, "LiteLLM spend") ?? optionalNumber(info.total_spend, "LiteLLM total_spend") ?? 0;
+	const spend =
+		optionalNumber(info.spend, "LiteLLM spend") ?? optionalNumber(info.total_spend, "LiteLLM total_spend") ?? 0;
 	const maxBudget =
 		optionalNumber(info.max_budget, "LiteLLM max_budget") ??
 		optionalNumber(info.budget, "LiteLLM budget") ??
@@ -426,9 +447,7 @@ export function parseLiteLLMKeyInfo(payload: unknown): ParsedProviderUsage {
 		optionalNumber(info.remaining_budget, "LiteLLM remaining_budget") ??
 		(maxBudget !== undefined ? Math.max(maxBudget - spend, 0) : undefined);
 	const budgetDuration = optionalString(info.budget_duration);
-	const models = Array.isArray(info.models)
-		? info.models.map((item) => String(item)).filter(Boolean)
-		: [];
+	const models = Array.isArray(info.models) ? info.models.map((item) => String(item)).filter(Boolean) : [];
 
 	const summary =
 		remainingBudget !== undefined && maxBudget !== undefined
@@ -437,10 +456,7 @@ export function parseLiteLLMKeyInfo(payload: unknown): ParsedProviderUsage {
 					"USD"
 				)} spent)`
 			: `${formatMoney(spend, "USD")} spent`;
-	const details = [
-		`Key: ${alias}`,
-		`Spend: ${formatMoney(spend, "USD")}`,
-	];
+	const details = [`Key: ${alias}`, `Spend: ${formatMoney(spend, "USD")}`];
 	if (maxBudget !== undefined) {
 		details.push(`Budget: ${formatMoney(maxBudget, "USD")}`);
 	}
@@ -541,9 +557,10 @@ async function checkFireworksUsage(apiKey: string): Promise<ParsedProviderUsage>
 	const totalTokens = promptTokens + completionTokens;
 	const accountLabel = `${accounts.length} account${accounts.length === 1 ? "" : "s"}`;
 	return {
-		summary: totalTokens > 0
-			? `${formatCount(promptTokens)} input + ${formatCount(completionTokens)} output tokens month-to-date across ${accountLabel}`
-			: `No serverless token usage returned month-to-date across ${accountLabel}`,
+		summary:
+			totalTokens > 0
+				? `${formatCount(promptTokens)} input + ${formatCount(completionTokens)} output tokens month-to-date across ${accountLabel}`
+				: `No serverless token usage returned month-to-date across ${accountLabel}`,
 		details,
 	};
 }
@@ -589,7 +606,12 @@ function addCurrencyTotal(totals: Map<string, number>, currency: string, value: 
 	totals.set(currency, (totals.get(currency) ?? 0) + value);
 }
 
-function addBreakdownTotal(totals: Map<string, Map<string, number>>, label: string, currency: string, value: number): void {
+function addBreakdownTotal(
+	totals: Map<string, Map<string, number>>,
+	label: string,
+	currency: string,
+	value: number
+): void {
 	let currencyTotals = totals.get(label);
 	if (!currencyTotals) {
 		currencyTotals = new Map<string, number>();

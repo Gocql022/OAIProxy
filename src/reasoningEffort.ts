@@ -44,7 +44,7 @@ export function getReasoningEfforts(model: HFModelItem, selectedEffort?: string)
 	if (hasReasoningEffortValues(model.supported_reasoning_efforts)) {
 		return appendSelectedAlias(uniqueReasoningEfforts(model.supported_reasoning_efforts));
 	}
-	if (isDeepSeekModel(model)) {
+	if (isNativeDeepSeekModel(model)) {
 		return appendSelectedAlias(DEEPSEEK_REASONING_EFFORTS);
 	}
 	if (isFireworksGlm52Model(model)) {
@@ -109,7 +109,7 @@ export function normalizeReasoningEffortForModel(model: HFModelItem, value: stri
 		return undefined;
 	}
 
-	if (isDeepSeekModel(model)) {
+	if (isNativeDeepSeekModel(model)) {
 		if (normalized === "low" || normalized === "medium" || normalized === "high") {
 			return "high";
 		}
@@ -163,16 +163,17 @@ function isDeepSeekModel(model: HFModelItem): boolean {
 	return id.includes("deepseek") || provider.includes("deepseek");
 }
 
+function isNativeDeepSeekModel(model: HFModelItem): boolean {
+	return isDeepSeekModel(model) && model.owned_by?.trim().toLowerCase() !== "tokenrouter";
+}
+
 function isFireworksGlm52Model(model: HFModelItem): boolean {
 	const id = model.id.toLowerCase();
 	const provider = model.owned_by?.toLowerCase() ?? "";
 	return id.includes("glm-5p2") && (id.includes("accounts/fireworks/") || provider.includes("fireworks"));
 }
 
-function getStringValue(
-	values: Readonly<Record<string, unknown>> | undefined,
-	...keys: string[]
-): string | undefined {
+function getStringValue(values: Readonly<Record<string, unknown>> | undefined, ...keys: string[]): string | undefined {
 	for (const key of keys) {
 		const value = values?.[key];
 		if (typeof value === "string" && value.trim()) {

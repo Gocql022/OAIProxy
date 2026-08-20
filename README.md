@@ -4,7 +4,7 @@
 
 # OAIProxy
 
-**A self-maintained VS Code extension to use OpenAI/Ollama/Anthropic/Gemini API providers in GitHub Copilot Chat, with presets for OpenAI, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax** 🔥
+**A self-maintained VS Code extension to use OpenAI/Ollama/Anthropic/Gemini API providers in GitHub Copilot Chat, with presets for OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax** 🔥
 
 English | [简体中文](README.zh-CN.md)
 
@@ -25,7 +25,7 @@ English | [简体中文](README.zh-CN.md)
 - **Advanced configuration**: Flexible chat request options with thinking/reasoning control
 - **Multi-provider management**: Configure models from multiple providers simultaneously with automatic API key management
 - **Model connection tests**: Test one configured model or run up to four tests in parallel from Model Management using the model's real saved request configuration
-- **Provider usage checks**: Check Fireworks month-to-date serverless tokens, DeepSeek/Kimi credit balance, MiniMax token-plan remaining quota, and OpenAI/Anthropic month-to-date cost usage from a standalone Provider Usage Check table; Z.AI and MiMo are shown as unavailable until public API-key usage endpoints are documented
+- **Provider usage checks**: Check Fireworks month-to-date serverless tokens, DeepSeek/Kimi credit balance, MiniMax token-plan remaining quota, and OpenAI/Anthropic month-to-date cost usage from a standalone Provider Usage Check table; Z.AI, MiMo, and TokenRouter are shown as unavailable when no public API-key usage endpoint is documented
 - **Multi-config per model**: Define different settings for the same model (e.g., GLM-4.6 with/without thinking)
 - **Visual configuration UI**: Intuitive interface for managing providers and models
 - **Auto-retry**: Handles API errors (429, 500, 502, 503, 504) with exponential backoff
@@ -85,11 +85,11 @@ Set `max_input_tokens` when a provider needs a safety margin below its official 
 
 The extension provides a visual configuration interface for managing providers, models, and API keys without editing JSON files manually. Open via the Command Palette (`OAIProxy: Open Configuration UI`) or click the OAIProxy status bar item.
 
-The Provider Management form includes presets for OpenAI, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax. Selecting a preset fills the provider ID, base URL, and API mode; you still choose the model ID from the provider's current documentation or model list. Example snippets are in `examples/openai-responses.jsonc`, `examples/openai-chat-completions.jsonc`, `examples/anthropic.jsonc`, `examples/fireworks.jsonc`, `examples/zai-glm.jsonc`, `examples/mimo.jsonc`, `examples/minimax-openai.jsonc`, and `examples/minimax-anthropic.jsonc`.
+The Provider Management form includes presets for OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax. TokenRouter uses `https://api.tokenrouter.com/v1` and stores its key as `oaicopilot.apiKey.tokenrouter`. Quick Setup includes `deepseek/deepseek-v4-pro-0813`, `qwen/qwen3.8-max`, `moonshotai/kimi-k3`, and `z-ai/glm-5.3`. Selecting a preset fills the provider ID, base URL, and API mode; you can still fetch or enter model IDs from the provider's current model list. Example snippets are in `examples/openai-responses.jsonc`, `examples/openai-chat-completions.jsonc`, `examples/tokenrouter.jsonc`, `examples/anthropic.jsonc`, `examples/fireworks.jsonc`, `examples/zai-glm.jsonc`, `examples/mimo.jsonc`, `examples/minimax-openai.jsonc`, and `examples/minimax-anthropic.jsonc`.
 
 Model Management provides a per-model `Test` action and a parallel `Test all` action. Each test sends a small real inference request through the model's saved provider, API mode, headers, and advanced request settings, so it may incur minimal provider usage.
 
-The standalone Provider Usage Check table lists configured supported providers dynamically and reports credit, token, token-plan, or cost usage. Fireworks account discovery and month-to-date serverless token checks reuse the normal Fireworks provider key. OpenAI and Anthropic usage/admin keys are stored separately from chat API keys. Z.AI and MiMo entries are shown with unavailable reasons because their current public docs do not expose API-key usage or balance endpoints.
+The standalone Provider Usage Check table lists configured supported providers dynamically and reports credit, token, token-plan, or cost usage. Fireworks account discovery and month-to-date serverless token checks reuse the normal Fireworks provider key. OpenAI and Anthropic usage/admin keys are stored separately from chat API keys. Z.AI, MiMo, and TokenRouter entries are shown with unavailable reasons when their public docs do not expose API-key usage or balance endpoints; TokenRouter rows link to the [TokenRouter dashboard](https://www.tokenrouter.com/console).
 
 → [Full Configuration Guide](doc/configuration.md)
 
@@ -97,7 +97,7 @@ The standalone Provider Usage Check table lists configured supported providers d
 
 Supports five API protocols: `openai` (Chat Completions), `openai-responses` (Responses), `ollama`, `anthropic`, and `gemini`. Specify per-model via the `apiMode` parameter.
 
-Fireworks, Kimi, DeepSeek, Z.AI GLM, and Xiaomi MiMo use the existing `openai` mode because their hosted APIs are OpenAI-compatible. MiniMax supports both `openai` and `anthropic` modes; MiniMax recommends the Anthropic-compatible M3 endpoint for thinking and interleaved-thinking workflows.
+TokenRouter, Fireworks, Kimi, DeepSeek, Z.AI GLM, and Xiaomi MiMo use the existing `openai` mode because their hosted APIs are OpenAI-compatible. MiniMax supports both `openai` and `anthropic` modes; MiniMax recommends the Anthropic-compatible M3 endpoint for thinking and interleaved-thinking workflows.
 
 → [Full Multi-API Guide](doc/configuration.md#multi-api-mode)
 
@@ -106,6 +106,10 @@ Fireworks, Kimi, DeepSeek, Z.AI GLM, and Xiaomi MiMo use the existing `openai` m
 Fireworks is a first-class provider using `https://api.fireworks.ai/inference/v1` and full model IDs such as `accounts/fireworks/models/deepseek-v4-pro`, `accounts/fireworks/models/kimi-k2p7-code`, and `accounts/fireworks/models/glm-5p2`. Quick Setup keeps these Fireworks-hosted cards separate from the original DeepSeek, Kimi, and Z.AI cards.
 
 Fireworks prompt caching is enabled by default upstream. OAIProxy adds a stable `user` affinity value to improve cache routing and reads cached-token telemetry from OpenAI-compatible usage responses. The Fireworks usage check discovers accounts through the public accounts API and reports month-to-date serverless input/output tokens; the HTTP endpoint does not expose rated cost totals.
+
+## TokenRouter
+
+TokenRouter is configured as an OpenAI-compatible provider at `https://api.tokenrouter.com/v1`. The Quick Setup cards use the exact gateway model IDs `deepseek/deepseek-v4-pro-0813`, `qwen/qwen3.8-max`, `moonshotai/kimi-k3`, and `z-ai/glm-5.3`; the provider key is stored separately as `oaicopilot.apiKey.tokenrouter`. TokenRouter usage and balance checks are intentionally marked unavailable because no public key-scoped usage endpoint is documented; use the [TokenRouter dashboard](https://www.tokenrouter.com/console) for account usage.
 
 ## Z.AI GLM-5.2
 

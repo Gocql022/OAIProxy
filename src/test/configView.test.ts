@@ -62,6 +62,15 @@ suite("configView", () => {
 		});
 	});
 
+	test("stores TokenRouter keys under its dedicated provider secret", () => {
+		assert.deepStrictEqual(resolveProviderApiKeyChange("TokenRouter", "  tr-test  "), {
+			kind: "store",
+			secretKey: "oaicopilot.apiKey.tokenrouter",
+			legacySecretKey: "oaicopilot.apiKey.TokenRouter",
+			value: "tr-test",
+		});
+	});
+
 	test("preserves provider API keys when the UI sends an empty key without clear intent", () => {
 		assert.deepStrictEqual(resolveProviderApiKeyChange("deepseek", undefined), {
 			kind: "preserve",
@@ -96,13 +105,15 @@ suite("configView", () => {
 
 		const result = resolveBatchAddModels(existing, candidate);
 
-		assert.deepStrictEqual(result.added.map((item) => item.id), ["claude-sonnet-4-6"]);
+		assert.deepStrictEqual(
+			result.added.map((item) => item.id),
+			["claude-sonnet-4-6"]
+		);
 		assert.strictEqual(result.skipped.length, 2);
-		assert.deepStrictEqual(result.models.map((item) => `${item.id}${item.configId ? "::" + item.configId : ""}`), [
-			"MiniMax-M3::anthropic",
-			"gpt-5.5",
-			"claude-sonnet-4-6",
-		]);
+		assert.deepStrictEqual(
+			result.models.map((item) => `${item.id}${item.configId ? "::" + item.configId : ""}`),
+			["MiniMax-M3::anthropic", "gpt-5.5", "claude-sonnet-4-6"]
+		);
 	});
 
 	test("batch add never creates hidden provider rows for inherited models", () => {
@@ -121,7 +132,10 @@ suite("configView", () => {
 			{ inheritProvider: true }
 		);
 
-		assert.strictEqual(result.models.some((item) => item.id.startsWith("__provider__")), false);
+		assert.strictEqual(
+			result.models.some((item) => item.id.startsWith("__provider__")),
+			false
+		);
 		assert.strictEqual(result.added[0].baseUrl, undefined);
 		assert.strictEqual(result.added[0].apiMode, undefined);
 		assert.strictEqual(result.added[0].headers, undefined);
@@ -152,7 +166,10 @@ suite("configView", () => {
 			}
 		);
 
-		assert.strictEqual(result.models.some((item) => item.id === "__provider__minimax-anthropic"), false);
+		assert.strictEqual(
+			result.models.some((item) => item.id === "__provider__minimax-anthropic"),
+			false
+		);
 		assert.strictEqual(result.added[0].baseUrl, undefined);
 		const resolved = resolveProviderBackedModel(result.added[0], result.models, [
 			{
@@ -188,14 +205,14 @@ suite("configView", () => {
 			{ inheritProvider: true }
 		);
 
-		assert.strictEqual(result.models.some((item) => item.id === "__provider__kimi"), false);
+		assert.strictEqual(
+			result.models.some((item) => item.id === "__provider__kimi"),
+			false
+		);
 		assert.strictEqual(result.added[0].baseUrl, undefined);
 
 		const resolved = resolveProviderBackedModel(result.added[0], result.models);
-		assert.strictEqual(
-			resolved?.baseUrl,
-			"https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
-		);
+		assert.strictEqual(resolved?.baseUrl, "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1");
 		assert.strictEqual(resolved?.apiMode, "openai");
 	});
 
@@ -212,7 +229,10 @@ suite("configView", () => {
 			{ inheritProvider: true }
 		);
 
-		assert.strictEqual(result.models.some((item) => item.id === "__provider__openai"), false);
+		assert.strictEqual(
+			result.models.some((item) => item.id === "__provider__openai"),
+			false
+		);
 		assert.strictEqual(result.added[0].baseUrl, undefined);
 		assert.strictEqual(result.added[0].apiMode, undefined);
 	});
@@ -248,7 +268,10 @@ suite("configView", () => {
 			]
 		);
 
-		assert.strictEqual(result.models.some((item) => item.id === "__provider__kimi"), false);
+		assert.strictEqual(
+			result.models.some((item) => item.id === "__provider__kimi"),
+			false
+		);
 		assert.strictEqual(
 			result.added[0].baseUrl,
 			"https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
@@ -299,13 +322,17 @@ suite("configView", () => {
 			inheritProvider: true,
 		});
 
-		const message = getMissingProviderSetupMessage(inherited, [inherited], [
-			{
-				provider: "kimi",
-				baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
-				apiMode: "openai",
-			},
-		]);
+		const message = getMissingProviderSetupMessage(
+			inherited,
+			[inherited],
+			[
+				{
+					provider: "kimi",
+					baseUrl: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+					apiMode: "openai",
+				},
+			]
+		);
 
 		assert.strictEqual(message, undefined);
 	});
@@ -359,9 +386,10 @@ suite("configView", () => {
 		const result = resolveBatchDeleteModels(existing, ["MiniMax-M3::anthropic", "gpt-5.5"]);
 
 		assert.deepStrictEqual(result.removedIds, ["MiniMax-M3::anthropic", "gpt-5.5"]);
-		assert.deepStrictEqual(result.models.map((item) => `${item.id}${item.configId ? "::" + item.configId : ""}`), [
-			"MiniMax-M3",
-		]);
+		assert.deepStrictEqual(
+			result.models.map((item) => `${item.id}${item.configId ? "::" + item.configId : ""}`),
+			["MiniMax-M3"]
+		);
 	});
 });
 
