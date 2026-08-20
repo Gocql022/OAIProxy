@@ -23,7 +23,7 @@
 - **高级配置**：灵活的对话请求选项，支持思维链/推理控制
 - **多供应商管理**：同时配置多个供应商模型，自动管理各供应商 API 密钥
 - **模型连接测试**：在 Model Management 中测试单个已配置模型，或最多并行运行四个测试，并使用模型真实保存的请求配置
-- **供应商用量检查**：在独立的 Provider Usage Check 表格中查看 Fireworks 当月无服务器 token、DeepSeek/Kimi 余额、MiniMax token 套餐剩余额度，以及 OpenAI/Anthropic 当月费用用量；Z.AI、小米 MiMo 和 TokenRouter 在没有公开 API key 用量端点时会显示为暂不可用
+- **供应商用量检查**：在独立的 Provider Usage Check 表格中查看 Fireworks 当月无服务器 token、DeepSeek/Kimi 余额、TokenRouter Management Key 账户余额、MiniMax token 套餐剩余额度，以及 OpenAI/Anthropic 当月费用用量；Z.AI 和小米 MiMo 在没有公开 API key 用量端点时会显示为暂不可用
 - **同模型多配置**：为同一模型定义不同参数配置（如 GLM-4.6 开启/关闭思维链）
 - **可视化配置界面**：直观的界面管理供应商和模型
 - **自动重试**：处理 API 错误（429、500、502、503、504），支持指数退避
@@ -85,7 +85,7 @@
 
 Model Management 提供每个模型的 `Test` 操作和并行的 `Test all` 操作。每次测试都会通过模型保存的供应商、API 模式、自定义请求头和高级参数发送一条小型真实推理请求，因此可能产生少量供应商用量。
 
-独立的 Provider Usage Check 表格会动态列出已配置且支持用量检查的供应商，并按余额、token、token 套餐或费用用量展示结果。Fireworks 账户发现和当月无服务器 token 检查复用普通 Fireworks API key。OpenAI 和 Anthropic 的用量/admin key 会与聊天 API key 分开保存。Z.AI、小米 MiMo 和 TokenRouter 条目会显示不可用原因，因为当前公开文档未提供 API key 用量或余额端点；TokenRouter 条目会链接到 [TokenRouter 控制台](https://www.tokenrouter.com/console)。
+独立的 Provider Usage Check 表格会动态列出已配置且支持用量检查的供应商，并按余额、token、token 套餐或费用用量展示结果。Fireworks 账户发现和当月无服务器 token 检查复用普通 Fireworks API key。OpenAI 和 Anthropic 的用量/admin key 会与聊天 API key 分开保存。TokenRouter 使用单独的 Management Key，并通过 Management API self-wallet 端点显示账户余额。Z.AI 和小米 MiMo 条目会显示不可用原因，因为当前公开文档未提供 API key 用量或余额端点。
 
 → [完整配置指南](doc/configuration.zh-CN.md)
 
@@ -105,7 +105,7 @@ Fireworks 默认启用 prompt caching。OAIProxy 添加稳定的 `user` affinity
 
 ## TokenRouter
 
-TokenRouter 通过 `https://api.tokenrouter.com/v1` 提供 OpenAI 兼容接口。Quick Setup 卡片使用精确的网关模型 ID：`deepseek/deepseek-v4-pro-0813`、`qwen/qwen3.8-max`、`moonshotai/kimi-k3` 和 `z-ai/glm-5.3`；供应商密钥单独保存为 `oaicopilot.apiKey.tokenrouter`。由于当前没有公开的按 API key 查询用量端点，TokenRouter 用量检查会明确显示为不可用；账户用量请查看 [TokenRouter 控制台](https://www.tokenrouter.com/console)。
+TokenRouter 通过 `https://api.tokenrouter.com/v1` 提供 OpenAI 兼容接口。Quick Setup 卡片使用精确的网关模型 ID：`deepseek/deepseek-v4-pro-0813`、`qwen/qwen3.8-max`、`moonshotai/kimi-k3` 和 `z-ai/glm-5.3`；供应商密钥单独保存为 `oaicopilot.apiKey.tokenrouter`。TokenRouter 余额检查使用单独保存为 `oaicopilot.usageApiKey.tokenrouter` 的 Management Key，并调用 Management API wallet 端点。
 
 ## Z.AI GLM-5.2
 

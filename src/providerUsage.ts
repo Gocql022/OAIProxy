@@ -1,4 +1,12 @@
-export type ProviderUsageAdapter = "anthropic" | "deepseek" | "fireworks" | "kimi" | "litellm" | "minimax" | "openai";
+export type ProviderUsageAdapter =
+	| "anthropic"
+	| "deepseek"
+	| "fireworks"
+	| "kimi"
+	| "litellm"
+	| "minimax"
+	| "openai"
+	| "tokenrouter";
 
 export interface ProviderUsageResult {
 	provider: string;
@@ -37,13 +45,12 @@ const MINIMAX_TOKEN_PLAN_ENDPOINT = "https://api.minimax.io/v1/token_plan/remain
 const OPENAI_COSTS_ENDPOINT = "https://api.openai.com/v1/organization/costs";
 const ANTHROPIC_COST_REPORT_ENDPOINT = "https://api.anthropic.com/v1/organizations/cost_report";
 const FIREWORKS_ACCOUNTS_ENDPOINT = "https://api.fireworks.ai/v1/accounts";
+const TOKENROUTER_MANAGEMENT_BASE_URL = "https://api.tokenrouter.com";
 const MIMO_USAGE_UNSUPPORTED_REASON =
 	"Xiaomi MiMo usage checks are unavailable because Xiaomi only exposes balance/usage through web Console endpoints; no public API-key usage endpoint is documented.";
 const ZAI_USAGE_UNSUPPORTED_REASON =
 	"Z.AI usage checks are unavailable because Z.AI currently documents API keys and console billing/usage pages, but not a public API-key usage or balance endpoint.";
 export const TOKENROUTER_DASHBOARD_URL = "https://www.tokenrouter.com/console";
-const TOKENROUTER_USAGE_UNSUPPORTED_REASON =
-	"TokenRouter usage checks are unavailable because its public API documentation does not expose a key-scoped balance or usage endpoint.";
 
 export function getProviderSecretKey(provider: string): string {
 	return `oaicopilot.apiKey.${provider.trim().toLowerCase()}`;
@@ -54,7 +61,7 @@ export function getProviderUsageSecretKey(provider: string): string {
 }
 
 export function providerRequiresUsageApiKey(adapter: ProviderUsageAdapter): boolean {
-	return adapter === "openai" || adapter === "anthropic" || adapter === "litellm";
+	return adapter === "openai" || adapter === "anthropic" || adapter === "litellm" || adapter === "tokenrouter";
 }
 
 export function isMimoProvider(provider: string, baseUrl?: string): boolean {
@@ -90,9 +97,6 @@ export function isTokenRouterProvider(provider: string, baseUrl?: string): boole
 }
 
 export function getProviderUsageUnsupportedReason(provider: string, baseUrl?: string): string | undefined {
-	if (isTokenRouterProvider(provider, baseUrl)) {
-		return TOKENROUTER_USAGE_UNSUPPORTED_REASON;
-	}
 	if (isMimoProvider(provider, baseUrl)) {
 		return MIMO_USAGE_UNSUPPORTED_REASON;
 	}
@@ -106,6 +110,9 @@ export function getProviderUsageAdapter(provider: string, baseUrl?: string): Pro
 	const normalizedProvider = provider.trim().toLowerCase();
 	const normalizedBaseUrl = (baseUrl ?? "").trim().toLowerCase();
 
+	if (isTokenRouterProvider(provider, baseUrl)) {
+		return "tokenrouter";
+	}
 	if (normalizedProvider === "openai" || normalizedBaseUrl.includes("api.openai.com")) {
 		return "openai";
 	}
@@ -176,6 +183,10 @@ export async function checkProviderUsage(request: ProviderUsageRequest): Promise
 		parsed = parseAnthropicCostReport(
 			await fetchJson(buildAnthropicCostReportEndpoint(), "Anthropic", anthropicAdminHeaders(request.apiKey))
 		);
+	} else if (adapter === "tokenrouter") {
+		parsed = parseTokenRouterWallet(
+			await fetchJson(buildTokenRouterWalletEndpoint(request.baseUrl), "TokenRouter", bearerHeaders(request.apiKey))
+		);
 	} else {
 		if (!request.targetApiKey) {
 			throw new Error(
@@ -198,6 +209,15 @@ export async function checkProviderUsage(request: ProviderUsageRequest): Promise
 		summary: parsed.summary,
 		details: parsed.details,
 	};
+}
+
+export function buildTokenRouterWalletEndpoint(baseUrl?: string): string {
+	const trimmed = (baseUrl ?? TOKENROUTER_MANAGEMENT_BASE_URL).trim() || TOKENROUTER_MANAGEMENT_BASE_URL;
+	const withoutTrailingSlash = trimmed.replace(/\/+$/, "");
+	const managementBaseUrl = withoutTrailingSlash.endsWith("/v1")
+		? withoutTrailingSlash.slice(0, -"/v1".length)
+		: withoutTrailingSlash;
+	return `${managementBaseUrl}/api/management/self/wallet`;
 }
 
 export function parseDeepSeekBalance(payload: unknown): ParsedProviderUsage {
@@ -238,6 +258,38 @@ export function parseDeepSeekBalance(payload: unknown): ParsedProviderUsage {
 				(balance) =>
 					`${balance.currency}: total ${balance.totalBalance}, grant ${balance.grantedBalance}, top-up ${balance.toppedUpBalance}`
 			),
+		],
+	};
+}
+
+export function parseTokenRouterWallet(payload: unknown): ParsedProviderUsage {
+	const obj = asRecord(payload, "TokenRouter wallet response");
+	if (obj.success === false) {
+		const message = optionalString(obj.message) ?? "unknown error";
+		throw new Error(`TokenRouter wallet check failed: ${message}.`);
+	}
+
+	const data = asRecord(obj.data, "TokenRouter wallet data");
+	const topUpBalance = asNumber(data.topUpBalance, "TokenRouter topUpBalance");
+	const voucherEfficientAmount = asNumber(
+		data.voucherEfficientAmount,
+		"TokenRouter voucherEfficientAmount"
+	);
+	const toppedUpSpent = asNumber(data.toppedUpSpent, "TokenRouter toppedUpSpent");
+	const voucherSpent = asNumber(data.voucherSpent, "TokenRouter voucherSpent");
+	const totalRemaining = topUpBalance + voucherEfficientAmount;
+
+	return {
+		summary: `${formatDecimal(totalRemaining)} credits remaining (top-up ${formatDecimal(
+			topUpBalance
+		)}, voucher ${formatDecimal(voucherEfficientAmount)})`,
+		details: [
+			"Source: TokenRouter Management API self wallet endpoint.",
+			`Remaining topped-up balance: ${formatDecimal(topUpBalance)}`,
+			`Valid voucher balance: ${formatDecimal(voucherEfficientAmount)}`,
+			`Total remaining credits: ${formatDecimal(totalRemaining)}`,
+			`Topped-up spent: ${formatDecimal(toppedUpSpent)}`,
+			`Voucher spent: ${formatDecimal(voucherSpent)}`,
 		],
 	};
 }

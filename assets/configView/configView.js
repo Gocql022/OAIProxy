@@ -212,6 +212,9 @@ function applyProviderPreset(row, presetId) {
 function getProviderUsageKind(provider, baseUrl) {
 	const normalizedProvider = (provider || "").trim().toLowerCase();
 	const normalizedBaseUrl = (baseUrl || "").trim().toLowerCase();
+	if (normalizedProvider === "tokenrouter" || normalizedBaseUrl.includes("api.tokenrouter.com")) {
+		return "tokenrouter";
+	}
 	if (normalizedProvider === "openai" || normalizedBaseUrl.includes("api.openai.com")) {
 		return "openai";
 	}
@@ -274,9 +277,6 @@ function isMimoProvider(provider, baseUrl) {
 }
 
 function getProviderUsageUnsupportedReason(provider, baseUrl) {
-	if (isTokenRouterProvider(provider, baseUrl)) {
-		return "TokenRouter usage checks are unavailable because its public API documentation does not expose a key-scoped balance or usage endpoint.";
-	}
 	if (isMimoProvider(provider, baseUrl)) {
 		return "Xiaomi MiMo usage checks are unavailable because Xiaomi only exposes balance/usage through web Console endpoints; no public API-key usage endpoint is documented.";
 	}
@@ -288,7 +288,7 @@ function getProviderUsageUnsupportedLink(provider, baseUrl) {
 }
 
 function providerUsageNeedsSeparateKey(usageKind) {
-	return usageKind === "openai" || usageKind === "anthropic" || usageKind === "litellm";
+	return usageKind === "openai" || usageKind === "anthropic" || usageKind === "litellm" || usageKind === "tokenrouter";
 }
 
 function getProviderUsagePlan(usageKind) {
@@ -303,6 +303,9 @@ function getProviderUsagePlan(usageKind) {
 	}
 	if (usageKind === "openai" || usageKind === "anthropic") {
 		return "Cost usage";
+	}
+	if (usageKind === "tokenrouter") {
+		return "Credit balance";
 	}
 	if (usageKind === "litellm") {
 		return "Proxy key spend";
@@ -322,6 +325,9 @@ function getProviderUsageTargetDescription(usageKind) {
 	}
 	if (usageKind === "openai" || usageKind === "anthropic") {
 		return "Month-to-date spend";
+	}
+	if (usageKind === "tokenrouter") {
+		return "Remaining account credits";
 	}
 	if (usageKind === "litellm") {
 		return "Virtual key spend and budget";
@@ -828,9 +834,15 @@ function renderProviderUsageKeyCell(provider, usageKind, unsupportedReason) {
 		return '<div class="usage-key-note">Not used</div>';
 	}
 	if (providerUsageNeedsSeparateKey(usageKind)) {
+		const placeholder =
+			usageKind === "tokenrouter"
+				? "Management key"
+				: usageKind === "litellm"
+					? "Master/admin key"
+					: "Admin usage key";
 		return `<input type="password" class="provider-input provider-usage-key-input" data-provider="${escapeHtml(
 			provider
-		)}" value="${escapeHtml(state.providerUsageKeys[provider] || "")}" placeholder="Admin usage key" />`;
+		)}" value="${escapeHtml(state.providerUsageKeys[provider] || "")}" placeholder="${escapeHtml(placeholder)}" />`;
 	}
 	return '<div class="usage-key-note">Provider API key</div>';
 }

@@ -25,7 +25,7 @@ English | [简体中文](README.zh-CN.md)
 - **Advanced configuration**: Flexible chat request options with thinking/reasoning control
 - **Multi-provider management**: Configure models from multiple providers simultaneously with automatic API key management
 - **Model connection tests**: Test one configured model or run up to four tests in parallel from Model Management using the model's real saved request configuration
-- **Provider usage checks**: Check Fireworks month-to-date serverless tokens, DeepSeek/Kimi credit balance, MiniMax token-plan remaining quota, and OpenAI/Anthropic month-to-date cost usage from a standalone Provider Usage Check table; Z.AI, MiMo, and TokenRouter are shown as unavailable when no public API-key usage endpoint is documented
+- **Provider usage checks**: Check Fireworks month-to-date serverless tokens, DeepSeek/Kimi credit balance, TokenRouter Management Key credit balance, MiniMax token-plan remaining quota, and OpenAI/Anthropic month-to-date cost usage from a standalone Provider Usage Check table; Z.AI and MiMo are shown as unavailable when no public API-key usage endpoint is documented
 - **Multi-config per model**: Define different settings for the same model (e.g., GLM-4.6 with/without thinking)
 - **Visual configuration UI**: Intuitive interface for managing providers and models
 - **Auto-retry**: Handles API errors (429, 500, 502, 503, 504) with exponential backoff
@@ -89,7 +89,7 @@ The Provider Management form includes presets for OpenAI, TokenRouter, Anthropic
 
 Model Management provides a per-model `Test` action and a parallel `Test all` action. Each test sends a small real inference request through the model's saved provider, API mode, headers, and advanced request settings, so it may incur minimal provider usage.
 
-The standalone Provider Usage Check table lists configured supported providers dynamically and reports credit, token, token-plan, or cost usage. Fireworks account discovery and month-to-date serverless token checks reuse the normal Fireworks provider key. OpenAI and Anthropic usage/admin keys are stored separately from chat API keys. Z.AI, MiMo, and TokenRouter entries are shown with unavailable reasons when their public docs do not expose API-key usage or balance endpoints; TokenRouter rows link to the [TokenRouter dashboard](https://www.tokenrouter.com/console).
+The standalone Provider Usage Check table lists configured supported providers dynamically and reports credit, token, token-plan, or cost usage. Fireworks account discovery and month-to-date serverless token checks reuse the normal Fireworks provider key. OpenAI and Anthropic usage/admin keys are stored separately from chat API keys. TokenRouter uses a separate Management Key and reports account credits from its Management API self-wallet endpoint. Z.AI and MiMo entries are shown with unavailable reasons when their public docs do not expose API-key usage or balance endpoints.
 
 → [Full Configuration Guide](doc/configuration.md)
 
@@ -109,7 +109,7 @@ Fireworks prompt caching is enabled by default upstream. OAIProxy adds a stable 
 
 ## TokenRouter
 
-TokenRouter is configured as an OpenAI-compatible provider at `https://api.tokenrouter.com/v1`. The Quick Setup cards use the exact gateway model IDs `deepseek/deepseek-v4-pro-0813`, `qwen/qwen3.8-max`, `moonshotai/kimi-k3`, and `z-ai/glm-5.3`; the provider key is stored separately as `oaicopilot.apiKey.tokenrouter`. TokenRouter usage and balance checks are intentionally marked unavailable because no public key-scoped usage endpoint is documented; use the [TokenRouter dashboard](https://www.tokenrouter.com/console) for account usage.
+TokenRouter is configured as an OpenAI-compatible provider at `https://api.tokenrouter.com/v1`. The Quick Setup cards use the exact gateway model IDs `deepseek/deepseek-v4-pro-0813`, `qwen/qwen3.8-max`, `moonshotai/kimi-k3`, and `z-ai/glm-5.3`; the provider key is stored separately as `oaicopilot.apiKey.tokenrouter`. TokenRouter credit checks use a separate Management Key stored as `oaicopilot.usageApiKey.tokenrouter` and call the Management API wallet endpoint.
 
 ## Z.AI GLM-5.2
 

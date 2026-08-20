@@ -152,7 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			if (providers.length === 0) {
 				vscode.window.showInformationMessage(
-					"No configured OpenAI, Anthropic, DeepSeek, Fireworks, Kimi/Moonshot, or MiniMax providers found."
+					"No configured OpenAI, Anthropic, DeepSeek, Fireworks, Kimi/Moonshot, MiniMax, LiteLLM, or TokenRouter providers found."
 				);
 				return;
 			}
@@ -334,7 +334,7 @@ async function runProviderUsageCheck(
 		if (!apiKey) {
 			vscode.window.showErrorMessage(
 				providerRequiresUsageApiKey(adapter)
-					? `No usage/admin API key found for provider ${provider}.`
+					? getMissingUsageApiKeyMessage(provider, adapter)
 					: `No API key found for provider ${provider}. Configure its provider API key first.`
 			);
 			return;
@@ -359,11 +359,7 @@ async function promptForUsageApiKey(
 	provider: string,
 	adapter: ProviderUsageAdapter
 ): Promise<string | undefined> {
-	const title = adapter === "openai" ? "OpenAI Admin API Key for Usage" : "Anthropic Admin API Key for Usage";
-	const prompt =
-		adapter === "openai"
-			? "OpenAI usage/cost checks require an Admin API key. It is stored separately from the chat API key."
-			: "Anthropic usage/cost checks require an Admin API key (sk-ant-admin...). It is stored separately from the chat API key.";
+	const { title, prompt } = getUsageApiKeyPrompt(adapter);
 	const apiKey = await vscode.window.showInputBox({
 		title,
 		prompt,
@@ -381,6 +377,44 @@ async function promptForUsageApiKey(
 
 	await context.secrets.store(getProviderUsageSecretKey(provider), trimmed);
 	return trimmed;
+}
+
+function getUsageApiKeyPrompt(adapter: ProviderUsageAdapter): { title: string; prompt: string } {
+	if (adapter === "openai") {
+		return {
+			title: "OpenAI Admin API Key for Usage",
+			prompt: "OpenAI usage/cost checks require an Admin API key. It is stored separately from the chat API key.",
+		};
+	}
+	if (adapter === "anthropic") {
+		return {
+			title: "Anthropic Admin API Key for Usage",
+			prompt:
+				"Anthropic usage/cost checks require an Admin API key (sk-ant-admin...). It is stored separately from the chat API key.",
+		};
+	}
+	if (adapter === "tokenrouter") {
+		return {
+			title: "TokenRouter Management Key for Credits",
+			prompt:
+				"TokenRouter credit checks require a Management Key. It is stored separately from the chat API key.",
+		};
+	}
+	return {
+		title: "LiteLLM Admin Key for Usage",
+		prompt:
+			"LiteLLM usage checks require a master/admin key. It is stored separately from the virtual provider key.",
+	};
+}
+
+function getMissingUsageApiKeyMessage(provider: string, adapter: ProviderUsageAdapter): string {
+	if (adapter === "tokenrouter") {
+		return `No TokenRouter Management Key found for provider ${provider}.`;
+	}
+	if (adapter === "litellm") {
+		return `No LiteLLM master/admin Usage Key found for provider ${provider}.`;
+	}
+	return `No usage/admin API key found for provider ${provider}.`;
 }
 
 function getProviderFromCommandArgs(
