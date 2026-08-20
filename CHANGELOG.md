@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.1.31 (2026-08-20)
+
+- Add TokenRouter Management Key credit checks through the public Management API self-wallet endpoint, with dedicated usage-key handling, UI labels, docs, and regression coverage.
+
 ## 0.1.30 (2026-08-20)
 
 - Add TokenRouter as a first-class OpenAI-compatible provider with provider-specific API-key storage, management presets, configuration documentation, and an explicit unavailable status when no public key-scoped usage endpoint is documented.
