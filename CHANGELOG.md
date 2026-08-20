@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.1.30 (2026-08-20)
+
+- Add TokenRouter as a first-class OpenAI-compatible provider with provider-specific API-key storage, management presets, configuration documentation, and an explicit unavailable status when no public key-scoped usage endpoint is documented.
+- Add TokenRouter Quick Setup cards for DeepSeek V4 Pro 0813, Qwen3.8-Max, Kimi K3, and GLM-5.3 with documented model IDs, context/output limits, vision, tool, thinking, reasoning-effort, and prompt-cache settings.
+- Add TokenRouter examples and regression coverage for provider selection, usage handling, model presets, reasoning effort, request shaping, and cache telemetry.
+- Fix expired OpenAI Responses memory entries so their expiry is reported before cleanup while stale entries are still removed.
+
 ## 0.1.29 (2026-08-11)
 
 - Fix Copilot Session Info context usage for OAIProxy models by emitting normalized provider token counts from OpenAI/LiteLLM Chat Completions, OpenAI Responses, Anthropic, Gemini, and Ollama streams while suppressing cancelled or failed responses.

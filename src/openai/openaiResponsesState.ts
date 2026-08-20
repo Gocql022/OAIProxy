@@ -57,13 +57,12 @@ export class OpenAIResponsesStateStore {
 		readonly previousResponseIdUnsupported?: boolean;
 	}): OpenAIResponsesStateResolution {
 		const now = options.now ?? Date.now();
-		this.prune(now);
-
 		const inputSignatures = createOpenAIResponsesInputSignatures(options.fullInput);
 		const stateKey = buildOpenAIResponsesStateKey(options.identity, inputSignatures);
 		const currentInputCount = inputSignatures.length;
 		const existing = this._entries.get(stateKey);
 		if (!existing) {
+			this.prune(now);
 			return {
 				stateKey,
 				inputSignatures,
@@ -79,6 +78,7 @@ export class OpenAIResponsesStateStore {
 		const previousInputCount = existing.inputSignatures.length;
 		if (memoryStateExpired) {
 			this._entries.delete(stateKey);
+			this.prune(now);
 			return {
 				stateKey,
 				inputSignatures,
@@ -90,6 +90,7 @@ export class OpenAIResponsesStateStore {
 				currentInputCount,
 			};
 		}
+		this.prune(now);
 
 		const memoryPrefixMatched =
 			!options.previousResponseIdUnsupported &&
