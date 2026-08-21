@@ -45,6 +45,21 @@ suite("reasoningEffort", () => {
 		assert.strictEqual(getDefaultReasoningEffort(deepseek, getReasoningEfforts(deepseek)), "high");
 	});
 
+	test("preserves TokenRouter DeepSeek's documented low/high/max tiers", () => {
+		const deepseek = model({
+			id: "deepseek/deepseek-v4-pro-0813",
+			owned_by: "tokenrouter",
+			supported_reasoning_efforts: ["low", "high", "max"],
+			default_reasoning_effort: "max",
+		});
+
+		assert.deepStrictEqual(getReasoningEfforts(deepseek), ["low", "high", "max"]);
+		assert.strictEqual(normalizeReasoningEffortForModel(deepseek, "low"), "low");
+		assert.strictEqual(normalizeReasoningEffortForModel(deepseek, "high"), "high");
+		assert.strictEqual(normalizeReasoningEffortForModel(deepseek, "max"), "max");
+		assert.strictEqual(getDefaultReasoningEffort(deepseek, getReasoningEfforts(deepseek)), "max");
+	});
+
 	test("exposes Z.AI GLM-5.2 documented effort values", () => {
 		const glm = model({
 			id: "glm-5.2",
@@ -76,10 +91,7 @@ suite("reasoningEffort", () => {
 	});
 
 	test("prefers per-request model options over model configuration", () => {
-		assert.strictEqual(
-			getRequestedReasoningEffort({ reasoningEffort: "max" }, { reasoningEffort: "high" }),
-			"high"
-		);
+		assert.strictEqual(getRequestedReasoningEffort({ reasoningEffort: "max" }, { reasoningEffort: "high" }), "high");
 		assert.strictEqual(getRequestedReasoningEffort({ reasoning_effort: "max" }, undefined), "max");
 		assert.strictEqual(getRequestedReasoningEffort(undefined, { reasoning_effort: "none" }), "none");
 	});

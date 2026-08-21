@@ -20,7 +20,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "OpenAI frontier model for complex coding and professional work.",
 		model: {
 			id: "gpt-5.5",
-			_comment: "Quick Setup defaults based on official OpenAI GPT-5.5 model docs: https://developers.openai.com/api/docs/models/gpt-5.5",
+			_comment:
+				"Quick Setup defaults based on official OpenAI GPT-5.5 model docs: https://developers.openai.com/api/docs/models/gpt-5.5",
 			displayName: "GPT-5.5",
 			owned_by: "openai",
 			baseUrl: "https://api.openai.com/v1",
@@ -49,7 +50,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "OpenAI-compatible Chat Completions setup for GPT-5.5.",
 		model: {
 			id: "gpt-5.5",
-			_comment: "Quick Setup defaults based on official OpenAI GPT-5.5 model docs: https://developers.openai.com/api/docs/models/gpt-5.5",
+			_comment:
+				"Quick Setup defaults based on official OpenAI GPT-5.5 model docs: https://developers.openai.com/api/docs/models/gpt-5.5",
 			configId: "chat-completions",
 			displayName: "GPT-5.5 (Chat Completions)",
 			owned_by: "openai",
@@ -77,7 +79,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Anthropic's high-capability Claude model for complex reasoning and agentic coding.",
 		model: {
 			id: "claude-opus-4-7",
-			_comment: "Quick Setup defaults based on official Anthropic Claude model docs: https://platform.claude.com/docs/en/about-claude/models/overview",
+			_comment:
+				"Quick Setup defaults based on official Anthropic Claude model docs: https://platform.claude.com/docs/en/about-claude/models/overview",
 			displayName: "Claude Opus 4.7",
 			owned_by: "anthropic",
 			baseUrl: "https://api.anthropic.com",
@@ -113,7 +116,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Balanced Claude setup for coding, agent workflows, and daily production use.",
 		model: {
 			id: "claude-sonnet-4-6",
-			_comment: "Quick Setup defaults based on official Anthropic Claude model docs: https://platform.claude.com/docs/en/about-claude/models/overview",
+			_comment:
+				"Quick Setup defaults based on official Anthropic Claude model docs: https://platform.claude.com/docs/en/about-claude/models/overview",
 			displayName: "Claude Sonnet 4.6",
 			owned_by: "anthropic",
 			baseUrl: "https://api.anthropic.com",
@@ -149,7 +153,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "DeepSeek V4 Pro with thinking mode enabled for agentic coding workflows.",
 		model: {
 			id: "deepseek-v4-pro",
-			_comment: "Quick Setup defaults based on official DeepSeek V4 model and Thinking Mode docs: https://api-docs.deepseek.com/quick_start/pricing and https://api-docs.deepseek.com/guides/thinking_mode; OAIProxy selects max reasoning effort by default.",
+			_comment:
+				"Quick Setup defaults based on official DeepSeek V4 model and Thinking Mode docs: https://api-docs.deepseek.com/quick_start/pricing and https://api-docs.deepseek.com/guides/thinking_mode; OAIProxy selects max reasoning effort by default.",
 			displayName: "DeepSeek V4 Pro",
 			owned_by: "deepseek",
 			baseUrl: "https://api.deepseek.com",
@@ -176,7 +181,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Fast DeepSeek V4 option with the same OpenAI-compatible endpoint.",
 		model: {
 			id: "deepseek-v4-flash",
-			_comment: "Quick Setup defaults based on official DeepSeek V4 model and Thinking Mode docs: https://api-docs.deepseek.com/quick_start/pricing and https://api-docs.deepseek.com/guides/thinking_mode; OAIProxy selects max reasoning effort by default.",
+			_comment:
+				"Quick Setup defaults based on official DeepSeek V4 model and Thinking Mode docs: https://api-docs.deepseek.com/quick_start/pricing and https://api-docs.deepseek.com/guides/thinking_mode; OAIProxy selects max reasoning effort by default.",
 			displayName: "DeepSeek V4 Flash",
 			owned_by: "deepseek",
 			baseUrl: "https://api.deepseek.com",
@@ -203,7 +209,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Z.AI GLM Coding Plan model with 1M context, max reasoning effort, and preserved thinking.",
 		model: {
 			id: "glm-5.2",
-			_comment: "Quick Setup defaults based on official Z.AI GLM Coding Plan and GLM-5.2 docs: https://docs.z.ai/devpack/quick-start, https://docs.z.ai/devpack/latest-model, and https://docs.z.ai/api-reference/llm/chat-completion",
+			_comment:
+				"Quick Setup defaults based on official Z.AI GLM Coding Plan and GLM-5.2 docs: https://docs.z.ai/devpack/quick-start, https://docs.z.ai/devpack/latest-model, and https://docs.z.ai/api-reference/llm/chat-completion",
 			displayName: "GLM-5.2",
 			owned_by: "zai",
 			baseUrl: "https://api.z.ai/api/coding/paas/v4",
@@ -231,7 +238,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Kimi's flagship 1M-context model for long-horizon coding, knowledge work, and deep reasoning.",
 		model: {
 			id: "kimi-k3",
-			_comment: "Quick Setup defaults based on official Kimi K3 docs: https://platform.kimi.ai/docs/guide/kimi-k3-quickstart. K3 uses a 1M-token context and an official 131,072-token default completion allowance; max_completion_tokens can be raised up to 1,048,576 within the context window.",
+			_comment:
+				"Quick Setup defaults based on official Kimi K3 docs: https://platform.kimi.ai/docs/guide/kimi-k3-quickstart. K3 uses a 1M-token context and an official 131,072-token default completion allowance; max_completion_tokens can be raised up to 1,048,576 within the context window.",
 			displayName: "Kimi K3",
 			owned_by: "kimi",
 			baseUrl: "https://api.moonshot.ai/v1",
@@ -247,6 +255,113 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		},
 	},
 	{
+		id: "tokenrouter-deepseek-v4-pro-0813",
+		label: "DeepSeek V4 Pro 0813 (TokenRouter)",
+		providerPresetId: "tokenrouter",
+		category: "latest",
+		tags: ["TokenRouter", "DeepSeek", "Reasoning", "Tools"],
+		description: "DeepSeek V4 Pro 0813 through TokenRouter's OpenAI-compatible gateway.",
+		model: {
+			id: "deepseek/deepseek-v4-pro-0813",
+			_comment:
+				"Quick Setup defaults based on TokenRouter documentation and official DeepSeek V4 Pro-0813 model/thinking docs: https://www.tokenrouter.com/docs, https://api-docs.deepseek.com/quick_start/pricing, and https://api-docs.deepseek.com/guides/thinking_mode",
+			displayName: "DeepSeek V4 Pro 0813 (TokenRouter)",
+			owned_by: "tokenrouter",
+			baseUrl: "https://api.tokenrouter.com/v1",
+			apiMode: "openai",
+			vision: false,
+			context_length: 1048576,
+			max_tokens: 393216,
+			reasoning_effort: "max",
+			supported_reasoning_efforts: ["low", "high", "max"],
+			default_reasoning_effort: "max",
+			thinking: {
+				type: "enabled",
+			},
+			toolCalling: true,
+			include_reasoning_in_request: true,
+		},
+	},
+	{
+		id: "tokenrouter-qwen-3-8-max",
+		label: "Qwen3.8-Max (TokenRouter)",
+		providerPresetId: "tokenrouter",
+		category: "latest",
+		tags: ["TokenRouter", "Qwen", "Vision", "Reasoning", "Tools"],
+		description: "Qwen3.8-Max through TokenRouter with multimodal input and adjustable reasoning effort.",
+		model: {
+			id: "qwen/qwen3.8-max",
+			_comment:
+				"Quick Setup defaults based on TokenRouter documentation and the official Qwen3.8-Max model page: https://www.tokenrouter.com/docs and https://qwen.ai/blog?id=qwen3.8",
+			displayName: "Qwen3.8-Max (TokenRouter)",
+			owned_by: "tokenrouter",
+			baseUrl: "https://api.tokenrouter.com/v1",
+			apiMode: "openai",
+			vision: true,
+			context_length: 1000000,
+			max_completion_tokens: 65536,
+			reasoning_effort: "xhigh",
+			supported_reasoning_efforts: ["low", "medium", "xhigh"],
+			default_reasoning_effort: "xhigh",
+			toolCalling: true,
+			include_reasoning_in_request: true,
+		},
+	},
+	{
+		id: "tokenrouter-kimi-k3",
+		label: "Kimi K3 (TokenRouter)",
+		providerPresetId: "tokenrouter",
+		category: "latest",
+		tags: ["TokenRouter", "Kimi", "Vision", "Reasoning", "Tools"],
+		description: "Kimi K3 through TokenRouter with 1M context, vision, tools, and always-on thinking.",
+		model: {
+			id: "moonshotai/kimi-k3",
+			_comment:
+				"Quick Setup defaults based on TokenRouter documentation and official Kimi K3 API docs: https://www.tokenrouter.com/docs and https://platform.kimi.ai/docs/guide/kimi-k3-quickstart",
+			displayName: "Kimi K3 (TokenRouter)",
+			owned_by: "tokenrouter",
+			baseUrl: "https://api.tokenrouter.com/v1",
+			apiMode: "openai",
+			vision: true,
+			context_length: 1048576,
+			max_completion_tokens: 131072,
+			reasoning_effort: "max",
+			supported_reasoning_efforts: ["low", "high", "max"],
+			default_reasoning_effort: "max",
+			toolCalling: true,
+			include_reasoning_in_request: true,
+		},
+	},
+	{
+		id: "tokenrouter-glm-5-3",
+		label: "GLM-5.3 (TokenRouter)",
+		providerPresetId: "tokenrouter",
+		category: "latest",
+		tags: ["TokenRouter", "Z.AI", "GLM", "Thinking", "Reasoning", "Tools"],
+		description: "GLM-5.3 through TokenRouter with forced thinking and preserved reasoning content.",
+		model: {
+			id: "z-ai/glm-5.3",
+			_comment:
+				"Quick Setup defaults based on TokenRouter documentation and official Z.AI GLM-5.3/API docs: https://www.tokenrouter.com/docs, https://docs.z.ai/guides/llm/glm-5.3, and https://docs.z.ai/api-reference/llm/chat-completion",
+			displayName: "GLM-5.3 (TokenRouter)",
+			owned_by: "tokenrouter",
+			baseUrl: "https://api.tokenrouter.com/v1",
+			apiMode: "openai",
+			vision: false,
+			context_length: 1000000,
+			max_tokens: 131072,
+			reasoning_effort: "max",
+			supported_reasoning_efforts: ["low", "high", "max"],
+			default_reasoning_effort: "max",
+			thinking: {
+				type: "enabled",
+				clear_thinking: false,
+			},
+			toolCalling: true,
+			include_reasoning_in_request: true,
+		},
+	},
+	{
 		id: "kimi-k2-7-code",
 		label: "Kimi K2.7 Code",
 		providerPresetId: "kimi",
@@ -255,7 +370,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Kimi's latest code-focused model with multimodal input, tool calling, and always-on thinking.",
 		model: {
 			id: "kimi-k2.7-code",
-			_comment: "Quick Setup defaults based on official Kimi K2.7 Code docs: https://platform.kimi.ai/docs/guide/kimi-k2-7-code-quickstart. max_input_tokens is an OAIProxy safety budget to encourage VS Code compaction before Moonshot's 256K provider limit.",
+			_comment:
+				"Quick Setup defaults based on official Kimi K2.7 Code docs: https://platform.kimi.ai/docs/guide/kimi-k2-7-code-quickstart. max_input_tokens is an OAIProxy safety budget to encourage VS Code compaction before Moonshot's 256K provider limit.",
 			displayName: "Kimi K2.7 Code",
 			owned_by: "kimi",
 			baseUrl: "https://api.moonshot.ai/v1",
@@ -277,7 +393,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "DeepSeek V4 Pro through Fireworks serverless inference.",
 		model: {
 			id: "accounts/fireworks/models/deepseek-v4-pro",
-			_comment: "Quick Setup defaults based on the official Fireworks model page and prompt caching guide: https://app.fireworks.ai/models/fireworks/deepseek-v4-pro and https://docs.fireworks.ai/guides/prompt-caching",
+			_comment:
+				"Quick Setup defaults based on the official Fireworks model page and prompt caching guide: https://app.fireworks.ai/models/fireworks/deepseek-v4-pro and https://docs.fireworks.ai/guides/prompt-caching",
 			displayName: "DeepSeek V4 Pro (Fireworks)",
 			owned_by: "fireworks",
 			baseUrl: "https://api.fireworks.ai/inference/v1",
@@ -301,7 +418,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Kimi K2.7 Code through Fireworks serverless inference.",
 		model: {
 			id: "accounts/fireworks/models/kimi-k2p7-code",
-			_comment: "Quick Setup defaults based on the official Fireworks model page and prompt caching guide: https://app.fireworks.ai/models/fireworks/kimi-k2p7-code and https://docs.fireworks.ai/guides/prompt-caching",
+			_comment:
+				"Quick Setup defaults based on the official Fireworks model page and prompt caching guide: https://app.fireworks.ai/models/fireworks/kimi-k2p7-code and https://docs.fireworks.ai/guides/prompt-caching",
 			displayName: "Kimi K2.7 Code (Fireworks)",
 			owned_by: "fireworks",
 			baseUrl: "https://api.fireworks.ai/inference/v1",
@@ -325,7 +443,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "GLM-5.2 through Fireworks serverless inference.",
 		model: {
 			id: "accounts/fireworks/models/glm-5p2",
-			_comment: "Quick Setup defaults based on the official Fireworks model page, Chat Completions API, and prompt caching guide: https://app.fireworks.ai/models/fireworks/glm-5p2, https://docs.fireworks.ai/api-reference/post-chatcompletions, and https://docs.fireworks.ai/guides/prompt-caching",
+			_comment:
+				"Quick Setup defaults based on the official Fireworks model page, Chat Completions API, and prompt caching guide: https://app.fireworks.ai/models/fireworks/glm-5p2, https://docs.fireworks.ai/api-reference/post-chatcompletions, and https://docs.fireworks.ai/guides/prompt-caching",
 			displayName: "GLM-5.2 (Fireworks)",
 			owned_by: "fireworks",
 			baseUrl: "https://api.fireworks.ai/inference/v1",
@@ -352,7 +471,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Kimi's general-purpose multimodal model with thinking enabled for agent tasks.",
 		model: {
 			id: "kimi-k2.6",
-			_comment: "Quick Setup defaults based on official Kimi API docs: https://platform.kimi.ai/docs/guide/start-using-kimi-api",
+			_comment:
+				"Quick Setup defaults based on official Kimi API docs: https://platform.kimi.ai/docs/guide/start-using-kimi-api",
 			displayName: "Kimi K2.6",
 			owned_by: "kimi",
 			baseUrl: "https://api.moonshot.ai/v1",
@@ -381,7 +501,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Kimi K2.6 through the LiteLLM proxy sample endpoint with thinking enabled.",
 		model: {
 			id: "Kimi-K2.6",
-			_comment: "Quick Setup defaults based on official Kimi API docs and LiteLLM extra_body guidance: https://platform.kimi.ai/docs/guide/start-using-kimi-api",
+			_comment:
+				"Quick Setup defaults based on official Kimi API docs and LiteLLM extra_body guidance: https://platform.kimi.ai/docs/guide/start-using-kimi-api",
 			displayName: "Kimi K2.6 (LiteLLM)",
 			owned_by: "litellm",
 			baseUrl: "https://ai.nube.sh/api/v1",
@@ -410,7 +531,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "DeepSeek V4 Flash through the LiteLLM proxy sample endpoint with thinking enabled.",
 		model: {
 			id: "DeepSeek-V4-Flash",
-			_comment: "Quick Setup defaults based on official DeepSeek V4 model and Thinking Mode docs: https://api-docs.deepseek.com/quick_start/pricing and https://api-docs.deepseek.com/guides/thinking_mode; OAIProxy selects max reasoning effort by default.",
+			_comment:
+				"Quick Setup defaults based on official DeepSeek V4 model and Thinking Mode docs: https://api-docs.deepseek.com/quick_start/pricing and https://api-docs.deepseek.com/guides/thinking_mode; OAIProxy selects max reasoning effort by default.",
 			displayName: "DeepSeek V4 Flash (LiteLLM)",
 			owned_by: "litellm",
 			baseUrl: "https://ai.nube.sh/api/v1",
@@ -437,7 +559,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Z.AI GLM-5.2 through the LiteLLM proxy sample endpoint with thinking enabled.",
 		model: {
 			id: "GLM-5.2",
-			_comment: "Quick Setup defaults based on official Z.AI GLM Coding Plan and GLM-5.2 docs: https://docs.z.ai/devpack/quick-start, https://docs.z.ai/devpack/latest-model, and https://docs.z.ai/api-reference/llm/chat-completion",
+			_comment:
+				"Quick Setup defaults based on official Z.AI GLM Coding Plan and GLM-5.2 docs: https://docs.z.ai/devpack/quick-start, https://docs.z.ai/devpack/latest-model, and https://docs.z.ai/api-reference/llm/chat-completion",
 			displayName: "GLM-5.2 (LiteLLM)",
 			owned_by: "litellm",
 			baseUrl: "https://ai.nube.sh/api/v1",
@@ -465,7 +588,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Kimi K3 through the LiteLLM proxy sample endpoint for long-horizon coding and deep reasoning.",
 		model: {
 			id: "Kimi-K3",
-			_comment: "Quick Setup defaults based on official Kimi K3 docs: https://platform.kimi.ai/docs/guide/kimi-k3-quickstart. K3 uses a 1M-token context and an official 131,072-token default completion allowance; max_completion_tokens can be raised up to 1,048,576 within the context window.",
+			_comment:
+				"Quick Setup defaults based on official Kimi K3 docs: https://platform.kimi.ai/docs/guide/kimi-k3-quickstart. K3 uses a 1M-token context and an official 131,072-token default completion allowance; max_completion_tokens can be raised up to 1,048,576 within the context window.",
 			displayName: "Kimi K3 (LiteLLM)",
 			owned_by: "litellm",
 			baseUrl: "https://ai.nube.sh/api/v1",
@@ -489,7 +613,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Cost-conscious Kimi multimodal setup for dialogue and agent tasks.",
 		model: {
 			id: "kimi-k2.5",
-			_comment: "Quick Setup defaults based on official Kimi API docs: https://platform.kimi.ai/docs/guide/start-using-kimi-api",
+			_comment:
+				"Quick Setup defaults based on official Kimi API docs: https://platform.kimi.ai/docs/guide/start-using-kimi-api",
 			displayName: "Kimi K2.5",
 			owned_by: "kimi",
 			baseUrl: "https://api.moonshot.ai/v1",
@@ -648,7 +773,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Google Gemini's advanced multimodal reasoning model.",
 		model: {
 			id: "gemini-3-pro-preview",
-			_comment: "Quick Setup defaults based on official Google Gemini model docs: https://ai.google.dev/gemini-api/docs/models",
+			_comment:
+				"Quick Setup defaults based on official Google Gemini model docs: https://ai.google.dev/gemini-api/docs/models",
 			displayName: "Gemini 3 Pro Preview",
 			owned_by: "google",
 			baseUrl: "https://generativelanguage.googleapis.com",
@@ -669,7 +795,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Fast Gemini 3 preview setup for high-volume multimodal work.",
 		model: {
 			id: "gemini-3-flash-preview",
-			_comment: "Quick Setup defaults based on official Google Gemini model docs: https://ai.google.dev/gemini-api/docs/models",
+			_comment:
+				"Quick Setup defaults based on official Google Gemini model docs: https://ai.google.dev/gemini-api/docs/models",
 			displayName: "Gemini 3 Flash Preview",
 			owned_by: "google",
 			baseUrl: "https://generativelanguage.googleapis.com",
@@ -690,7 +817,8 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 		description: "Stable Gemini price-performance model for low-latency agentic tasks.",
 		model: {
 			id: "gemini-2.5-flash",
-			_comment: "Quick Setup defaults based on official Google Gemini model docs: https://ai.google.dev/gemini-api/docs/models",
+			_comment:
+				"Quick Setup defaults based on official Google Gemini model docs: https://ai.google.dev/gemini-api/docs/models",
 			displayName: "Gemini 2.5 Flash",
 			owned_by: "google",
 			baseUrl: "https://generativelanguage.googleapis.com",

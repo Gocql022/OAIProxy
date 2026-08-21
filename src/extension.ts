@@ -345,7 +345,7 @@ async function runProviderUsageCheck(
 		if (!apiKey) {
 			vscode.window.showErrorMessage(
 				providerRequiresUsageApiKey(adapter)
-					? vscode.l10n.t("No usage/admin API key found for provider {0}.", provider)
+					? getMissingUsageApiKeyMessage(provider, adapter)
 					: vscode.l10n.t("No API key found for provider {0}. Configure its provider API key first.", provider)
 			);
 			return;
@@ -370,18 +370,7 @@ async function promptForUsageApiKey(
 	provider: string,
 	adapter: ProviderUsageAdapter
 ): Promise<string | undefined> {
-	const title =
-		adapter === "openai"
-			? vscode.l10n.t("OpenAI Admin API Key for Usage")
-			: vscode.l10n.t("Anthropic Admin API Key for Usage");
-	const prompt =
-		adapter === "openai"
-			? vscode.l10n.t(
-					"OpenAI usage/cost checks require an Admin API key. It is stored separately from the chat API key."
-				)
-			: vscode.l10n.t(
-					"Anthropic usage/cost checks require an Admin API key (sk-ant-admin...). It is stored separately from the chat API key."
-				);
+	const { title, prompt } = getUsageApiKeyPrompt(adapter);
 	const apiKey = await vscode.window.showInputBox({
 		title,
 		prompt,
@@ -399,6 +388,45 @@ async function promptForUsageApiKey(
 
 	await context.secrets.store(getProviderUsageSecretKey(provider), trimmed);
 	return trimmed;
+}
+
+function getUsageApiKeyPrompt(adapter: ProviderUsageAdapter): { title: string; prompt: string } {
+	if (adapter === "openai") {
+		return {
+			title: vscode.l10n.t("OpenAI Admin API Key for Usage"),
+			prompt: vscode.l10n.t(
+				"OpenAI usage/cost checks require an Admin API key. It is stored separately from the chat API key."
+			),
+		};
+	}
+	if (adapter === "anthropic") {
+		return {
+			title: vscode.l10n.t("Anthropic Admin API Key for Usage"),
+			prompt: vscode.l10n.t(
+				"Anthropic usage/cost checks require an Admin API key (sk-ant-admin...). It is stored separately from the chat API key."
+			),
+		};
+	}
+	if (adapter === "tokenrouter") {
+		return {
+			title: "TokenRouter Management Key for Credits",
+			prompt: "TokenRouter credit checks require a Management Key. It is stored separately from the chat API key.",
+		};
+	}
+	return {
+		title: "LiteLLM Admin Key for Usage",
+		prompt: "LiteLLM usage checks require a master/admin key. It is stored separately from the virtual provider key.",
+	};
+}
+
+function getMissingUsageApiKeyMessage(provider: string, adapter: ProviderUsageAdapter): string {
+	if (adapter === "tokenrouter") {
+		return `No TokenRouter Management Key found for provider ${provider}.`;
+	}
+	if (adapter === "litellm") {
+		return `No LiteLLM master/admin Usage Key found for provider ${provider}.`;
+	}
+	return vscode.l10n.t("No usage/admin API key found for provider {0}.", provider);
 }
 
 function getProviderFromCommandArgs(

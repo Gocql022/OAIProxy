@@ -122,9 +122,7 @@ suite("openaiApi", () => {
 				{
 					role: vscode.LanguageModelChatMessageRole.Assistant,
 					name: undefined,
-					content: [
-						new vscode.LanguageModelTextPart("Visible answer."),
-					],
+					content: [new vscode.LanguageModelTextPart("Visible answer.")],
 				} as unknown as vscode.LanguageModelChatRequestMessage,
 			],
 			{ includeReasoningInRequest: true }
@@ -173,6 +171,46 @@ suite("openaiApi", () => {
 		assert.strictEqual(messages[0].role, "assistant");
 		assert.strictEqual(messages[0].content, "Visible answer.");
 		assert.strictEqual(messages[0].reasoning_content, "Preserved reasoning.");
+	});
+
+	test("uses exact TokenRouter model IDs and documented request controls", () => {
+		const expected = new Map([
+			[
+				"deepseek/deepseek-v4-pro-0813",
+				{ maxTokens: 393216, maxCompletionTokens: undefined, effort: "max", thinking: { type: "enabled" } },
+			],
+			["qwen/qwen3.8-max", { maxTokens: undefined, maxCompletionTokens: 65536, effort: "xhigh", thinking: undefined }],
+			["moonshotai/kimi-k3", { maxTokens: undefined, maxCompletionTokens: 131072, effort: "max", thinking: undefined }],
+			[
+				"z-ai/glm-5.3",
+				{
+					maxTokens: 131072,
+					maxCompletionTokens: undefined,
+					effort: "max",
+					thinking: { type: "enabled", clear_thinking: false },
+				},
+			],
+		]);
+
+		for (const preset of MODEL_PRESETS.filter((item) => item.providerPresetId === "tokenrouter")) {
+			const controls = expected.get(preset.model.id);
+			assert.ok(controls, `unexpected TokenRouter model ${preset.model.id}`);
+			const api = new OpenaiApi(preset.model.id);
+			const body = api.prepareRequestBody(
+				{
+					model: preset.model.id,
+					messages: [],
+					stream: true,
+				},
+				preset.model
+			);
+
+			assert.strictEqual(body.model, preset.model.id);
+			assert.strictEqual(body.max_tokens, controls.maxTokens);
+			assert.strictEqual(body.max_completion_tokens, controls.maxCompletionTokens);
+			assert.strictEqual(body.reasoning_effort, controls.effort);
+			assert.deepStrictEqual(body.thinking, controls.thinking);
+		}
 	});
 
 	test("keeps Kimi K2.7 Code request body on official defaults", () => {
@@ -226,9 +264,9 @@ suite("openaiApi", () => {
 				controller.enqueue(
 					new TextEncoder().encode(
 						[
-							"data: {\"choices\":[{\"delta\":{\"provider_specific_fields\":{\"reasoning_content\":\"thinking...\"}}}]}",
+							'data: {"choices":[{"delta":{"provider_specific_fields":{"reasoning_content":"thinking..."}}}]}',
 							"",
-							"data: {\"choices\":[{\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}]}",
+							'data: {"choices":[{"delta":{"content":"answer"},"finish_reason":"stop"}]}',
 							"",
 							"data: [DONE]",
 							"",
@@ -264,7 +302,7 @@ suite("openaiApi", () => {
 				controller.enqueue(
 					new TextEncoder().encode(
 						[
-							"data: {\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"final answer\"},\"finish_reason\":\"stop\"}]}",
+							'data: {"choices":[{"message":{"role":"assistant","content":"final answer"},"finish_reason":"stop"}]}',
 							"",
 							"data: [DONE]",
 							"",
@@ -299,7 +337,7 @@ suite("openaiApi", () => {
 				controller.enqueue(
 					new TextEncoder().encode(
 						[
-							"data: {\"choices\":[{\"message\":{\"role\":\"assistant\",\"tool_calls\":[{\"id\":\"call_1\",\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\"}}]},\"finish_reason\":\"tool_calls\"}]}",
+							'data: {"choices":[{"message":{"role":"assistant","tool_calls":[{"id":"call_1","type":"function","function":{"name":"read_file","arguments":"{\\"path\\":\\"README.md\\"}"}}]},"finish_reason":"tool_calls"}]}',
 							"",
 							"data: [DONE]",
 							"",
@@ -340,7 +378,7 @@ suite("openaiApi", () => {
 				controller.enqueue(
 					new TextEncoder().encode(
 						[
-							"data: {\"choices\":[{\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":5,\"total_tokens\":105}}",
+							'data: {"choices":[{"delta":{"content":"answer"},"finish_reason":"stop"}],"usage":{"prompt_tokens":100,"completion_tokens":5,"total_tokens":105}}',
 							"",
 							"data: [DONE]",
 							"",
@@ -371,9 +409,7 @@ suite("openaiApi", () => {
 
 		assert.ok(parts.some((part) => part instanceof vscode.LanguageModelTextPart && part.value === "answer"));
 		assert.ok(
-			!parts.some(
-				(part) => part instanceof vscode.LanguageModelDataPart && part.mimeType === COPILOT_USAGE_MIME
-			)
+			!parts.some((part) => part instanceof vscode.LanguageModelDataPart && part.mimeType === COPILOT_USAGE_MIME)
 		);
 	});
 });

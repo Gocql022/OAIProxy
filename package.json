@@ -2,7 +2,7 @@
 	"name": "oaiproxy",
 	"publisher": "lqdflying",
 	"displayName": "OAIProxy",
-	"description": "OpenAI/LiteLLM/Ollama/Anthropic/Gemini provider for Copilot Chat, with OpenAI, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax presets",
+	"description": "OpenAI/LiteLLM/Ollama/Anthropic/Gemini provider for Copilot Chat, with OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax presets",
 	"icon": "assets/icon.png",
 	"keywords": [
 		"ai",
@@ -12,6 +12,7 @@
 		"language-model",
 		"llm",
 		"openai",
+		"tokenrouter",
 		"kimi",
 		"moonshot",
 		"deepseek",
@@ -36,7 +37,7 @@
 		"type": "git",
 		"url": "https://github.com/lqdflying/OAIProxy"
 	},
-	"version": "0.1.29",
+	"version": "0.1.31",
 	"engines": {
 		"vscode": "^1.120.0"
 	},

@@ -43,6 +43,16 @@ suite("promptCache", () => {
 		});
 
 		assert.strictEqual(mimoBody.prompt_cache_key, undefined);
+
+		const tokenrouterBody: Record<string, unknown> = {};
+		applyOpenAIPromptCache(tokenrouterBody, {
+			model: model({ id: "qwen/qwen3.8-max", owned_by: "tokenrouter" }),
+			baseUrl: "https://api.tokenrouter.com/v1",
+			modelId: "qwen/qwen3.8-max",
+		});
+
+		assert.strictEqual(tokenrouterBody.prompt_cache_key, undefined);
+		assert.strictEqual(tokenrouterBody.user, undefined);
 	});
 
 	test("respects explicit OpenAI prompt cache configuration", () => {
@@ -87,33 +97,39 @@ suite("promptCache", () => {
 
 	test("enables Anthropic cache control for known Anthropic-compatible endpoints by default", () => {
 		assert.strictEqual(
-			isAnthropicPromptCacheEnabled(model({
-				id: "MiniMax-M3",
-				owned_by: "minimax-anthropic",
-				apiMode: "anthropic",
-				baseUrl: "https://api.minimax.io/anthropic",
-			})),
+			isAnthropicPromptCacheEnabled(
+				model({
+					id: "MiniMax-M3",
+					owned_by: "minimax-anthropic",
+					apiMode: "anthropic",
+					baseUrl: "https://api.minimax.io/anthropic",
+				})
+			),
 			true
 		);
 		assert.strictEqual(
-			isAnthropicPromptCacheEnabled(model({
-				id: "custom",
-				owned_by: "custom",
-				apiMode: "anthropic",
-				baseUrl: "https://example.test/anthropic",
-			})),
+			isAnthropicPromptCacheEnabled(
+				model({
+					id: "custom",
+					owned_by: "custom",
+					apiMode: "anthropic",
+					baseUrl: "https://example.test/anthropic",
+				})
+			),
 			false
 		);
 		assert.strictEqual(
-			isAnthropicPromptCacheEnabled(model({
-				id: "MiniMax-M3",
-				owned_by: "minimax-anthropic",
-				apiMode: "anthropic",
-				baseUrl: "https://api.minimax.io/anthropic",
-				prompt_cache: {
-					enabled: false,
-				},
-			})),
+			isAnthropicPromptCacheEnabled(
+				model({
+					id: "MiniMax-M3",
+					owned_by: "minimax-anthropic",
+					apiMode: "anthropic",
+					baseUrl: "https://api.minimax.io/anthropic",
+					prompt_cache: {
+						enabled: false,
+					},
+				})
+			),
 			false
 		);
 	});

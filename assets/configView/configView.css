@@ -454,6 +454,10 @@ tr:hover {
 	overflow-wrap: anywhere;
 }
 
+.usage-value-link {
+	margin-top: 6px;
+}
+
 .error-text {
 	color: var(--vscode-errorForeground);
 }

@@ -220,6 +220,9 @@ function applyProviderPreset(row, presetId) {
 function getProviderUsageKind(provider, baseUrl) {
 	const normalizedProvider = (provider || "").trim().toLowerCase();
 	const normalizedBaseUrl = (baseUrl || "").trim().toLowerCase();
+	if (normalizedProvider === "tokenrouter" || normalizedBaseUrl.includes("api.tokenrouter.com")) {
+		return "tokenrouter";
+	}
 	if (normalizedProvider === "openai" || normalizedBaseUrl.includes("api.openai.com")) {
 		return "openai";
 	}
@@ -261,6 +264,14 @@ function getProviderUsageKind(provider, baseUrl) {
 	return "";
 }
 
+const TOKENROUTER_DASHBOARD_URL = "https://www.tokenrouter.com/console";
+
+function isTokenRouterProvider(provider, baseUrl) {
+	const normalizedProvider = (provider || "").trim().toLowerCase();
+	const normalizedBaseUrl = (baseUrl || "").trim().toLowerCase();
+	return normalizedProvider === "tokenrouter" || normalizedBaseUrl.includes("api.tokenrouter.com");
+}
+
 function isMimoProvider(provider, baseUrl) {
 	const normalizedProvider = (provider || "").trim().toLowerCase();
 	const normalizedBaseUrl = (baseUrl || "").trim().toLowerCase();
@@ -282,8 +293,12 @@ function getProviderUsageUnsupportedReason(provider, baseUrl) {
 	return "";
 }
 
+function getProviderUsageUnsupportedLink(provider, baseUrl) {
+	return isTokenRouterProvider(provider, baseUrl) ? TOKENROUTER_DASHBOARD_URL : "";
+}
+
 function providerUsageNeedsSeparateKey(usageKind) {
-	return usageKind === "openai" || usageKind === "anthropic" || usageKind === "litellm";
+	return usageKind === "openai" || usageKind === "anthropic" || usageKind === "litellm" || usageKind === "tokenrouter";
 }
 
 function getProviderUsagePlan(usageKind) {
@@ -298,6 +313,9 @@ function getProviderUsagePlan(usageKind) {
 	}
 	if (usageKind === "openai" || usageKind === "anthropic") {
 		return t("Cost usage");
+	}
+	if (usageKind === "tokenrouter") {
+		return "Credit balance";
 	}
 	if (usageKind === "litellm") {
 		return t("Proxy key spend");
@@ -317,6 +335,9 @@ function getProviderUsageTargetDescription(usageKind) {
 	}
 	if (usageKind === "openai" || usageKind === "anthropic") {
 		return t("Month-to-date spend");
+	}
+	if (usageKind === "tokenrouter") {
+		return "Remaining account credits";
 	}
 	if (usageKind === "litellm") {
 		return t("Virtual key spend and budget");
@@ -468,10 +489,7 @@ function getSelectedModelPreset() {
 
 function hasConfiguredModel(model) {
 	return state.models.some((m) => {
-		return (
-			m.id === model.id &&
-			((model.configId && m.configId === model.configId) || (!model.configId && !m.configId))
-		);
+		return m.id === model.id && ((model.configId && m.configId === model.configId) || (!model.configId && !m.configId));
 	});
 }
 
@@ -618,7 +636,9 @@ function getProviderTransportModel(provider) {
 	if (!normalizedProvider) {
 		return undefined;
 	}
-	const providerConfig = state.providers.find((item) => (item.provider || "").trim().toLowerCase() === normalizedProvider);
+	const providerConfig = state.providers.find(
+		(item) => (item.provider || "").trim().toLowerCase() === normalizedProvider
+	);
 	if (providerConfig) {
 		return {
 			id: `__provider__${providerConfig.provider}`,
@@ -774,6 +794,7 @@ function getProviderUsageRows() {
 			...entry,
 			usageKind: getProviderUsageKind(entry.provider, entry.baseUrl),
 			unsupportedReason: getProviderUsageUnsupportedReason(entry.provider, entry.baseUrl),
+			unsupportedLink: getProviderUsageUnsupportedLink(entry.provider, entry.baseUrl),
 		}))
 		.filter((entry) => entry.usageKind || entry.unsupportedReason);
 }
@@ -803,9 +824,12 @@ function renderProviderUsageStatus(usageState, unsupportedReason) {
 	return `<span class="status-pill success">${t("Checked")}</span>`;
 }
 
-function renderProviderUsageValue(usageState, usageKind, unsupportedReason) {
+function renderProviderUsageValue(usageState, usageKind, unsupportedReason, unsupportedLink) {
 	if (unsupportedReason) {
-		return `<div class="usage-value muted">${escapeHtml(unsupportedReason)}</div>`;
+		const link = unsupportedLink
+			? `<div class="usage-value-link"><a href="${escapeHtml(unsupportedLink)}" target="_blank" rel="noopener noreferrer">Open TokenRouter dashboard</a></div>`
+			: "";
+		return `<div class="usage-value muted">${escapeHtml(unsupportedReason)}${link}</div>`;
 	}
 	if (usageState?.status === "success") {
 		return `<div class="usage-value">${escapeHtml(usageState.summary || t("Usage check completed."))}</div>`;
@@ -821,9 +845,15 @@ function renderProviderUsageKeyCell(provider, usageKind, unsupportedReason) {
 		return `<div class="usage-key-note">${t("Not used")}</div>`;
 	}
 	if (providerUsageNeedsSeparateKey(usageKind)) {
+		const placeholder =
+			usageKind === "tokenrouter"
+				? "Management key"
+				: usageKind === "litellm"
+					? "Master/admin key"
+					: "Admin usage key";
 		return `<input type="password" class="provider-input provider-usage-key-input" data-provider="${escapeHtml(
 			provider
-		)}" value="${escapeHtml(state.providerUsageKeys[provider] || "")}" placeholder="${t("Admin usage key")}" />`;
+		)}" value="${escapeHtml(state.providerUsageKeys[provider] || "")}" placeholder="${escapeHtml(t(placeholder))}" />`;
 	}
 	return `<div class="usage-key-note">${t("Provider API key")}</div>`;
 }
@@ -832,7 +862,8 @@ function renderProviderUsageChecks() {
 	const rows = getProviderUsageRows();
 	const supportedTargets = rows.filter((target) => target.usageKind);
 	checkAllProviderUsageBtn.disabled =
-		supportedTargets.length === 0 || supportedTargets.some((target) => state.providerUsage[target.provider]?.status === "loading");
+		supportedTargets.length === 0 ||
+		supportedTargets.some((target) => state.providerUsage[target.provider]?.status === "loading");
 	if (!rows.length) {
 		providerUsageTableBody.innerHTML =
 			'<tr><td colspan="6" class="no-data">' + t("No configured providers have known usage-check behavior yet") + "</td></tr>";
@@ -855,7 +886,7 @@ function renderProviderUsageChecks() {
 						<div class="usage-plan">${escapeHtml(isUnsupported ? t("Unavailable") : getProviderUsagePlan(target.usageKind))}</div>
 						<div class="provider-meta">${escapeHtml(target.usageKind || "mimo")}</div>
 					</td>
-					<td>${renderProviderUsageValue(usageState, target.usageKind, target.unsupportedReason)}</td>
+					<td>${renderProviderUsageValue(usageState, target.usageKind, target.unsupportedReason, target.unsupportedLink)}</td>
 					<td>${renderProviderUsageKeyCell(target.provider, target.usageKind, target.unsupportedReason)}</td>
 					<td>${renderProviderUsageStatus(usageState, target.unsupportedReason)}</td>
 					<td class="action-cell">
@@ -907,9 +938,9 @@ function getModelOutputLimit(model) {
 
 function renderModelPresetFilters() {
 	const currentProvider = modelPresetProviderFilterInput.value;
-	const providers = Array.from(new Set(state.modelPresets.map((preset) => preset.model?.owned_by).filter(Boolean))).sort(
-		(a, b) => getProviderLabel(a).localeCompare(getProviderLabel(b))
-	);
+	const providers = Array.from(
+		new Set(state.modelPresets.map((preset) => preset.model?.owned_by).filter(Boolean))
+	).sort((a, b) => getProviderLabel(a).localeCompare(getProviderLabel(b)));
 	modelPresetProviderFilterInput.innerHTML =
 		'<option value="">All providers</option>' +
 		providers

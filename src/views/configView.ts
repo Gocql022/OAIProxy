@@ -24,6 +24,7 @@ import {
 	getProviderUsageSecretKey,
 	getProviderUsageUnsupportedReason,
 	providerRequiresUsageApiKey,
+	type ProviderUsageAdapter,
 	type ProviderUsageResult,
 } from "../providerUsage";
 
@@ -145,6 +146,16 @@ export function resolveProviderApiKeyChange(
 	}
 
 	return { kind: "preserve", secretKey, legacySecretKey };
+}
+
+function getMissingProviderUsageKeyMessage(provider: string, adapter: ProviderUsageAdapter): string {
+	if (adapter === "tokenrouter") {
+		return `No TokenRouter Management Key found for provider ${provider}. Add it in the Usage Key field first.`;
+	}
+	if (adapter === "litellm") {
+		return `No LiteLLM master/admin Usage Key found for provider ${provider}. Add it in the Usage Key field first.`;
+	}
+	return `No usage/admin API key found for provider ${provider}. Add it in the Usage Key field first.`;
 }
 
 export interface BatchAddModelsResult {
@@ -948,7 +959,7 @@ export class ConfigViewPanel {
 			if (!apiKey) {
 				throw new Error(
 					providerRequiresUsageApiKey(adapter)
-						? `No usage/admin API key found for provider ${trimmedProvider}. Add it in the Usage Key field first.`
+						? getMissingProviderUsageKeyMessage(trimmedProvider, adapter)
 						: `No API key found for provider ${trimmedProvider}. Configure its provider API key first.`
 				);
 			}

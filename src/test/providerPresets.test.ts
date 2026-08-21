@@ -2,6 +2,16 @@ import * as assert from "assert";
 import { PROVIDER_PRESETS } from "../providerPresets";
 
 suite("providerPresets", () => {
+	test("includes TokenRouter OpenAI-compatible preset", () => {
+		const preset = PROVIDER_PRESETS.find((item) => item.id === "tokenrouter");
+
+		assert.ok(preset);
+		assert.strictEqual(preset.label, "TokenRouter");
+		assert.strictEqual(preset.provider, "tokenrouter");
+		assert.strictEqual(preset.baseUrl, "https://api.tokenrouter.com/v1");
+		assert.strictEqual(preset.apiMode, "openai");
+	});
+
 	test("includes MiniMax OpenAI-compatible preset", () => {
 		const preset = PROVIDER_PRESETS.find((item) => item.id === "minimax");
 

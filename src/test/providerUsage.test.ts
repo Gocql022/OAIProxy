@@ -3,10 +3,12 @@ import {
 	checkProviderUsage,
 	buildFireworksBillingUsageEndpoint,
 	buildLiteLLMKeyInfoEndpoint,
+	buildTokenRouterWalletEndpoint,
 	formatDuration,
 	getProviderUsageAdapter,
 	getProviderUsageSecretKey,
 	getProviderUsageUnsupportedReason,
+	isTokenRouterProvider,
 	parseAnthropicCostReport,
 	parseDeepSeekBalance,
 	parseFireworksAccounts,
@@ -15,6 +17,8 @@ import {
 	parseMiniMaxTokenPlan,
 	parseLiteLLMKeyInfo,
 	parseOpenAICosts,
+	parseTokenRouterWallet,
+	providerRequiresUsageApiKey,
 } from "../providerUsage";
 
 suite("providerUsage", () => {
@@ -56,6 +60,49 @@ suite("providerUsage", () => {
 			"Cash balance: 3.00001",
 			"Voucher balance: 46.58893",
 		]);
+	});
+
+	test("parses TokenRouter management wallet response", () => {
+		const result = parseTokenRouterWallet({
+			success: true,
+			message: "",
+			data: {
+				topUpBalance: "120.50",
+				voucherEfficientAmount: 30,
+				toppedUpSpent: "80.25",
+				voucherSpent: 10,
+			},
+		});
+
+		assert.strictEqual(result.summary, "150.5 credits remaining (top-up 120.5, voucher 30)");
+		assert.deepStrictEqual(result.details, [
+			"Source: TokenRouter Management API self wallet endpoint.",
+			"Remaining topped-up balance: 120.5",
+			"Valid voucher balance: 30",
+			"Total remaining credits: 150.5",
+			"Topped-up spent: 80.25",
+			"Voucher spent: 10",
+		]);
+	});
+
+	test("rejects TokenRouter wallet errors and malformed balances", () => {
+		assert.throws(
+			() => parseTokenRouterWallet({ success: false, message: "management key has expired" }),
+			/management key has expired/
+		);
+		assert.throws(
+			() =>
+				parseTokenRouterWallet({
+					success: true,
+					data: {
+						topUpBalance: "bad",
+						voucherEfficientAmount: 30,
+						toppedUpSpent: 0,
+						voucherSpent: 0,
+					},
+				}),
+			/TokenRouter topUpBalance must be a number/
+		);
 	});
 
 	test("parses MiniMax token plan usage as used counts", () => {
@@ -170,6 +217,8 @@ suite("providerUsage", () => {
 		assert.strictEqual(getProviderUsageAdapter("litellm", "https://ai.nube.sh/api/v1"), "litellm");
 		assert.strictEqual(getProviderUsageAdapter("fireworks", "https://api.fireworks.ai/inference/v1"), "fireworks");
 		assert.strictEqual(getProviderUsageAdapter("custom", "https://api.fireworks.ai/inference/v1"), "fireworks");
+		assert.strictEqual(getProviderUsageAdapter("tokenrouter", "https://api.tokenrouter.com/v1"), "tokenrouter");
+		assert.strictEqual(providerRequiresUsageApiKey("tokenrouter"), true);
 		assert.strictEqual(getProviderUsageSecretKey("OpenAI"), "oaicopilot.usageApiKey.openai");
 	});
 
@@ -228,37 +277,43 @@ suite("providerUsage", () => {
 			const url = String(input);
 			requestedUrls.push(url);
 			if (url.startsWith("https://api.fireworks.ai/v1/accounts?")) {
-				return new Response(JSON.stringify({
-					accounts: [
-						{ name: "accounts/team-a", displayName: "Team A" },
-						{ name: "accounts/team-b" },
-					],
-				}), {
-					status: 200,
-					headers: { "content-type": "application/json" },
-				});
+				return new Response(
+					JSON.stringify({
+						accounts: [{ name: "accounts/team-a", displayName: "Team A" }, { name: "accounts/team-b" }],
+					}),
+					{
+						status: 200,
+						headers: { "content-type": "application/json" },
+					}
+				);
 			}
 			if (url.includes("/accounts/team-a/billingUsage?")) {
-				return new Response(JSON.stringify({
-					serverlessCosts: [
-						{
-							promptTokens: "1200",
-							completionTokens: "300",
-							group: { model_name: "accounts/fireworks/models/deepseek-v4-pro" },
-						},
-					],
-				}), { status: 200 });
+				return new Response(
+					JSON.stringify({
+						serverlessCosts: [
+							{
+								promptTokens: "1200",
+								completionTokens: "300",
+								group: { model_name: "accounts/fireworks/models/deepseek-v4-pro" },
+							},
+						],
+					}),
+					{ status: 200 }
+				);
 			}
 			if (url.includes("/accounts/team-b/billingUsage?")) {
-				return new Response(JSON.stringify({
-					serverlessCosts: [
-						{
-							promptTokens: "800",
-							completionTokens: "200",
-							group: { model_name: "accounts/fireworks/models/glm-5p2" },
-						},
-					],
-				}), { status: 200 });
+				return new Response(
+					JSON.stringify({
+						serverlessCosts: [
+							{
+								promptTokens: "800",
+								completionTokens: "200",
+								group: { model_name: "accounts/fireworks/models/glm-5p2" },
+							},
+						],
+					}),
+					{ status: 200 }
+				);
 			}
 			return new Response("not found", { status: 404, statusText: "Not Found" });
 		};
@@ -369,6 +424,57 @@ suite("providerUsage", () => {
 			}),
 			/Z\.AI usage checks are unavailable/
 		);
+	});
+
+	test("checks TokenRouter wallet with a management key", async () => {
+		const originalFetch = globalThis.fetch;
+		const requested: Array<{ url: string; authorization?: string }> = [];
+		globalThis.fetch = (async (input, init) => {
+			const headers = init?.headers as Record<string, string> | undefined;
+			requested.push({
+				url: String(input),
+				authorization: headers?.Authorization,
+			});
+			return new Response(
+				JSON.stringify({
+					success: true,
+					message: "",
+					data: {
+						topUpBalance: 12,
+						voucherEfficientAmount: 3.5,
+						toppedUpSpent: 4,
+						voucherSpent: 1,
+					},
+				}),
+				{ status: 200 }
+			);
+		}) as typeof fetch;
+
+		assert.strictEqual(isTokenRouterProvider("tokenrouter", "https://api.tokenrouter.com/v1"), true);
+		assert.strictEqual(isTokenRouterProvider("custom", "https://api.tokenrouter.com/v1"), true);
+		assert.strictEqual(getProviderUsageAdapter("tokenrouter", "https://api.tokenrouter.com/v1"), "tokenrouter");
+		assert.strictEqual(
+			buildTokenRouterWalletEndpoint("https://api.tokenrouter.com/v1"),
+			"https://api.tokenrouter.com/api/management/self/wallet"
+		);
+		try {
+			assert.strictEqual(getProviderUsageUnsupportedReason("tokenrouter", "https://api.tokenrouter.com/v1"), undefined);
+			const result = await checkProviderUsage({
+				provider: "tokenrouter",
+				baseUrl: "https://api.tokenrouter.com/v1",
+				apiKey: "mgmt-test",
+			});
+			assert.strictEqual(result.adapter, "tokenrouter");
+			assert.strictEqual(result.summary, "15.5 credits remaining (top-up 12, voucher 3.5)");
+			assert.deepStrictEqual(requested, [
+				{
+					url: "https://api.tokenrouter.com/api/management/self/wallet",
+					authorization: "Bearer mgmt-test",
+				},
+			]);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
 	});
 
 	test("formats non-positive reset times as now", () => {

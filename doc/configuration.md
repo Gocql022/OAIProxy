@@ -152,11 +152,12 @@ Mixed configuration with multiple API modes:
 
 ### Provider Presets
 
-The configuration UI can prefill provider settings for OpenAI, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax. Presets fill only the provider ID, base URL, and API mode; add the exact model IDs you want to use separately.
+The configuration UI can prefill provider settings for OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax. TokenRouter uses `https://api.tokenrouter.com/v1` and stores its provider key as `oaicopilot.apiKey.tokenrouter`. Its Quick Setup cards use `deepseek/deepseek-v4-pro-0813`, `qwen/qwen3.8-max`, `moonshotai/kimi-k3`, and `z-ai/glm-5.3`; add or customize the exact model IDs you want to use separately when needed.
 
 | Provider | Provider ID | Base URL | API Mode |
 |---|---|---|---|
 | OpenAI | `openai` | `https://api.openai.com/v1` | `openai` |
+| TokenRouter | `tokenrouter` | `https://api.tokenrouter.com/v1` | `openai` |
 | Anthropic | `anthropic` | `https://api.anthropic.com` | `anthropic` |
 | Kimi (Moonshot AI) | `kimi` | `https://api.moonshot.ai/v1` | `openai` |
 | DeepSeek | `deepseek` | `https://api.deepseek.com` | `openai` |
@@ -166,7 +167,7 @@ The configuration UI can prefill provider settings for OpenAI, Anthropic, Firewo
 | MiniMax (OpenAI) | `minimax` | `https://api.minimax.io/v1` | `openai` |
 | MiniMax (Anthropic) | `minimax-anthropic` | `https://api.minimax.io/anthropic` | `anthropic` |
 
-Settings snippets are available in `examples/openai-responses.jsonc`, `examples/openai-chat-completions.jsonc`, `examples/anthropic.jsonc`, `examples/fireworks.jsonc`, `examples/zai-glm.jsonc`, `examples/mimo.jsonc`, `examples/minimax-openai.jsonc`, and `examples/minimax-anthropic.jsonc`. Fireworks usage checks reuse the normal provider key and report month-to-date serverless tokens across accessible accounts. OpenAI and Anthropic usage/cost checks require separate admin keys; enter those in the configuration UI's `Usage Key` field instead of adding them to `settings.json`. Z.AI and MiMo usage checks are shown as unavailable because their current public docs do not expose API-key usage or balance endpoints.
+Settings snippets are available in `examples/openai-responses.jsonc`, `examples/openai-chat-completions.jsonc`, `examples/tokenrouter.jsonc`, `examples/anthropic.jsonc`, `examples/fireworks.jsonc`, `examples/zai-glm.jsonc`, `examples/mimo.jsonc`, `examples/minimax-openai.jsonc`, and `examples/minimax-anthropic.jsonc`. Fireworks usage checks reuse the normal provider key and report month-to-date serverless tokens across accessible accounts. OpenAI and Anthropic usage/cost checks require separate admin keys; enter those in the configuration UI's `Usage Key` field instead of adding them to `settings.json`. TokenRouter uses a separate Management Key in the `Usage Key` field and reports account credits from the Management API self-wallet endpoint. Z.AI and MiMo usage checks are shown as unavailable because their current public docs do not expose API-key usage or balance endpoints.
 
 ### Fireworks AI
 
