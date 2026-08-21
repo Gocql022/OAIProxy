@@ -65,6 +65,7 @@
 	"Generating commit message for {0}...": "正在为 {0} 生成提交消息...",
 	"Stored OpenAI API key is malformed. OAIProxy removed it; enter a valid OpenAI key starting with sk-.": "存储的 OpenAI API 密钥格式无效。OAIProxy 已将其移除；请输入以 sk- 开头的有效 OpenAI 密钥。",
 	"Invalid OpenAI API key format. Enter an OpenAI API key that starts with sk-.": "OpenAI API 密钥格式无效。请输入以 sk- 开头的 OpenAI API 密钥。",
+	"OAIProxy removed unsupported field \"{0}\" from the request and retried.": "OAIProxy 已从请求中移除不支持的字段\"{0}\"并自动重试。",
 	"Thinking Effort": "思考力度",
 	"Controls how much reasoning the model should use before answering.": "控制模型在回答前应使用多少推理。",
 	"No reasoning applied.": "不进行推理。",

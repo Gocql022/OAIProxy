@@ -65,6 +65,7 @@
 	"Generating commit message for {0}...": "Generating commit message for {0}...",
 	"Stored OpenAI API key is malformed. OAIProxy removed it; enter a valid OpenAI key starting with sk-.": "Stored OpenAI API key is malformed. OAIProxy removed it; enter a valid OpenAI key starting with sk-.",
 	"Invalid OpenAI API key format. Enter an OpenAI API key that starts with sk-.": "Invalid OpenAI API key format. Enter an OpenAI API key that starts with sk-.",
+	"OAIProxy removed unsupported field \"{0}\" from the request and retried.": "OAIProxy removed unsupported field \"{0}\" from the request and retried.",
 	"Thinking Effort": "Thinking Effort",
 	"Controls how much reasoning the model should use before answering.": "Controls how much reasoning the model should use before answering.",
 	"No reasoning applied.": "No reasoning applied.",

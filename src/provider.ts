@@ -15,8 +15,7 @@ import type { OllamaRequestBody } from "./ollama/ollamaTypes";
 
 import {
 	parseModelId,
-	createRetryConfig,
-	executeWithRetry,
+    createRetryConfig,
 	normalizeUserModels,
 	isImageMimeType,
 	isVideoMimeType,
@@ -45,6 +44,7 @@ import { CommonApi } from "./commonApi";
 import { logger } from "./logger";
 import { getRequestedReasoningEffort, normalizeReasoningEffortForModel } from "./reasoningEffort";
 import { applyOpenAIPromptCache, hasCacheControl } from "./promptCache";
+import { fetchWithFieldFallback } from "./fieldFallback";
 import { createTokenUsageReport, getTokenBudgetErrorMessage } from "./tokenUsage";
 import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "./vscodeCompat";
 
@@ -76,6 +76,8 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 
 	private readonly _geminiToolCallMetaByCallId = new Map<string, GeminiToolCallMeta>();
 	private readonly _openaiResponsesPreviousResponseIdUnsupportedBaseUrls = new Set<string>();
+    /** Track baseUrl|field pairs whose unsupported-field fallback has already been notified. */
+    private readonly _notifiedUnsupportedFields = new Set<string>();
 	private readonly _openaiResponsesState = new OpenAIResponsesStateStore();
 
 	static readonly OPENAI_RESPONSES_STATEFUL_MARKER_MIME = "application/vnd.oaiproxy.stateful-marker";
@@ -436,24 +438,15 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				// send Ollama chat request with retry
 				const url = `${BASE_URL.replace(/\/+$/, "")}/api/chat`;
 				logRequestBody(url, ollamaRequestBody, isVisionBridgeRequest);
-				const response = await executeWithRetry(async () => {
-					const res = await fetch(url, {
-						method: "POST",
-						headers: requestHeaders,
-						body: JSON.stringify(ollamaRequestBody),
-						signal: abortController.signal,
-					});
-
-					if (!res.ok) {
-						const errorText = await res.text();
-						console.error("[Ollama Provider] Ollama API error response", errorText);
-						throw new Error(
-							`Ollama API error: [${res.status}] ${res.statusText}${errorText ? `\n${errorText}` : ""}\nURL: ${url}`
-						);
-					}
-
-					return res;
-				}, retryConfig);
+                const { response } = await fetchWithFieldFallback({
+                    url,
+                    headers: requestHeaders,
+                    body: ollamaRequestBody,
+                    retryConfig,
+                    signal: abortController.signal,
+                    apiLabel: "Ollama API",
+                    onFieldRemoved: (field) => this.notifyUnsupportedFieldRemoved(BASE_URL, field),
+                });
 
 				if (!response.body) {
 					throw new Error("No response body from Ollama API");
@@ -480,24 +473,15 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					? `${normalizedBaseUrl}/messages`
 					: `${normalizedBaseUrl}/v1/messages`;
 				logRequestBody(url, requestBody, isVisionBridgeRequest);
-				const response = await executeWithRetry(async () => {
-					const res = await fetch(url, {
-						method: "POST",
-						headers: requestHeaders,
-						body: JSON.stringify(requestBody),
-						signal: abortController.signal,
-					});
-
-					if (!res.ok) {
-						const errorText = await res.text();
-						console.error("[Anthropic Provider] Anthropic API error response", errorText);
-						throw new Error(
-							`Anthropic API error: [${res.status}] ${res.statusText}${errorText ? `\n${errorText}` : ""}\nURL: ${url}`
-						);
-					}
-
-					return res;
-				}, retryConfig);
+                const { response } = await fetchWithFieldFallback({
+                    url,
+                    headers: requestHeaders,
+                    body: requestBody,
+                    retryConfig,
+                    signal: abortController.signal,
+                    apiLabel: "Anthropic API",
+                    onFieldRemoved: (field) => this.notifyUnsupportedFieldRemoved(BASE_URL, field),
+                });
 
 				if (!response.body) {
 					throw new Error("No response body from Anthropic API");
@@ -633,27 +617,18 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					usedStatefulDeltaInput: addedPreviousResponseId,
 				});
 
-				const sendRequest = async (body: Record<string, unknown>) =>
-					await executeWithRetry(async () => {
-						const res = await fetch(url, {
-							method: "POST",
-							headers: requestHeaders,
-							body: JSON.stringify(body),
-							signal: abortController.signal,
-						});
-
-						if (!res.ok) {
-							const errorText = await res.text();
-							const error = new Error(
-								`Responses API error: [${res.status}] ${res.statusText}${errorText ? `\n${errorText}` : ""}\nURL: ${url}`
-							);
-							(error as { status?: number; errorText?: string }).status = res.status;
-							(error as { status?: number; errorText?: string }).errorText = errorText;
-							throw error;
-						}
-
-						return res;
-					}, retryConfig);
+                const sendRequest = async (body: Record<string, unknown>): Promise<Response> => {
+                    const { response } = await fetchWithFieldFallback({
+                        url,
+                        headers: requestHeaders,
+                        body,
+                        retryConfig,
+                        signal: abortController.signal,
+                        apiLabel: "Responses API",
+                        onFieldRemoved: (field) => this.notifyUnsupportedFieldRemoved(normalizedBaseUrl, field),
+                    });
+                    return response;
+                };
 
 				let response: Response;
 				try {
@@ -773,24 +748,16 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					throw new Error("Invalid Gemini base URL configuration.");
 				}
 
-				const response = await executeWithRetry(async () => {
-					const res = await fetch(url, {
-						method: "POST",
-						headers: requestHeaders,
-						body: JSON.stringify(requestBody),
-						signal: abortController.signal,
-					});
-
-					if (!res.ok) {
-						const errorText = await res.text();
-						console.error("[Gemini Provider] Gemini API error response", errorText);
-						throw new Error(
-							`Gemini API error: [${res.status}] ${res.statusText}${errorText ? `\n${errorText}` : ""}\nURL: ${url}`
-						);
-					}
-
-					return res;
-				}, retryConfig);
+                const responseResult = await fetchWithFieldFallback({
+                    url,
+                    headers: requestHeaders,
+                    body: requestBody,
+                    retryConfig,
+                    signal: abortController.signal,
+                    apiLabel: "Gemini API",
+                    onFieldRemoved: (field) => this.notifyUnsupportedFieldRemoved(BASE_URL, field),
+                });
+                const response = responseResult.response;
 
 				if (!response.body) {
 					throw new Error("No response body from Gemini API");
@@ -818,24 +785,16 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				// send chat request with retry
 				const url = `${BASE_URL.replace(/\/+$/, "")}/chat/completions`;
 				logRequestBody(url, requestBody, isVisionBridgeRequest);
-				const response = await executeWithRetry(async () => {
-					const res = await fetch(url, {
-						method: "POST",
-						headers: requestHeaders,
-						body: JSON.stringify(requestBody),
-						signal: abortController.signal,
-					});
-
-					if (!res.ok) {
-						const errorText = await res.text();
-						console.error("[OAIProxy Model Provider] OAIProxy API error response", errorText);
-						throw new Error(
-							`OAIProxy API error: [${res.status}] ${res.statusText}${errorText ? `\n${errorText}` : ""}\nURL: ${url}`
-						);
-					}
-
-					return res;
-				}, retryConfig);
+                const responseResult = await fetchWithFieldFallback({
+                    url,
+                    headers: requestHeaders,
+                    body: requestBody,
+                    retryConfig,
+                    signal: abortController.signal,
+                    apiLabel: "OAIProxy API",
+                    onFieldRemoved: (field) => this.notifyUnsupportedFieldRemoved(BASE_URL, field),
+                });
+                const response = responseResult.response;
 
 				if (!response.body) {
 					throw new Error("No response body from OAIProxy API");
@@ -970,6 +929,21 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 
 		return apiKey;
 	}
+
+    /**
+     * Notify the user once per baseUrl+field pair that an unsupported field was
+     * automatically removed from the request and retried.
+     */
+    private notifyUnsupportedFieldRemoved(baseUrl: string, field: string): void {
+        const key = `${baseUrl.replace(/\/+$/, "").toLowerCase()}|${field}`;
+        if (this._notifiedUnsupportedFields.has(key)) {
+            return;
+        }
+        this._notifiedUnsupportedFields.add(key);
+        void vscode.window.showWarningMessage(
+            vscode.l10n.t('OAIProxy removed unsupported field "{0}" from the request and retried.', field)
+        );
+    }
 
 	private isInvalidOfficialOpenAIApiKey(
 		apiKey: string,
