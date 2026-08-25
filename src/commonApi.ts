@@ -289,7 +289,9 @@ export abstract class CommonApi<TMessage, TRequestBody> {
 		};
 
 		// Provider-specific header formats
-		if (apiMode === "anthropic") {
+		if (apiMode === "azure-foundry") {
+			headers["api-key"] = apiKey;
+		} else if (apiMode === "anthropic") {
 			headers["x-api-key"] = apiKey;
 			headers["anthropic-version"] = "2023-06-01";
 		} else if (apiMode === "ollama" && apiKey !== "ollama") {

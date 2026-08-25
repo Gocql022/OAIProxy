@@ -4,7 +4,7 @@
 
 # OAIProxy
 
-**A self-maintained VS Code extension to use OpenAI/Ollama/Anthropic/Gemini API providers in GitHub Copilot Chat, with presets for OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax** 🔥
+**A self-maintained VS Code extension to use Azure Foundry/OpenAI/Ollama/Anthropic/Gemini API providers in GitHub Copilot Chat, with presets for Azure Foundry, OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax** 🔥
 
 English | [简体中文](README.zh-CN.md)
 
@@ -17,7 +17,7 @@ English | [简体中文](README.zh-CN.md)
 ![OAIProxy demo](assets/demo.gif)
 
 ## Features
-- **Multi-API support**: OpenAI/Ollama/Anthropic/Gemini APIs, with OpenAI-compatible presets for Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, MiniMax, ModelScope, SiliconFlow, and more
+- **Multi-API support**: Azure Foundry/OpenAI/Ollama/Anthropic/Gemini APIs, with direct Azure Foundry presets plus OpenAI-compatible presets for Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, MiniMax, ModelScope, SiliconFlow, and more
 - **Vision models**: Full support for image understanding capabilities
 - **Vision Bridge**: Use images in chat with text-only models — OAIProxy automatically describes images via a configured vision model with LRU caching
 - **Think tag support**: Seamless display of model thinking/reasoning blocks across all providers (OpenAI, Ollama, Gemini, Anthropic)
@@ -25,7 +25,7 @@ English | [简体中文](README.zh-CN.md)
 - **Advanced configuration**: Flexible chat request options with thinking/reasoning control
 - **Multi-provider management**: Configure models from multiple providers simultaneously with automatic API key management
 - **Model connection tests**: Test one configured model or run up to four tests in parallel from Model Management using the model's real saved request configuration
-- **Provider usage checks**: Check Fireworks month-to-date serverless tokens, DeepSeek/Kimi credit balance, TokenRouter Management Key credit balance, MiniMax token-plan remaining quota, and OpenAI/Anthropic month-to-date cost usage from a standalone Provider Usage Check table; Z.AI and MiMo are shown as unavailable when no public API-key usage endpoint is documented
+- **Provider usage checks**: Check Fireworks month-to-date serverless tokens, DeepSeek/Kimi credit balance, TokenRouter Management Key credit balance, MiniMax token-plan remaining quota, and OpenAI/Anthropic month-to-date cost usage from a standalone Provider Usage Check table; Azure Foundry, Z.AI, and MiMo explain where no public inference-key usage endpoint is available
 - **Multi-config per model**: Define different settings for the same model (e.g., GLM-4.6 with/without thinking)
 - **Visual configuration UI**: Intuitive interface for managing providers and models
 - **Auto-retry**: Handles API errors (429, 500, 502, 503, 504) with exponential backoff
@@ -85,21 +85,27 @@ Set `max_input_tokens` when a provider needs a safety margin below its official 
 
 The extension provides a visual configuration interface for managing providers, models, and API keys without editing JSON files manually. Open via the Command Palette (`OAIProxy: Open Configuration UI`) or click the OAIProxy status bar item.
 
-The Provider Management form includes presets for OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax. TokenRouter uses `https://api.tokenrouter.com/v1` and stores its key as `oaicopilot.apiKey.tokenrouter`. Quick Setup includes `deepseek/deepseek-v4-pro-0813`, `qwen/qwen3.8-max`, `moonshotai/kimi-k3`, and `z-ai/glm-5.3`. Selecting a preset fills the provider ID, base URL, and API mode; you can still fetch or enter model IDs from the provider's current model list. Example snippets are in `examples/openai-responses.jsonc`, `examples/openai-chat-completions.jsonc`, `examples/tokenrouter.jsonc`, `examples/anthropic.jsonc`, `examples/fireworks.jsonc`, `examples/zai-glm.jsonc`, `examples/mimo.jsonc`, `examples/minimax-openai.jsonc`, and `examples/minimax-anthropic.jsonc`.
+The Provider Management form lists Azure Foundry first, followed by presets for OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax. For Azure Foundry, replace the resource-name placeholder with the direct `https://<resource>.services.ai.azure.com/openai/v1` endpoint and save its inference key; OAIProxy stores it as `oaicopilot.apiKey.azure-foundry` and authenticates with `api-key`. Quick Setup includes concise Azure Foundry cards for `Kimi-K2.6` and `DeepSeek-V4-Pro`. Selecting a preset fills the provider ID, base URL, and API mode; you can still fetch or enter model IDs from the provider's current model list. Example snippets are in `examples/openai-responses.jsonc`, `examples/openai-chat-completions.jsonc`, `examples/tokenrouter.jsonc`, `examples/anthropic.jsonc`, `examples/fireworks.jsonc`, `examples/zai-glm.jsonc`, `examples/mimo.jsonc`, `examples/minimax-openai.jsonc`, and `examples/minimax-anthropic.jsonc`.
 
 Model Management provides a per-model `Test` action and a parallel `Test all` action. Each test sends a small real inference request through the model's saved provider, API mode, headers, and advanced request settings, so it may incur minimal provider usage.
 
-The standalone Provider Usage Check table lists configured supported providers dynamically and reports credit, token, token-plan, or cost usage. Fireworks account discovery and month-to-date serverless token checks reuse the normal Fireworks provider key. OpenAI and Anthropic usage/admin keys are stored separately from chat API keys. TokenRouter uses a separate Management Key and reports account credits from its Management API self-wallet endpoint. Z.AI and MiMo entries are shown with unavailable reasons when their public docs do not expose API-key usage or balance endpoints.
+The standalone Provider Usage Check table lists configured supported providers dynamically and reports credit, token, token-plan, or cost usage. Fireworks account discovery and month-to-date serverless token checks reuse the normal Fireworks provider key. OpenAI and Anthropic usage/admin keys are stored separately from chat API keys. TokenRouter uses a separate Management Key and reports account credits from its Management API self-wallet endpoint. Azure Foundry inference keys cannot call an official usage/cost endpoint; use Azure Monitor or Cost Management with Azure RBAC. Z.AI and MiMo entries are likewise shown with unavailable reasons when their public docs do not expose API-key usage or balance endpoints.
 
 → [Full Configuration Guide](doc/configuration.md)
 
 ## Multi-API Mode
 
-Supports five API protocols: `openai` (Chat Completions), `openai-responses` (Responses), `ollama`, `anthropic`, and `gemini`. Specify per-model via the `apiMode` parameter.
+Supports seven API protocols: `azure-foundry` (direct Azure Foundry Chat Completions with `api-key` authentication), `openai` (Chat Completions), `litellm` (LiteLLM Proxy Chat Completions), `openai-responses` (Responses), `ollama`, `anthropic`, and `gemini`. Specify per-model via the `apiMode` parameter.
 
 TokenRouter, Fireworks, Kimi, DeepSeek, Z.AI GLM, and Xiaomi MiMo use the existing `openai` mode because their hosted APIs are OpenAI-compatible. MiniMax supports both `openai` and `anthropic` modes; MiniMax recommends the Anthropic-compatible M3 endpoint for thinking and interleaved-thinking workflows.
 
 → [Full Multi-API Guide](doc/configuration.md#multi-api-mode)
+
+## Azure Foundry
+
+Azure Foundry uses its direct `/openai/v1` endpoint, not an Azure API Management gateway. Configure the resource URL and inference key in Provider Management, then add the `Kimi-K2.6` and/or `DeepSeek-V4-Pro` Quick Setup cards. The Kimi card defaults to `high` reasoning; DeepSeek defaults to `max`. Both cards support tools, and Kimi enables vision.
+
+Azure Foundry performs eligible model prompt caching automatically. OAIProxy deliberately does not send `prompt_cache_key`, `prompt_cache_retention`, or `thinking` for these cards. A cache hit does not prevent the model from receiving the conversation context: Foundry reuses cached prefix computation internally while the model still processes the full logical request. Confirm real hits through `cache.usage` logs and `usage.prompt_tokens_details.cached_tokens`; caching is best effort, so identical requests can still report no hit.
 
 ## Fireworks AI
 
@@ -159,7 +165,7 @@ Use the `extra` field to inject arbitrary JSON parameters into the API request b
 
 ## Prompt / KV Cache
 
-OAIProxy surfaces provider cache-hit usage in structured logs and applies safe cache request shaping where supported. OpenAI endpoints get a stable `prompt_cache_key` by default, Fireworks gets a stable `user` affinity value, and Anthropic-compatible `cache_control` writes are opt-in via `prompt_cache.anthropic.enabled` or explicit VS Code `cache_control` message parts. DeepSeek, Xiaomi MiMo, MiniMax OpenAI mode, and Gemini continue to use provider automatic/implicit caching.
+OAIProxy surfaces provider cache-hit usage in structured logs and applies safe cache request shaping where supported. OpenAI endpoints get a stable `prompt_cache_key` by default, Fireworks gets a stable `user` affinity value, and Anthropic-compatible `cache_control` writes are opt-in via `prompt_cache.anthropic.enabled` or explicit VS Code `cache_control` message parts. Azure Foundry, DeepSeek, Xiaomi MiMo, MiniMax OpenAI mode, and Gemini continue to use provider automatic/implicit caching.
 
 OpenAI `previous_response_id` is kept for conversation state only; OpenAI still bills previous input tokens in the response chain. Use `oaicopilot.logLevel: "info"` or `"debug"` and inspect `cache.usage` log entries to verify actual cache reads/hits.
 

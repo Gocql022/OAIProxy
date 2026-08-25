@@ -1,11 +1,40 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
+import { CommonApi } from "../commonApi";
 import { MODEL_PRESETS } from "../modelPresets";
 import { OpenaiApi } from "../openai/openaiApi";
 import { COPILOT_USAGE_MIME } from "../responseUsage";
 import type { HFModelItem } from "../types";
 
 suite("openaiApi", () => {
+	test("uses the Azure Foundry api-key header without bearer authorization", () => {
+		const headers = CommonApi.prepareHeaders("foundry-secret", "azure-foundry");
+
+		assert.strictEqual(headers["api-key"], "foundry-secret");
+		assert.strictEqual(headers.Authorization, undefined);
+		assert.strictEqual(headers["Content-Type"], "application/json");
+	});
+
+	test("keeps direct Azure Foundry request bodies free of rejected cache and thinking fields", () => {
+		for (const presetId of ["azure-foundry-kimi-k2-6", "azure-foundry-deepseek-v4-pro"]) {
+			const preset = MODEL_PRESETS.find((item) => item.id === presetId);
+			assert.ok(preset);
+			const body = new OpenaiApi(preset.model.id, "azure-foundry").prepareRequestBody(
+				{
+					model: preset.model.id,
+					messages: [],
+					stream: true,
+				},
+				preset.model
+			);
+
+			assert.strictEqual(body.reasoning_effort, preset.model.reasoning_effort);
+			assert.strictEqual(body.thinking, undefined);
+			assert.strictEqual(body.prompt_cache_key, undefined);
+			assert.strictEqual(body.prompt_cache_retention, undefined);
+		}
+	});
+
 	test("passes MiniMax M3 OpenAI thinking configuration through request body", () => {
 		const api = new OpenaiApi("MiniMax-M3");
 		const body = api.prepareRequestBody(

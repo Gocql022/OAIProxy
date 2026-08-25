@@ -798,7 +798,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				await geminiApi.processStreamingResponse(response.body, trackingProgress, token);
 			} else {
 				// OpenAI compatible API mode (default)
-				const openaiApi = apiMode === "litellm" ? new LiteLLMApi(model.id) : new OpenaiApi(model.id);
+				const openaiApi = apiMode === "litellm"
+					? new LiteLLMApi(model.id)
+					: new OpenaiApi(model.id, apiMode === "azure-foundry" ? "azure-foundry" : "openai");
 				const openaiMessages = openaiApi.convertMessages(workingMessages, modelConfig);
 
 				// requestBody

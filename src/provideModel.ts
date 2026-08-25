@@ -196,9 +196,13 @@ export async function fetchModels(
 
 	const modelsList = (async () => {
 		const baseHeaders: Record<string, string> = {
-			Authorization: `Bearer ${apiKey}`,
 			"User-Agent": VersionManager.getUserAgent(),
 		};
+		if (normalizedApiMode === "azure-foundry") {
+			baseHeaders["api-key"] = apiKey;
+		} else {
+			baseHeaders.Authorization = `Bearer ${apiKey}`;
+		}
 		const headers = customHeaders ? { ...baseHeaders, ...customHeaders } : baseHeaders;
 		const resp = await fetch(`${baseUrl.replace(/\/+$/, "")}/models`, {
 			method: "GET",

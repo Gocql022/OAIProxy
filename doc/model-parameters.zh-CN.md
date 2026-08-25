@@ -35,7 +35,7 @@
 | `extra` | 否 | `object` | — | 额外请求体参数 |
 | `extra_body` | 否 | `object` | — | LiteLLM 供应商/代理专用请求体参数 |
 | `include_reasoning_in_request` | 否 | `boolean` | — | 在 assistant 消息中包含 `reasoning_content` |
-| `apiMode` | 否 | `string` | `openai` | API 协议：`openai`、`litellm`、`openai-responses`、`ollama`、`anthropic`、`gemini` |
+| `apiMode` | 否 | `string` | `openai` | API 协议：`azure-foundry`、`openai`、`litellm`、`openai-responses`、`ollama`、`anthropic`、`gemini` |
 | `delay` | 否 | `number` | 全局 `oaicopilot.delay` | 连续请求之间的模型专属延迟（毫秒） |
 | `useForCommitGeneration` | 否 | `boolean` | — | 是否用于 Git 提交信息生成（不支持 `gemini`） |
 
@@ -84,11 +84,12 @@ MiniMax M3 在 OpenAI 兼容模式和 Anthropic 兼容模式下都支持 `thinki
 按供应商适配的 Prompt/KV 缓存配置：
 - OpenAI 官方端点会自动添加稳定的 `prompt_cache_key`，除非设置 `prompt_cache.enabled: false`。可用 `prompt_cache.key` 覆盖 key，用 `prompt_cache.retention` 设置 `"in_memory"` 或 `"24h"`。
 - Anthropic 兼容缓存写入需要显式启用。设置 `prompt_cache.anthropic.enabled: true` 后，会为稳定的 system prompt 和工具定义添加 `cache_control`；`ttl` 可为 `"5m"` 或 `"1h"`。显式的 VS Code `cache_control` 数据片段即使未启用该配置也会被保留。
-- DeepSeek、小米 MiMo、MiniMax OpenAI 模式和 Gemini 使用供应商自动/隐式缓存。通过 `cache.usage` 日志查看实际命中情况。
+- Azure Foundry、DeepSeek、小米 MiMo、MiniMax OpenAI 模式和 Gemini 使用供应商自动/隐式缓存。Azure Foundry 卡片不发送 `prompt_cache_key`、`prompt_cache_retention` 或 `thinking`；通过 `cache.usage` 及 `usage.prompt_tokens_details.cached_tokens` 验证尽力而为的命中。
 
 ### `apiMode`
 
 此模型使用的 API 协议：
+- `"azure-foundry"`：Azure Foundry 直连 `/openai/v1/chat/completions`，使用 `api-key` 请求头
 - `"openai"`（默认）：`/chat/completions`，使用 `Authorization: Bearer` 请求头。适用于 Kimi、DeepSeek、Z.AI GLM、小米 MiMo、MiniMax 等 OpenAI 兼容供应商。
 - `"litellm"`：LiteLLM Proxy `/chat/completions`，使用 `Authorization: Bearer` 请求头。OAIProxy 会把思维链/推理的供应商选项映射到 `extra_body`。
 - `"openai-responses"`：`/responses`，使用 `Authorization: Bearer` 请求头

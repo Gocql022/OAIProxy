@@ -73,32 +73,37 @@ VS Code Copilot 针对特定模型优化了系统提示词。[详细介绍](http
 
 ### 支持的 API 模式
 
-1. **`openai`**（默认）- OpenAI Chat Completions API
+1. **`azure-foundry`** - Azure Foundry 直连 Chat Completions API
+   - 端点：资源 `/openai/v1` Base URL 下的 `/chat/completions`
+   - 请求头：`api-key: <apiKey>`
+   - 用途：Azure Foundry 推理直连端点（不用于 Azure API Management 网关）
+
+2. **`openai`**（默认）- OpenAI Chat Completions API
    - 端点：`/chat/completions`
    - 请求头：`Authorization: Bearer <apiKey>`
    - 适用：大多数 OpenAI 兼容供应商（Kimi、DeepSeek、Z.AI GLM、小米 MiMo、MiniMax、ModelScope、SiliconFlow 等）
 
-2. **`litellm`** - LiteLLM Proxy Chat Completions API
+3. **`litellm`** - LiteLLM Proxy Chat Completions API
    - 端点：`/chat/completions`
    - 请求头：`Authorization: Bearer <apiKey>`
    - 适用：需要通过字面量 `extra_body` 传递供应商/代理参数的 LiteLLM 代理端点
 
-3. **`openai-responses`** - OpenAI Responses API
+4. **`openai-responses`** - OpenAI Responses API
    - 端点：`/responses`
    - 请求头：`Authorization: Bearer <apiKey>`
    - 适用：OpenAI 官方 Responses API（及兼容网关如 rsp4copilot）
 
-4. **`ollama`** - Ollama 原生 API
+5. **`ollama`** - Ollama 原生 API
    - 端点：`/api/chat`
    - 请求头：`Authorization: Bearer <apiKey>`（当存储的 API Key 恰好为 `ollama` 时省略）
    - 适用：本地 Ollama 实例
 
-5. **`anthropic`** - Anthropic Claude API
+6. **`anthropic`** - Anthropic Claude API
    - 端点：`/v1/messages`
    - 请求头：`x-api-key: <apiKey>`
    - 适用：Anthropic Claude 模型
 
-6. **`gemini`** - Gemini 原生 API
+7. **`gemini`** - Gemini 原生 API
    - 端点：`/v1beta/models/{model}:streamGenerateContent?alt=sse`
    - 请求头：`x-goog-api-key: <apiKey>`
    - 适用：Google Gemini 模型（及兼容网关如 rsp4copilot）
@@ -131,6 +136,7 @@ VS Code Copilot 针对特定模型优化了系统提示词。[详细介绍](http
 ### 重要说明
 
 - 未指定 `apiMode` 时默认为 `"openai"`。
+- Azure Foundry 使用 `apiMode: "azure-foundry"`、直连的 `...services.ai.azure.com/openai/v1` 端点和 `api-key` 请求头；URL 与密钥在 Provider Management 中配置。
 - LiteLLM Proxy 在需要通过字面量 `extra_body` 传递供应商参数时使用 `apiMode: "litellm"`。
 - Fireworks、Kimi、DeepSeek、Z.AI GLM 和小米 MiMo 通过其 OpenAI 兼容的 Chat Completions API 使用 `apiMode: "openai"`。
 - MiniMax 的 M 系列模型同时支持 `apiMode: "openai"` 和 `apiMode: "anthropic"`。MiniMax 推荐在 M3 思维链和交错思维工作流中使用 Anthropic 兼容端点。

@@ -4,8 +4,37 @@ import {
 	resolveModelTokenLimits,
 } from "../modelTokenLimits";
 import { MODEL_PICKER_METADATA } from "../modelPickerMetadata";
+import { fetchModels } from "../provideModel";
 
 suite("provideModel", () => {
+	test("fetches Azure Foundry models with api-key authentication", async () => {
+		const originalFetch = globalThis.fetch;
+		let capturedUrl = "";
+		let capturedHeaders: Record<string, string> = {};
+		globalThis.fetch = (async (input, init) => {
+			capturedUrl = String(input);
+			capturedHeaders = init?.headers as Record<string, string>;
+			return new Response(JSON.stringify({ data: [{ id: "Kimi-K2.6", owned_by: "azure-foundry" }] }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			});
+		}) as typeof fetch;
+
+		try {
+			const result = await fetchModels(
+				"https://resource.services.ai.azure.com/openai/v1/",
+				"foundry-secret",
+				"azure-foundry"
+			);
+			assert.strictEqual(capturedUrl, "https://resource.services.ai.azure.com/openai/v1/models");
+			assert.strictEqual(capturedHeaders["api-key"], "foundry-secret");
+			assert.strictEqual(capturedHeaders.Authorization, undefined);
+			assert.strictEqual(result.models[0].id, "Kimi-K2.6");
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
 	test("uses VS Code 1.126-compatible BYOK picker metadata", () => {
 		assert.deepStrictEqual(MODEL_PICKER_METADATA, {
 			isUserSelectable: true,

@@ -44,12 +44,12 @@ suite("configView", () => {
 
 	test("sanitizes credentials and whitespace from model connection errors", () => {
 		const error = new Error(
-			"Request failed\nAuthorization: Bearer secret-token, x-api-key=private-key; x-goog-api-key: google-key"
+			"Request failed\nAuthorization: Bearer secret-token, api-key=foundry-key; x-api-key=private-key; x-goog-api-key: google-key"
 		);
 
 		assert.strictEqual(
 			sanitizeModelConnectionTestError(error),
-			"Request failed Authorization: Bearer [REDACTED], x-api-key=[REDACTED]; x-goog-api-key: [REDACTED]"
+			"Request failed Authorization: Bearer [REDACTED], api-key=[REDACTED]; x-api-key=[REDACTED]; x-goog-api-key: [REDACTED]"
 		);
 	});
 

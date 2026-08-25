@@ -35,7 +35,7 @@ All parameters support individual configuration for different models, providing 
 | `extra` | no | `object` | — | Extra request body parameters |
 | `extra_body` | no | `object` | — | LiteLLM provider/proxy-specific request body parameters |
 | `include_reasoning_in_request` | no | `boolean` | — | Include `reasoning_content` in assistant messages |
-| `apiMode` | no | `string` | `openai` | API protocol: `openai`, `litellm`, `openai-responses`, `ollama`, `anthropic`, `gemini` |
+| `apiMode` | no | `string` | `openai` | API protocol: `azure-foundry`, `openai`, `litellm`, `openai-responses`, `ollama`, `anthropic`, `gemini` |
 | `delay` | no | `number` | global `oaicopilot.delay` | Per-model delay (ms) between consecutive requests |
 | `useForCommitGeneration` | no | `boolean` | — | Use this model for Git commit message generation (not supported for `gemini`) |
 
@@ -84,11 +84,12 @@ Default Thinking Effort value pre-selected in the model picker. If not set, `rea
 Provider-aware prompt/KV cache configuration:
 - OpenAI official endpoints automatically receive a stable `prompt_cache_key` unless `prompt_cache.enabled` is `false`. Set `prompt_cache.key` to override the key, and `prompt_cache.retention` to `"in_memory"` or `"24h"` when you need an explicit OpenAI retention policy.
 - Anthropic-compatible cache writes are opt-in. Set `prompt_cache.anthropic.enabled: true` to mark stable system prompts and tool definitions with `cache_control`; `ttl` can be `"5m"` or `"1h"`. Explicit VS Code `cache_control` data parts are preserved even without this config.
-- DeepSeek, Xiaomi MiMo, MiniMax OpenAI mode, and Gemini use provider automatic/implicit caching. Check `cache.usage` log entries to verify cache hits.
+- Azure Foundry, DeepSeek, Xiaomi MiMo, MiniMax OpenAI mode, and Gemini use provider automatic/implicit caching. Azure Foundry cards omit `prompt_cache_key`, `prompt_cache_retention`, and `thinking`; check `cache.usage` and returned `usage.prompt_tokens_details.cached_tokens` to verify best-effort hits.
 
 ### `apiMode`
 
 API protocol to use for this model:
+- `"azure-foundry"`: direct Azure Foundry `/openai/v1/chat/completions` with the `api-key` header
 - `"openai"` (default): `/chat/completions` with `Authorization: Bearer` header. Use this for OpenAI-compatible providers such as Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax.
 - `"litellm"`: LiteLLM Proxy `/chat/completions` with `Authorization: Bearer` header. OAIProxy maps thinking/reasoning provider options into `extra_body`.
 - `"openai-responses"`: `/responses` with `Authorization: Bearer` header

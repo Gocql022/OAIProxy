@@ -53,6 +53,17 @@ suite("promptCache", () => {
 
 		assert.strictEqual(tokenrouterBody.prompt_cache_key, undefined);
 		assert.strictEqual(tokenrouterBody.user, undefined);
+
+		const azureFoundryBody: Record<string, unknown> = {};
+		applyOpenAIPromptCache(azureFoundryBody, {
+			model: model({ id: "Kimi-K2.6", owned_by: "azure-foundry", apiMode: "azure-foundry" }),
+			baseUrl: "https://resource.services.ai.azure.com/openai/v1",
+			modelId: "Kimi-K2.6",
+		});
+
+		assert.strictEqual(azureFoundryBody.prompt_cache_key, undefined);
+		assert.strictEqual(azureFoundryBody.prompt_cache_retention, undefined);
+		assert.strictEqual(azureFoundryBody.user, undefined);
 	});
 
 	test("respects explicit OpenAI prompt cache configuration", () => {

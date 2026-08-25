@@ -2,6 +2,17 @@ import * as assert from "assert";
 import { PROVIDER_PRESETS } from "../providerPresets";
 
 suite("providerPresets", () => {
+	test("puts Azure Foundry first with direct endpoint authentication mode", () => {
+		const preset = PROVIDER_PRESETS[0];
+
+		assert.strictEqual(preset.id, "azure-foundry");
+		assert.strictEqual(preset.label, "Azure Foundry");
+		assert.strictEqual(preset.provider, "azure-foundry");
+		assert.strictEqual(preset.baseUrl, "https://YOUR-RESOURCE-NAME.services.ai.azure.com/openai/v1");
+		assert.strictEqual(preset.apiMode, "azure-foundry");
+		assert.strictEqual(preset.sortOrder, -100);
+	});
+
 	test("includes TokenRouter OpenAI-compatible preset", () => {
 		const preset = PROVIDER_PRESETS.find((item) => item.id === "tokenrouter");
 

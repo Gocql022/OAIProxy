@@ -4,7 +4,7 @@
 
 # OAIProxy
 
-**自维护的 VS Code 扩展，用于在 GitHub Copilot Chat 中使用 OpenAI/Ollama/Anthropic/Gemini API 兼容供应商，并内置 OpenAI、TokenRouter、Anthropic、Fireworks、Kimi、DeepSeek、Z.AI GLM、小米 MiMo、MiniMax 预设** 🔥
+**自维护的 VS Code 扩展，用于在 GitHub Copilot Chat 中使用 Azure Foundry/OpenAI/Ollama/Anthropic/Gemini API 供应商，并内置 Azure Foundry、OpenAI、TokenRouter、Anthropic、Fireworks、Kimi、DeepSeek、Z.AI GLM、小米 MiMo、MiniMax 预设** 🔥
 
 [English](README.md) | 简体中文
 
@@ -15,7 +15,7 @@
 ![OAIProxy 配置界面示例](assets/OAIProxy-Sample.png)
 
 ## 特性
-- **多 API 支持**：OpenAI/Ollama/Anthropic/Gemini API，并内置 TokenRouter、Fireworks、Kimi、DeepSeek、Z.AI GLM、小米 MiMo、MiniMax、ModelScope、SiliconFlow 等 OpenAI 兼容供应商预设
+- **多 API 支持**：Azure Foundry/OpenAI/Ollama/Anthropic/Gemini API，并内置 Azure Foundry 直连卡片及 TokenRouter、Fireworks、Kimi、DeepSeek、Z.AI GLM、小米 MiMo、MiniMax、ModelScope、SiliconFlow 等预设
 - **视觉模型**：完整支持图像理解能力
 - **视觉桥接**：在纯文本模型中使用图像 — OAIProxy 通过配置的视觉模型自动描述图像，并采用 LRU 缓存
 - **思维链标签支持**：在所有供应商（OpenAI、Ollama、Gemini、Anthropic）中无缝显示模型思维/推理模块
@@ -27,7 +27,7 @@
 - **同模型多配置**：为同一模型定义不同参数配置（如 GLM-4.6 开启/关闭思维链）
 - **可视化配置界面**：直观的界面管理供应商和模型
 - **自动重试**：处理 API 错误（429、500、502、503、504），支持指数退避
-- **请求取消**：即时停止进行中的聊天请求 — 所有五种 API 模式均连接到 HTTP `AbortController`
+- **请求取消**：即时停止进行中的聊天请求 — 所有 API 模式均连接到 HTTP `AbortController`
 - **Token 用量**：状态栏实时显示 token 计数和供应商 API 密钥管理
 - **Git 集成**：使用 OpenAI/OpenAI Responses/Ollama/Anthropic 模型直接从源代码管理生成提交信息
 - **导入/导出**：轻松分享和备份配置
@@ -81,7 +81,7 @@
 
 本扩展提供可视化配置界面，用于管理供应商、模型和 API 密钥，无需手动编辑 JSON 文件。可通过命令面板（`OAIProxy: Open Configuration UI`）打开，或点击 OAIProxy 状态栏项。
 
-供应商管理表单内置 OpenAI、TokenRouter、Anthropic、Fireworks、Kimi、DeepSeek、Z.AI GLM、小米 MiMo、MiniMax 预设。TokenRouter 使用 `https://api.tokenrouter.com/v1`，密钥保存为 `oaicopilot.apiKey.tokenrouter`。Quick Setup 提供 `deepseek/deepseek-v4-pro-0813`、`qwen/qwen3.8-max`、`moonshotai/kimi-k3` 和 `z-ai/glm-5.3` 卡片。选择预设会填入供应商 ID、Base URL 和 API 模式；模型 ID 仍以供应商当前文档或模型列表为准。示例片段见 `examples/openai-responses.jsonc`、`examples/openai-chat-completions.jsonc`、`examples/tokenrouter.jsonc`、`examples/anthropic.jsonc`、`examples/fireworks.jsonc`、`examples/zai-glm.jsonc`、`examples/mimo.jsonc`、`examples/minimax-openai.jsonc` 和 `examples/minimax-anthropic.jsonc`。
+供应商管理表单将 Azure Foundry 排在首位，随后是现有供应商预设。请将占位 URL 替换为直连的 `https://<resource>.services.ai.azure.com/openai/v1`，并保存推理密钥；密钥保存为 `oaicopilot.apiKey.azure-foundry`，请求通过 `api-key` 验证。Quick Setup 提供 `Kimi-K2.6` 和 `DeepSeek-V4-Pro` 两张 Azure Foundry 卡片。
 
 Model Management 提供每个模型的 `Test` 操作和并行的 `Test all` 操作。每次测试都会通过模型保存的供应商、API 模式、自定义请求头和高级参数发送一条小型真实推理请求，因此可能产生少量供应商用量。
 
@@ -91,11 +91,17 @@ Model Management 提供每个模型的 `Test` 操作和并行的 `Test all` 操�
 
 ## 多 API 模式
 
-支持五种 API 协议：`openai`（Chat Completions）、`openai-responses`（Responses）、`ollama`、`anthropic` 和 `gemini`。通过 `apiMode` 参数为每个模型指定。
+支持七种 API 协议：`azure-foundry`（使用 `api-key` 的 Azure Foundry 直连 Chat Completions）、`openai`、`litellm`、`openai-responses`、`ollama`、`anthropic` 和 `gemini`。通过 `apiMode` 参数为每个模型指定。
 
 TokenRouter、Fireworks、Kimi、DeepSeek、Z.AI GLM 和小米 MiMo 使用现有 `openai` 模式，因为它们的托管 API 与 OpenAI 格式兼容。MiniMax 同时支持 `openai` 和 `anthropic` 模式；MiniMax 推荐在 M3 思维链和交错思维工作流中使用 Anthropic 兼容端点。
 
 → [完整多 API 指南](doc/configuration.zh-CN.md#多-api-模式)
+
+## Azure Foundry
+
+Azure Foundry 使用资源的 `/openai/v1` 直连端点，而不是 Azure API Management 网关。Kimi 卡片默认 `high` 推理，DeepSeek 卡片默认 `max` 推理。两者均支持工具调用，Kimi 还启用视觉能力。
+
+Azure Foundry 自动且尽力执行模型 prompt caching。OAIProxy 不会为这两张卡片发送 `prompt_cache_key`、`prompt_cache_retention` 或 `thinking`。通过 `cache.usage` 日志及 `usage.prompt_tokens_details.cached_tokens` 验证实际命中。
 
 ## Fireworks AI
 
@@ -155,7 +161,7 @@ VS Code 1.120+ 在模型选择器中提供按模型的 Thinking Effort 下拉菜
 
 ## Prompt / KV 缓存
 
-OAIProxy 会在结构化日志中显示供应商缓存命中情况，并在支持的地方应用安全的缓存请求参数。OpenAI 官方端点默认获得稳定的 `prompt_cache_key`；Fireworks 获得稳定的 `user` affinity 值；Anthropic 兼容的 `cache_control` 写入需要通过 `prompt_cache.anthropic.enabled` 或显式 VS Code `cache_control` 消息片段启用。DeepSeek、小米 MiMo、MiniMax OpenAI 模式和 Gemini 使用供应商自动/隐式缓存。
+OAIProxy 会在结构化日志中显示供应商缓存命中情况，并在支持的地方应用安全的缓存请求参数。OpenAI 官方端点默认获得稳定的 `prompt_cache_key`；Fireworks 获得稳定的 `user` affinity 值；Anthropic 兼容的 `cache_control` 写入需要通过 `prompt_cache.anthropic.enabled` 或显式 VS Code `cache_control` 消息片段启用。Azure Foundry、DeepSeek、小米 MiMo、MiniMax OpenAI 模式和 Gemini 使用供应商自动/隐式缓存。
 
 OpenAI `previous_response_id` 仅用于会话状态；OpenAI 仍会在响应链中计费历史输入 token。使用 `oaicopilot.logLevel: "info"` 或 `"debug"`，并查看 `cache.usage` 日志来验证实际缓存读取/命中。
 
