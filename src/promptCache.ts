@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import type { HFModelItem } from "./types";
 import { logger } from "./logger";
-import { recordCacheUsage } from "./cacheUsage";
+import { recordCacheTelemetryUnavailable, recordCacheUsage } from "./cacheUsage";
 
 export const CACHE_CONTROL_MIME = "cache_control";
 
@@ -149,20 +149,32 @@ export function applyCacheControl<T extends Record<string, unknown>>(
 }
 
 export function logCacheUsage(apiMode: string, modelId: string, payload: unknown): void {
-	const usage = extractCacheUsage(payload);
-	if (!usage) {
+	const observation = extractUsageObservation(payload);
+	if (!observation) {
 		return;
 	}
-	const record = recordCacheUsage(apiMode, modelId, usage);
+	const { summary, hasCacheField } = observation;
+	if (!hasCacheField && summary.inputTokens === undefined) {
+		return;
+	}
+	const record = hasCacheField
+		? recordCacheUsage(apiMode, modelId, summary)
+		: recordCacheTelemetryUnavailable(apiMode, modelId, summary);
 	logger.info("cache.usage", {
 		apiMode,
 		modelId,
-		...usage,
+		...summary,
+		status: record.status,
 		cacheHitRate: record.cacheHitRate,
 	});
 }
 
 export function extractCacheUsage(payload: unknown): CacheUsageSummary | null {
+	const observation = extractUsageObservation(payload);
+	return observation?.hasCacheField ? observation.summary : null;
+}
+
+function extractUsageObservation(payload: unknown): { summary: CacheUsageSummary; hasCacheField: boolean } | null {
 	if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
 		return null;
 	}
@@ -180,7 +192,10 @@ export function extractCacheUsage(payload: unknown): CacheUsageSummary | null {
 		hasCacheField = addGeminiUsageMetadata(summary, usageMetadata) || hasCacheField;
 	}
 
-	return hasCacheField ? summary : null;
+	if (!hasCacheField && summary.inputTokens === undefined) {
+		return null;
+	}
+	return { summary, hasCacheField };
 }
 
 function isOfficialOpenAIEndpoint(model: HFModelItem | undefined, baseUrl: string): boolean {

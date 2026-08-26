@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import type { HFModelItem } from "../types";
 import { AnthropicApi } from "../anthropic/anthropicApi";
-import { getLatestCacheUsage, resetCacheUsageForTests } from "../cacheUsage";
+import { getLatestCacheHitUsage, getLatestCacheUsage, resetCacheUsageForTests } from "../cacheUsage";
 import {
 	applyOpenAIPromptCache,
 	extractCacheUsage,
@@ -308,6 +308,37 @@ suite("promptCache", () => {
 		assert.strictEqual(latest?.cacheHitTokens, 0);
 		assert.strictEqual(latest?.cacheEligibleTokens, 400);
 		assert.strictEqual(latest?.cacheHitRate, 0);
+	});
+
+	test("records unavailable telemetry without discarding the last confirmed hit", () => {
+		logCacheUsage("azure-foundry", "deepseek-test", {
+			usage: {
+				prompt_tokens: 47048,
+				completion_tokens: 1501,
+				total_tokens: 48549,
+				prompt_tokens_details: {
+					cached_tokens: 46848,
+				},
+			},
+		});
+		const confirmedHit = getLatestCacheUsage("deepseek-test");
+
+		logCacheUsage("azure-foundry", "deepseek-test", {
+			usage: {
+				prompt_tokens: 47540,
+				completion_tokens: 889,
+				total_tokens: 48429,
+				prompt_tokens_details: null,
+			},
+		});
+
+		const latest = getLatestCacheUsage("deepseek-test");
+		assert.strictEqual(latest?.status, "unreported");
+		assert.strictEqual(latest?.inputTokens, 47540);
+		assert.strictEqual(latest?.cacheHitTokens, undefined);
+		assert.strictEqual(getLatestCacheHitUsage("deepseek-test"), confirmedHit);
+		assert.strictEqual(confirmedHit?.status, "hit");
+		assert.strictEqual(confirmedHit?.cacheHitRate, 46848 / 47048);
 	});
 
 	test("preserves Anthropic cache_control message markers", () => {

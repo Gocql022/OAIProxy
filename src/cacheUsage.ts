@@ -1,6 +1,6 @@
 import type { CacheUsageSummary } from "./promptCache";
 
-export type CacheUsageStatus = "hit" | "miss" | "reported";
+export type CacheUsageStatus = "hit" | "miss" | "reported" | "unreported";
 
 export interface CacheUsageRecord extends CacheUsageSummary {
 	apiMode: string;
@@ -15,8 +15,10 @@ export interface CacheUsageRecord extends CacheUsageSummary {
 export type CacheUsageListener = (record: CacheUsageRecord) => void;
 
 const latestByModel = new Map<string, CacheUsageRecord>();
+const latestHitByModel = new Map<string, CacheUsageRecord>();
 const listeners = new Set<CacheUsageListener>();
 let latestRecord: CacheUsageRecord | undefined;
+let latestHitRecord: CacheUsageRecord | undefined;
 
 export function recordCacheUsage(apiMode: string, modelId: string, summary: CacheUsageSummary): CacheUsageRecord {
 	const cacheHitTokens = getCacheHitTokens(summary);
@@ -36,12 +38,25 @@ export function recordCacheUsage(apiMode: string, modelId: string, summary: Cach
 		status: getCacheUsageStatus(cacheHitTokens),
 	};
 
-	latestRecord = record;
-	latestByModel.set(modelId, record);
-	for (const listener of listeners) {
-		listener(record);
+	if (record.status === "hit") {
+		latestHitRecord = record;
+		latestHitByModel.set(modelId, record);
 	}
-	return record;
+	return publishRecord(record);
+}
+
+export function recordCacheTelemetryUnavailable(
+	apiMode: string,
+	modelId: string,
+	summary: CacheUsageSummary
+): CacheUsageRecord {
+	return publishRecord({
+		...summary,
+		apiMode,
+		modelId,
+		observedAt: new Date().toISOString(),
+		status: "unreported",
+	});
 }
 
 export function getLatestCacheUsage(modelId?: string): CacheUsageRecord | undefined {
@@ -49,6 +64,13 @@ export function getLatestCacheUsage(modelId?: string): CacheUsageRecord | undefi
 		return latestByModel.get(modelId);
 	}
 	return latestRecord;
+}
+
+export function getLatestCacheHitUsage(modelId?: string): CacheUsageRecord | undefined {
+	if (modelId) {
+		return latestHitByModel.get(modelId);
+	}
+	return latestHitRecord;
 }
 
 export function onDidChangeCacheUsage(listener: CacheUsageListener): { dispose(): void } {
@@ -62,8 +84,19 @@ export function onDidChangeCacheUsage(listener: CacheUsageListener): { dispose()
 
 export function resetCacheUsageForTests(): void {
 	latestByModel.clear();
+	latestHitByModel.clear();
 	listeners.clear();
 	latestRecord = undefined;
+	latestHitRecord = undefined;
+}
+
+function publishRecord(record: CacheUsageRecord): CacheUsageRecord {
+	latestRecord = record;
+	latestByModel.set(record.modelId, record);
+	for (const listener of listeners) {
+		listener(record);
+	}
+	return record;
 }
 
 function getCacheHitTokens(summary: CacheUsageSummary): number | undefined {

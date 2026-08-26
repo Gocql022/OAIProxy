@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { LanguageModelChatInformation, LanguageModelChatRequestMessage, LanguageModelChatTool } from "vscode";
-import { type CacheUsageRecord, getLatestCacheUsage } from "./cacheUsage";
+import { type CacheUsageRecord, getLatestCacheHitUsage, getLatestCacheUsage } from "./cacheUsage";
 import { countMessageTokenDetails, countToolTokens, type MessageTokenDetails } from "./provideToken";
 import { isToolResultPart, mapRole } from "./utils";
 import { isResponseUsagePart } from "./responseUsage";
@@ -160,6 +160,7 @@ export function formatTokenPercentage(value: number, maxTokens: number): string 
 
 export function formatTokenUsageTooltip(report: TokenUsageReport): vscode.MarkdownString {
 	const cacheUsage = getLatestCacheUsage(report.modelId) ?? getLatestCacheUsage();
+	const lastCacheHit = cacheUsage ? getLatestCacheHitUsage(cacheUsage.modelId) : undefined;
 	const warning = getWarningText(report);
 	const markdown = new vscode.MarkdownString(undefined, true);
 	markdown.supportThemeIcons = true;
@@ -172,7 +173,7 @@ export function formatTokenUsageTooltip(report: TokenUsageReport): vscode.Markdo
 	markdown.appendMarkdown(
 		`$(graph-line) **Input budget** ${formatTokenPercentage(report.inputTokens, report.maxInputTokens)} · ${formatTokenCount(report.inputTokens)} / ${formatTokenCount(report.maxInputTokens)}\n\n`
 	);
-	markdown.appendMarkdown(`${formatCacheUsageSummary(cacheUsage, report)}\n\n`);
+	markdown.appendMarkdown(`${formatCacheUsageSummary(cacheUsage, lastCacheHit, report)}\n\n`);
 	markdown.appendMarkdown("---\n\n");
 	markdown.appendMarkdown(`$(list-tree) **Breakdown**\n\n`);
 	for (const line of formatTooltipBreakdownLines(report)) {
@@ -388,7 +389,15 @@ function formatCacheUsageLines(report: TokenUsageReport): string[] {
 		"Cache:",
 		`  - Status: ${formatCacheStatus(cacheUsage)}`,
 		`  - Source: ${source}`,
+		`  - Observed: ${cacheUsage.observedAt}`,
 	];
+	if (cacheUsage.status === "unreported") {
+		const lastCacheHit = getLatestCacheHitUsage(cacheUsage.modelId);
+		if (lastCacheHit) {
+			lines.push(`  - Last Hit: ${formatCacheHit(lastCacheHit)} at ${lastCacheHit.observedAt}`);
+		}
+		return lines;
+	}
 
 	if (cacheUsage.cacheHitRate !== undefined) {
 		lines.push(
@@ -401,7 +410,11 @@ function formatCacheUsageLines(report: TokenUsageReport): string[] {
 	return lines;
 }
 
-function formatCacheUsageSummary(cacheUsage: CacheUsageRecord | undefined, report: TokenUsageReport): string {
+function formatCacheUsageSummary(
+	cacheUsage: CacheUsageRecord | undefined,
+	lastCacheHit: CacheUsageRecord | undefined,
+	report: TokenUsageReport
+): string {
 	if (!cacheUsage) {
 		return "$(database) **Cache** No provider telemetry yet";
 	}
@@ -410,6 +423,10 @@ function formatCacheUsageSummary(cacheUsage: CacheUsageRecord | undefined, repor
 	const source = cacheUsage.modelId === report.modelId
 		? cacheUsage.apiMode
 		: `${cacheUsage.apiMode} / ${cacheUsage.modelId}`;
+	if (cacheUsage.status === "unreported") {
+		const lastHitText = lastCacheHit ? ` · Last hit ${formatCacheHit(lastCacheHit)} at ${lastCacheHit.observedAt}` : "";
+		return `$(database) **Cache** Latest response: telemetry not reported${lastHitText} · ${source}`;
+	}
 	if (cacheUsage.cacheHitRate !== undefined) {
 		return `$(database) **Cache** **${(cacheUsage.cacheHitRate * 100).toFixed(1)}% hit** · ${status} · ${formatTokenCount(cacheUsage.cacheHitTokens ?? 0)} / ${formatTokenCount(cacheUsage.cacheEligibleTokens ?? 0)} · ${source}`;
 	}
@@ -426,7 +443,17 @@ function formatCacheStatus(cacheUsage: CacheUsageRecord): string {
 	if (cacheUsage.status === "miss") {
 		return "no hit yet";
 	}
+	if (cacheUsage.status === "unreported") {
+		return "latest response telemetry not reported";
+	}
 	return "provider reported";
+}
+
+function formatCacheHit(cacheUsage: CacheUsageRecord): string {
+	if (cacheUsage.cacheHitRate !== undefined) {
+		return `${(cacheUsage.cacheHitRate * 100).toFixed(1)}% (${formatTokenCount(cacheUsage.cacheHitTokens ?? 0)} / ${formatTokenCount(cacheUsage.cacheEligibleTokens ?? 0)})`;
+	}
+	return `${formatTokenCount(cacheUsage.cacheHitTokens ?? 0)} cached input`;
 }
 
 function getWarningText(report: TokenUsageReport): string | undefined {
