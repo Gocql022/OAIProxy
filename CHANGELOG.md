@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.1.33 (2026-08-26)
+
+- Distinguish a latest provider response with unavailable cache telemetry from a confirmed cache miss, so the OAIProxy status no longer presents an older hit as the current response state.
+- Preserve the last confirmed cache hit separately and show its hit rate and observation timestamp when the latest response omits cache-token details.
+- Record unavailable cache telemetry as an explicit `cache.usage` status and add cross-provider regression coverage for the updated cache display behavior.
+
 ## 0.1.32 (2026-08-26)
 
 - Add Azure Foundry as a first-class direct provider using `/openai/v1` Chat Completions and `api-key` authentication, with first-position Provider Management and Quick Setup ordering.
