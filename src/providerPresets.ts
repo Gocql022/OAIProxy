@@ -6,9 +6,18 @@ export interface ProviderPreset {
 	provider: string;
 	baseUrl: string;
 	apiMode: HFApiMode;
+	sortOrder?: number;
 }
 
 export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
+	{
+		id: "azure-foundry",
+		label: "Azure Foundry",
+		provider: "azure-foundry",
+		baseUrl: "https://YOUR-RESOURCE-NAME.services.ai.azure.com/openai/v1",
+		apiMode: "azure-foundry",
+		sortOrder: -100,
+	},
 	{
 		id: "openai",
 		label: "OpenAI",

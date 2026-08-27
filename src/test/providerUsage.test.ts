@@ -8,6 +8,7 @@ import {
 	getProviderUsageAdapter,
 	getProviderUsageSecretKey,
 	getProviderUsageUnsupportedReason,
+	isAzureFoundryProvider,
 	isTokenRouterProvider,
 	parseAnthropicCostReport,
 	parseDeepSeekBalance,
@@ -423,6 +424,23 @@ suite("providerUsage", () => {
 				apiKey: "test",
 			}),
 			/Z\.AI usage checks are unavailable/
+		);
+	});
+
+	test("directs Azure Foundry usage checks to Azure monitoring with RBAC", async () => {
+		const baseUrl = "https://resource.services.ai.azure.com/openai/v1";
+		assert.strictEqual(isAzureFoundryProvider("azure-foundry", baseUrl), true);
+		assert.strictEqual(isAzureFoundryProvider("custom", baseUrl), true);
+		assert.strictEqual(getProviderUsageAdapter("azure-foundry", baseUrl), undefined);
+		assert.match(getProviderUsageUnsupportedReason("azure-foundry", baseUrl) ?? "", /Azure Monitor/);
+		assert.match(getProviderUsageUnsupportedReason("custom", baseUrl) ?? "", /Azure RBAC/);
+		await assert.rejects(
+			checkProviderUsage({
+				provider: "azure-foundry",
+				baseUrl,
+				apiKey: "test",
+			}),
+			/Azure Foundry usage checks are unavailable/
 		);
 	});
 

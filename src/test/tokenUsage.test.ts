@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as path from "path";
 import * as vscode from "vscode";
-import { recordCacheUsage, resetCacheUsageForTests } from "../cacheUsage";
+import { recordCacheTelemetryUnavailable, recordCacheUsage, resetCacheUsageForTests } from "../cacheUsage";
 import { countMessageTokenDetails, type MessageTokenDetails } from "../provideToken";
 import { TokenizerManager } from "../tokenizer/tokenizerManager";
 import {
@@ -132,6 +132,42 @@ suite("tokenUsage", () => {
 		assert.ok(details.includes("Context Window: 95 / 150 (63.3%)"));
 		assert.ok(details.includes("Warning: input estimate is high"));
 		assert.strictEqual(createProgressBar(150, 100), "150.0%");
+	});
+
+	test("formats unavailable latest cache telemetry with the prior hit timestamp", async () => {
+		const hit = recordCacheUsage("azure-foundry", "format-model", {
+			inputTokens: 1000,
+			cachedTokens: 996,
+		});
+		recordCacheTelemetryUnavailable("azure-foundry", "format-model", {
+			inputTokens: 1050,
+			outputTokens: 20,
+			totalTokens: 1070,
+		});
+		const report = await createTokenUsageReport(
+			{
+				messages: [message(vscode.LanguageModelChatMessageRole.User, [new vscode.LanguageModelTextPart("hello")])],
+				tools: [],
+				model: {
+					id: "format-model",
+					name: "Format Model",
+					maxInputTokens: 1000,
+					maxOutputTokens: 100,
+				} as vscode.LanguageModelChatInformation,
+				modelConfig: { includeReasoningInRequest: false },
+			},
+			{
+				countMessageDetails: async () => tokenDetails({ overheadTokens: 4, textTokens: 10 }),
+				countToolDefinitions: async () => 0,
+			}
+		);
+
+		const tooltip = formatTokenUsageTooltip(report).value;
+		const details = formatTokenUsageDetails(report);
+		assert.ok(tooltip.includes("Latest response: telemetry not reported"));
+		assert.ok(tooltip.includes(`Last hit 99.6% (996 / 1.0K) at ${hit.observedAt}`));
+		assert.ok(details.includes("Status: latest response telemetry not reported"));
+		assert.ok(details.includes(`Last Hit: 99.6% (996 / 1.0K) at ${hit.observedAt}`));
 	});
 
 	test("formats oversized context preflight error", async () => {

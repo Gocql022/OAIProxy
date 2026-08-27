@@ -47,6 +47,48 @@ suite("modelPresets", () => {
 		}
 	});
 
+	test("contains the two direct Azure Foundry presets with verified defaults", () => {
+		const presets = MODEL_PRESETS.filter((preset) => preset.providerPresetId === "azure-foundry");
+		assert.deepStrictEqual(
+			presets.map((preset) => preset.id),
+			["azure-foundry-kimi-k2-6", "azure-foundry-deepseek-v4-pro"]
+		);
+
+		const kimi = presets[0].model;
+		assert.strictEqual(kimi.id, "Kimi-K2.6");
+		assert.strictEqual(kimi.configId, "azure-foundry");
+		assert.strictEqual(kimi.owned_by, "azure-foundry");
+		assert.strictEqual(kimi.apiMode, "azure-foundry");
+		assert.strictEqual(kimi.context_length, 262144);
+		assert.strictEqual(kimi.max_completion_tokens, 32768);
+		assert.strictEqual(kimi.max_tokens, undefined);
+		assert.strictEqual(kimi.vision, true);
+		assert.strictEqual(kimi.reasoning_effort, "high");
+		assert.deepStrictEqual(kimi.supported_reasoning_efforts, ["none", "minimal", "low", "medium", "high"]);
+		assert.strictEqual(kimi.default_reasoning_effort, "high");
+		assert.strictEqual(kimi.toolCalling, true);
+		assert.strictEqual(kimi.include_reasoning_in_request, true);
+		assert.strictEqual(kimi.thinking, undefined);
+		assert.strictEqual(kimi.prompt_cache, undefined);
+
+		const deepseek = presets[1].model;
+		assert.strictEqual(deepseek.id, "DeepSeek-V4-Pro");
+		assert.strictEqual(deepseek.configId, "azure-foundry");
+		assert.strictEqual(deepseek.owned_by, "azure-foundry");
+		assert.strictEqual(deepseek.apiMode, "azure-foundry");
+		assert.strictEqual(deepseek.context_length, 1000000);
+		assert.strictEqual(deepseek.max_tokens, 128000);
+		assert.strictEqual(deepseek.max_completion_tokens, undefined);
+		assert.strictEqual(deepseek.vision, false);
+		assert.strictEqual(deepseek.reasoning_effort, "max");
+		assert.deepStrictEqual(deepseek.supported_reasoning_efforts, ["none", "high", "max"]);
+		assert.strictEqual(deepseek.default_reasoning_effort, "max");
+		assert.strictEqual(deepseek.toolCalling, true);
+		assert.strictEqual(deepseek.include_reasoning_in_request, true);
+		assert.strictEqual(deepseek.thinking, undefined);
+		assert.strictEqual(deepseek.prompt_cache, undefined);
+	});
+
 	test("contains the approved MiMo chat presets", () => {
 		const mimoIds = MODEL_PRESETS.filter((preset) => preset.model.owned_by === "mimo").map((preset) => preset.model.id);
 		assert.deepStrictEqual(mimoIds, ["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-flash"]);

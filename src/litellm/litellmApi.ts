@@ -5,7 +5,9 @@ import type { HFModelItem, ReasoningConfig } from "../types";
 import { convertToolsToOpenAI } from "../utils";
 
 export class LiteLLMApi extends OpenaiApi {
-	protected readonly _cacheUsageApiMode = "litellm";
+	constructor(modelId: string) {
+		super(modelId, "litellm");
+	}
 
 	prepareRequestBody(
 		rb: Record<string, unknown>,

@@ -1,5 +1,18 @@
 # Change Log
 
+## 0.1.33 (2026-08-26)
+
+- Distinguish a latest provider response with unavailable cache telemetry from a confirmed cache miss, so the OAIProxy status no longer presents an older hit as the current response state.
+- Preserve the last confirmed cache hit separately and show its hit rate and observation timestamp when the latest response omits cache-token details.
+- Record unavailable cache telemetry as an explicit `cache.usage` status and add cross-provider regression coverage for the updated cache display behavior.
+
+## 0.1.32 (2026-08-26)
+
+- Add Azure Foundry as a first-class direct provider using `/openai/v1` Chat Completions and `api-key` authentication, with first-position Provider Management and Quick Setup ordering.
+- Add Azure Foundry Quick Setup cards for Kimi K2.6 and DeepSeek V4 Pro with verified context/output limits, vision, tool calling, and high/max reasoning defaults.
+- Preserve Azure Foundry automatic model caching without unsupported `thinking`, `prompt_cache_key`, or `prompt_cache_retention` fields, and surface returned cached-token usage through existing cache telemetry.
+- Document direct-endpoint setup, Azure Monitor/Cost Management usage guidance, credential-safe future probe procedures, and English/Chinese configuration details with regression coverage.
+
 ## 0.1.31 (2026-08-20)
 
 - Add TokenRouter Management Key credit checks through the public Management API self-wallet endpoint, with dedicated usage-key handling, UI labels, docs, and regression coverage.

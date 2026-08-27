@@ -58,7 +58,7 @@
 	"config.models.extra_body.description": "LiteLLM/OpenAI-SDK 风格的供应商特定请求体参数。在 apiMode 'litellm' 中，这些参数作为字面 extra_body 字段发送。",
 	"config.models.headers.description": "每次请求此模型的供应商时发送的自定义 HTTP 请求头。这些请求头将与默认请求头（Authorization、Content-Type、User-Agent）合并。",
 	"config.models.include_reasoning_in_request.description": "是否在发送给 API 的助手消息中包含 reasoning_content。支持 DeepSeek、MiMo 思考模式及其他兼容供应商。",
-	"config.models.apiMode.description": "API 模式：'openai'（默认）用于 OpenAI Chat Completions（/chat/completions；Kimi、DeepSeek、MiMo、MiniMax 等），'litellm' 用于 LiteLLM 代理 Chat Completions（/chat/completions，支持 extra_body），'openai-responses' 用于 OpenAI Responses（/responses），'ollama' 用于 Ollama（/api/chat），'anthropic' 用于 Anthropic（/v1/messages），'gemini' 用于 Gemini（*/v1beta/models/{model}:streamGenerateContent?alt=sse）。",
+	"config.models.apiMode.description": "API 模式：'openai'（默认）用于 OpenAI Chat Completions（/chat/completions；Kimi、DeepSeek、MiMo、MiniMax 等），'azure-foundry' 用于 Azure Foundry Chat Completions（/chat/completions，使用 api-key 认证），'litellm' 用于 LiteLLM 代理 Chat Completions（/chat/completions，支持 extra_body），'openai-responses' 用于 OpenAI Responses（/responses），'ollama' 用于 Ollama（/api/chat），'anthropic' 用于 Anthropic（/v1/messages），'gemini' 用于 Gemini（*/v1beta/models/{model}:streamGenerateContent?alt=sse）。",
 	"config.models.useForCommitGeneration.description": "是否用于生成 Git 提交消息。不支持 gemini apiMode。",
 	"config.models.delay.description": "该模型在连续请求之间的延迟（毫秒）。如果未指定，则回退到全局 oaicopilot.delay 配置。",
 	"config.retry.description": "用于处理类似 [429, 500, 502, 503, 504] 的 API 错误的重试配置。",

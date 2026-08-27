@@ -119,8 +119,8 @@
 		"False": "否",
 		"Tool Calling": "工具调用",
 		"Advertise tools to VS Code. Disable to skip Agent tool selection.": "向 VS Code 通告工具支持。禁用可跳过 Agent 工具选择。",
-		"'openai' for API (/chat/completions), 'litellm' for LiteLLM Proxy (/chat/completions), 'openai-responses' for API (/responses), 'ollama' for API (/api/chat), 'anthropic' for API (/v1/messages), 'gemini' for API (/v1beta/models/{model}:streamGenerateContent?alt=sse).":
-			"'openai' 使用 API (/chat/completions)，'litellm' 使用 LiteLLM 代理 (/chat/completions)，'openai-responses' 使用 API (/responses)，'ollama' 使用 API (/api/chat)，'anthropic' 使用 API (/v1/messages)，'gemini' 使用 API (/v1beta/models/{model}:streamGenerateContent?alt=sse)。",
+		"'openai' for API (/chat/completions), 'azure-foundry' for Azure Foundry (/chat/completions with api-key), 'litellm' for LiteLLM Proxy (/chat/completions), 'openai-responses' for API (/responses), 'ollama' for API (/api/chat), 'anthropic' for API (/v1/messages), 'gemini' for API (/v1beta/models/{model}:streamGenerateContent?alt=sse).":
+			"'openai' 使用 API (/chat/completions)，'azure-foundry' 使用 Azure Foundry (/chat/completions with api-key)，'litellm' 使用 LiteLLM 代理 (/chat/completions)，'openai-responses' 使用 API (/responses)，'ollama' 使用 API (/api/chat)，'anthropic' 使用 API (/v1/messages)，'gemini' 使用 API (/v1beta/models/{model}:streamGenerateContent?alt=sse)。",
 		"Model ID *": "模型 ID *",
 		"Model ID (e.g., gpt-4, claude-3).": "模型 ID（例如 gpt-4、claude-3）。",
 		"e.g., gpt-4, claude-3": "例如 gpt-4、claude-3",

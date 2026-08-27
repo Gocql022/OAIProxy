@@ -74,32 +74,37 @@ The extension supports multiple API protocols to work with various model provide
 
 ### Supported API Modes
 
-1. **`openai`** (default) - OpenAI Chat Completions API
+1. **`azure-foundry`** - Direct Azure Foundry Chat Completions API
+   - Endpoint: `/chat/completions` under the resource's `/openai/v1` base URL
+   - Header: `api-key: <apiKey>`
+   - Use for: Direct Azure Foundry inference endpoints (not Azure API Management gateways)
+
+2. **`openai`** (default) - OpenAI Chat Completions API
    - Endpoint: `/chat/completions`
    - Header: `Authorization: Bearer <apiKey>`
    - Use for: Most OpenAI-compatible providers (Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, MiniMax, ModelScope, SiliconFlow, etc.)
 
-2. **`litellm`** - LiteLLM Proxy Chat Completions API
+3. **`litellm`** - LiteLLM Proxy Chat Completions API
    - Endpoint: `/chat/completions`
    - Header: `Authorization: Bearer <apiKey>`
    - Use for: LiteLLM proxy endpoints that need literal `extra_body` provider/proxy parameters
 
-3. **`openai-responses`** - OpenAI Responses API
+4. **`openai-responses`** - OpenAI Responses API
    - Endpoint: `/responses`
    - Header: `Authorization: Bearer <apiKey>`
    - Use for: OpenAI official Responses API (and compatible gateways like rsp4copilot)
 
-4. **`ollama`** - Ollama native API
+5. **`ollama`** - Ollama native API
    - Endpoint: `/api/chat`
    - Header: `Authorization: Bearer <apiKey>` (omitted when the stored API key is exactly `ollama`)
    - Use for: Local Ollama instances
 
-5. **`anthropic`** - Anthropic Claude API
+6. **`anthropic`** - Anthropic Claude API
    - Endpoint: `/v1/messages`
    - Header: `x-api-key: <apiKey>`
    - Use for: Anthropic Claude models
 
-6. **`gemini`** - Gemini native API
+7. **`gemini`** - Gemini native API
    - Endpoint: `/v1beta/models/{model}:streamGenerateContent?alt=sse`
    - Header: `x-goog-api-key: <apiKey>`
    - Use for: Google Gemini models (and compatible gateways like rsp4copilot)
@@ -131,6 +136,7 @@ Mixed configuration with multiple API modes:
 
 ### Important Notes
 - The `apiMode` parameter defaults to `"openai"` if not specified.
+- Azure Foundry uses `apiMode: "azure-foundry"`, its direct `...services.ai.azure.com/openai/v1` endpoint, and the `api-key` header. Configure the URL and key in Provider Management.
 - LiteLLM Proxy uses `apiMode: "litellm"` when provider-specific parameters must be sent in the literal `extra_body` field.
 - Fireworks, Kimi, DeepSeek, Z.AI GLM, and Xiaomi MiMo use `apiMode: "openai"` through their OpenAI-compatible chat completions APIs.
 - MiniMax supports both `apiMode: "openai"` and `apiMode: "anthropic"` for M-series models. MiniMax recommends the Anthropic-compatible M3 endpoint for thinking and interleaved-thinking workflows.
@@ -152,10 +158,11 @@ Mixed configuration with multiple API modes:
 
 ### Provider Presets
 
-The configuration UI can prefill provider settings for OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax. TokenRouter uses `https://api.tokenrouter.com/v1` and stores its provider key as `oaicopilot.apiKey.tokenrouter`. Its Quick Setup cards use `deepseek/deepseek-v4-pro-0813`, `qwen/qwen3.8-max`, `moonshotai/kimi-k3`, and `z-ai/glm-5.3`; add or customize the exact model IDs you want to use separately when needed.
+The configuration UI lists Azure Foundry first, then the existing OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax providers. Azure Foundry stores its key as `oaicopilot.apiKey.azure-foundry`; its two Quick Setup cards use `Kimi-K2.6` and `DeepSeek-V4-Pro`.
 
 | Provider | Provider ID | Base URL | API Mode |
 |---|---|---|---|
+| Azure Foundry | `azure-foundry` | `https://YOUR-RESOURCE-NAME.services.ai.azure.com/openai/v1` | `azure-foundry` |
 | OpenAI | `openai` | `https://api.openai.com/v1` | `openai` |
 | TokenRouter | `tokenrouter` | `https://api.tokenrouter.com/v1` | `openai` |
 | Anthropic | `anthropic` | `https://api.anthropic.com` | `anthropic` |
@@ -167,7 +174,7 @@ The configuration UI can prefill provider settings for OpenAI, TokenRouter, Anth
 | MiniMax (OpenAI) | `minimax` | `https://api.minimax.io/v1` | `openai` |
 | MiniMax (Anthropic) | `minimax-anthropic` | `https://api.minimax.io/anthropic` | `anthropic` |
 
-Settings snippets are available in `examples/openai-responses.jsonc`, `examples/openai-chat-completions.jsonc`, `examples/tokenrouter.jsonc`, `examples/anthropic.jsonc`, `examples/fireworks.jsonc`, `examples/zai-glm.jsonc`, `examples/mimo.jsonc`, `examples/minimax-openai.jsonc`, and `examples/minimax-anthropic.jsonc`. Fireworks usage checks reuse the normal provider key and report month-to-date serverless tokens across accessible accounts. OpenAI and Anthropic usage/cost checks require separate admin keys; enter those in the configuration UI's `Usage Key` field instead of adding them to `settings.json`. TokenRouter uses a separate Management Key in the `Usage Key` field and reports account credits from the Management API self-wallet endpoint. Z.AI and MiMo usage checks are shown as unavailable because their current public docs do not expose API-key usage or balance endpoints.
+Settings snippets are available in `examples/openai-responses.jsonc`, `examples/openai-chat-completions.jsonc`, `examples/tokenrouter.jsonc`, `examples/anthropic.jsonc`, `examples/fireworks.jsonc`, `examples/zai-glm.jsonc`, `examples/mimo.jsonc`, `examples/minimax-openai.jsonc`, and `examples/minimax-anthropic.jsonc`. Fireworks usage checks reuse the normal provider key and report month-to-date serverless tokens across accessible accounts. OpenAI and Anthropic usage/cost checks require separate admin keys; enter those in the configuration UI's `Usage Key` field instead of adding them to `settings.json`. TokenRouter uses a separate Management Key in the `Usage Key` field and reports account credits from the Management API self-wallet endpoint. Azure Foundry inference keys do not expose usage/cost; use Azure Monitor or Cost Management with Azure RBAC. Z.AI and MiMo usage checks are shown as unavailable because their current public docs do not expose API-key usage or balance endpoints.
 
 ### Fireworks AI
 

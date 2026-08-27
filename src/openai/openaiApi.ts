@@ -49,10 +49,11 @@ interface OpenAIStreamStats {
 
 export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unknown>> {
 	private readonly _reasoningDetailTextByKey = new Map<string, string>();
-	protected readonly _cacheUsageApiMode: string = "openai";
+	protected readonly _cacheUsageApiMode: string;
 
-	constructor(modelId: string) {
+	constructor(modelId: string, cacheUsageApiMode = "openai") {
 		super(modelId);
+		this._cacheUsageApiMode = cacheUsageApiMode;
 	}
 
 	/**

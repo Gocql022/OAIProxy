@@ -284,7 +284,16 @@ function isMimoProvider(provider, baseUrl) {
 	);
 }
 
+function isAzureFoundryProvider(provider, baseUrl) {
+	const normalizedProvider = (provider || "").trim().toLowerCase();
+	const normalizedBaseUrl = (baseUrl || "").trim().toLowerCase();
+	return normalizedProvider === "azure-foundry" || normalizedBaseUrl.includes(".services.ai.azure.com");
+}
+
 function getProviderUsageUnsupportedReason(provider, baseUrl) {
+	if (isAzureFoundryProvider(provider, baseUrl)) {
+		return "Azure Foundry usage checks are unavailable with an inference API key; use Azure Monitor or Cost Management with Azure RBAC.";
+	}
 	if (isMimoProvider(provider, baseUrl)) {
 		return t(
 			"Xiaomi MiMo usage checks are unavailable because Xiaomi only exposes balance/usage through web Console endpoints; no public API-key usage endpoint is documented."
@@ -542,10 +551,10 @@ function getSelectedPresetBatch() {
 	const removePresets = selectedPresets.filter((preset) => hasConfiguredModel(preset.model));
 	const missingSetupProviders = Array.from(
 		new Set(addPresets.filter((preset) => !isProviderConfigured(preset.model)).map((preset) => preset.model.owned_by))
-	).sort((a, b) => getProviderLabel(a).localeCompare(getProviderLabel(b)));
+	).sort(compareProviders);
 	const missingProviders = Array.from(
 		new Set(addPresets.filter((preset) => requiresProviderKey(preset.model)).map((preset) => preset.model.owned_by))
-	).sort((a, b) => getProviderLabel(a).localeCompare(getProviderLabel(b)));
+	).sort(compareProviders);
 
 	return {
 		selectedPresets,
@@ -631,6 +640,16 @@ function getProviderLabel(provider) {
 	return preset ? preset.label : provider;
 }
 
+function getProviderSortOrder(provider) {
+	const preset = state.providerPresets.find((item) => item.provider === provider);
+	return Number.isFinite(preset?.sortOrder) ? preset.sortOrder : 0;
+}
+
+function compareProviders(left, right) {
+	const priority = getProviderSortOrder(left) - getProviderSortOrder(right);
+	return priority || getProviderLabel(left).localeCompare(getProviderLabel(right));
+}
+
 function getProviderTransportModel(provider) {
 	const normalizedProvider = (provider || "").trim().toLowerCase();
 	if (!normalizedProvider) {
@@ -696,7 +715,7 @@ function getKnownProviderEntries(configuredProviders) {
 		}
 	}
 
-	return Array.from(entries.values()).sort((a, b) => a.label.localeCompare(b.label));
+	return Array.from(entries.values()).sort((a, b) => compareProviders(a.provider, b.provider));
 }
 
 function syncModelProviderOptions(configuredProviders) {
@@ -772,7 +791,7 @@ function getConfiguredProviders() {
 		}
 		providers.set(provider, current);
 	}
-	return Array.from(providers.values()).sort((a, b) => a.provider.localeCompare(b.provider));
+	return Array.from(providers.values()).sort((a, b) => compareProviders(a.provider, b.provider));
 }
 
 function formatModelList(entry) {
@@ -940,7 +959,7 @@ function renderModelPresetFilters() {
 	const currentProvider = modelPresetProviderFilterInput.value;
 	const providers = Array.from(
 		new Set(state.modelPresets.map((preset) => preset.model?.owned_by).filter(Boolean))
-	).sort((a, b) => getProviderLabel(a).localeCompare(getProviderLabel(b)));
+	).sort(compareProviders);
 	modelPresetProviderFilterInput.innerHTML =
 		'<option value="">All providers</option>' +
 		providers
@@ -1038,7 +1057,7 @@ function renderModelPresets() {
 			return haystack.includes(search);
 		})
 		.sort((a, b) => {
-			const providerCompare = getProviderLabel(a.model.owned_by).localeCompare(getProviderLabel(b.model.owned_by));
+			const providerCompare = compareProviders(a.model.owned_by, b.model.owned_by);
 			return providerCompare || a.label.localeCompare(b.label);
 		});
 
@@ -1296,6 +1315,7 @@ document.getElementById("addProvider").addEventListener("click", () => {
 		<td>
 			<select class="provider-input" data-field="apiMode">
 				<option value="openai">OpenAI</option>
+				<option value="azure-foundry">Azure Foundry</option>
 				<option value="litellm">LiteLLM</option>
 				<option value="openai-responses">OpenAI Responses</option>
 				<option value="ollama">Ollama</option>
@@ -1703,6 +1723,7 @@ function renderProviders() {
 					<td class="provider-mode-cell">
 						<select class="provider-input" data-field="apiMode">
 							<option value="openai" ${apiMode === "openai" ? "selected" : ""}>OpenAI</option>
+							<option value="azure-foundry" ${apiMode === "azure-foundry" ? "selected" : ""}>Azure Foundry</option>
 							<option value="litellm" ${apiMode === "litellm" ? "selected" : ""}>LiteLLM</option>
 							<option value="openai-responses" ${apiMode === "openai-responses" ? "selected" : ""}>OpenAI Responses</option>
 							<option value="ollama" ${apiMode === "ollama" ? "selected" : ""}>Ollama</option>

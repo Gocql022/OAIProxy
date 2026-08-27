@@ -54,6 +54,9 @@ const MIMO_USAGE_UNSUPPORTED_REASON = vscode.l10n.t(
 const ZAI_USAGE_UNSUPPORTED_REASON = vscode.l10n.t(
 	"Z.AI usage checks are unavailable because Z.AI currently documents API keys and console billing/usage pages, but not a public API-key usage or balance endpoint."
 );
+const AZURE_FOUNDRY_USAGE_UNSUPPORTED_REASON = vscode.l10n.t(
+	"Azure Foundry usage checks are unavailable with an inference API key; use Azure Monitor or Cost Management with Azure RBAC."
+);
 export const TOKENROUTER_DASHBOARD_URL = "https://www.tokenrouter.com/console";
 
 export function getProviderSecretKey(provider: string): string {
@@ -100,7 +103,16 @@ export function isTokenRouterProvider(provider: string, baseUrl?: string): boole
 	return normalizedProvider === "tokenrouter" || normalizedBaseUrl.includes("api.tokenrouter.com");
 }
 
+export function isAzureFoundryProvider(provider: string, baseUrl?: string): boolean {
+	const normalizedProvider = provider.trim().toLowerCase();
+	const normalizedBaseUrl = (baseUrl ?? "").trim().toLowerCase();
+	return normalizedProvider === "azure-foundry" || normalizedBaseUrl.includes(".services.ai.azure.com");
+}
+
 export function getProviderUsageUnsupportedReason(provider: string, baseUrl?: string): string | undefined {
+	if (isAzureFoundryProvider(provider, baseUrl)) {
+		return AZURE_FOUNDRY_USAGE_UNSUPPORTED_REASON;
+	}
 	if (isMimoProvider(provider, baseUrl)) {
 		return MIMO_USAGE_UNSUPPORTED_REASON;
 	}

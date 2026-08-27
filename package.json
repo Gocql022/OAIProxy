@@ -2,7 +2,7 @@
 	"name": "oaiproxy",
 	"publisher": "lqdflying",
 	"displayName": "OAIProxy",
-	"description": "OpenAI/LiteLLM/Ollama/Anthropic/Gemini provider for Copilot Chat, with OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax presets",
+	"description": "Azure Foundry/OpenAI/LiteLLM/Ollama/Anthropic/Gemini provider for Copilot Chat, with Azure Foundry, OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax presets",
 	"icon": "assets/icon.png",
 	"keywords": [
 		"ai",
@@ -37,7 +37,7 @@
 		"type": "git",
 		"url": "https://github.com/lqdflying/OAIProxy"
 	},
-	"version": "0.1.31",
+	"version": "0.1.33",
 	"engines": {
 		"vscode": "^1.120.0"
 	},
@@ -456,6 +456,7 @@
 								"type": "string",
 								"enum": [
 									"openai",
+									"azure-foundry",
 									"litellm",
 									"openai-responses",
 									"ollama",
