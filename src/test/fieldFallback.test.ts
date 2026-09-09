@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import {
+    PROTECTED_UNSUPPORTED_FIELDS,
     bodyHasField,
     deleteBodyField,
     fetchWithFieldFallback,
@@ -66,6 +67,128 @@ suite("fieldFallback", () => {
         assert.strictEqual(deleteBodyField(body, "missing"), false);
     });
 
+    test("protected fields are not removed, error is thrown normally", async () => {
+        const originalFetch = globalThis.fetch;
+        let calls = 0;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (globalThis as any).fetch = async () => {
+            calls += 1;
+            return mockResponse({
+                status: 400,
+                bodyText: '{"error":{"message":"prompt_cache_retention is not supported on this model"}}',
+            });
+        };
+
+        await assert.rejects(
+            fetchWithFieldFallback({
+                url: "https://example.test/v1/chat/completions",
+                headers: {},
+                body: { prompt_cache_retention: "24h", model: "gpt" },
+                retryConfig: noRetry,
+                apiLabel: "OAIProxy API",
+            }),
+            /\[400\]/
+        );
+        // 保护字段：只发一次、不重试移除
+        assert.strictEqual(calls, 1);
+        globalThis.fetch = originalFetch;
+    });
+
+    test("protected fields are not removed on 422 either", async () => {
+        const originalFetch = globalThis.fetch;
+        let calls = 0;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (globalThis as any).fetch = async () => {
+            calls += 1;
+            return mockResponse({
+                status: 422,
+                bodyText: '{"error":{"message":"Unsupported parameter: thinking"}}',
+            });
+        };
+
+        await assert.rejects(
+            fetchWithFieldFallback({
+                url: "https://example.test/v1/chat/completions",
+                headers: {},
+                body: { thinking: { type: "enabled" }, model: "gpt" },
+                retryConfig: noRetry,
+                apiLabel: "OAIProxy API",
+            }),
+            /\[422\]/
+        );
+        assert.strictEqual(calls, 1);
+        globalThis.fetch = originalFetch;
+    });
+
+    test("non-protected unsupported fields are still removed and retried", async () => {
+        const calls: string[] = [];
+        let firstCall = true;
+        const originalFetch = globalThis.fetch;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (globalThis as any).fetch = async (_url: unknown, init: RequestInit | undefined) => {
+            calls.push(String(init?.body));
+            if (firstCall) {
+                firstCall = false;
+                return mockResponse({
+                    status: 400,
+                    bodyText: '{"error":{"message":"Unsupported parameter: temperature"}}',
+                });
+            }
+            return mockResponse({ status: 200, bodyText: "ok" });
+        };
+
+        const body: Record<string, unknown> = { temperature: 0.7, model: "gpt" };
+        const result = await fetchWithFieldFallback({
+            url: "https://example.test/v1/chat/completions",
+            headers: {},
+            body,
+            retryConfig: noRetry,
+            apiLabel: "OAIProxy API",
+        });
+
+        assert.strictEqual(result.response.status, 200);
+        assert.deepStrictEqual(result.removedFields, ["temperature"]);
+        assert.strictEqual(body.temperature, undefined);
+        assert.strictEqual(calls.length, 2);
+        globalThis.fetch = originalFetch;
+    });
+
+    test("custom protectedFields override can protect arbitrary fields", async () => {
+        const originalFetch = globalThis.fetch;
+        let calls = 0;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (globalThis as any).fetch = async () => {
+            calls += 1;
+            return mockResponse({
+                status: 400,
+                bodyText: '{"error":{"message":"Unsupported parameter: temperature"}}',
+            });
+        };
+
+        await assert.rejects(
+            fetchWithFieldFallback({
+                url: "https://example.test/v1/chat/completions",
+                headers: {},
+                body: { temperature: 0.7, model: "gpt" },
+                retryConfig: noRetry,
+                apiLabel: "OAIProxy API",
+                protectedFields: new Set(["temperature"]),
+            }),
+            /\[400\]/
+        );
+        assert.strictEqual(calls, 1);
+        globalThis.fetch = originalFetch;
+    });
+
+    test("PROTECTED_UNSUPPORTED_FIELDS covers cache, thinking and state fields", () => {
+        const norm = new Set(Array.from(PROTECTED_UNSUPPORTED_FIELDS, (f) => f.toLowerCase()));
+        assert.ok(norm.has("prompt_cache_key"));
+        assert.ok(norm.has("prompt_cache_retention"));
+        assert.ok(norm.has("thinking"));
+        assert.ok(norm.has("enable_thinking"));
+        assert.ok(norm.has("previous_response_id"));
+    });
+
     test("removes unsupported field and retries successfully", async () => {
         const calls: string[] = [];
         let firstCall = true;
@@ -77,13 +200,13 @@ suite("fieldFallback", () => {
                 firstCall = false;
                 return mockResponse({
                     status: 400,
-                    bodyText: '{"error":{"message":"prompt_cache_retention is not supported on this model"}}',
+                    bodyText: '{"error":{"message":"Unsupported parameter: temperature"}}',
                 });
             }
             return mockResponse({ status: 200, bodyText: "ok" });
         };
 
-        const body: Record<string, unknown> = { prompt_cache_retention: "24h", model: "gpt" };
+        const body: Record<string, unknown> = { temperature: 0.7, model: "gpt" };
         const removed: string[] = [];
         const result = await fetchWithFieldFallback({
             url: "https://example.test/v1/chat/completions",
@@ -95,11 +218,11 @@ suite("fieldFallback", () => {
         });
 
         assert.strictEqual(result.response.status, 200);
-        assert.deepStrictEqual(result.removedFields, ["prompt_cache_retention"]);
-        assert.deepStrictEqual(removed, ["prompt_cache_retention"]);
-        assert.strictEqual(body.prompt_cache_retention, undefined);
+        assert.deepStrictEqual(result.removedFields, ["temperature"]);
+        assert.deepStrictEqual(removed, ["temperature"]);
+        assert.strictEqual(body.temperature, undefined);
         assert.strictEqual(calls.length, 2);
-        assert.ok(!calls[1].includes("prompt_cache_retention"));
+        assert.ok(!calls[1].includes("temperature"));
         globalThis.fetch = originalFetch;
     });
 
@@ -130,7 +253,7 @@ suite("fieldFallback", () => {
             calls += 1;
             return mockResponse({
                 status: 400,
-                bodyText: '{"error":{"message":"prompt_cache_retention is not supported on this model"}}',
+                bodyText: '{"error":{"message":"Unsupported parameter: temperature"}}',
             });
         };
 
@@ -156,7 +279,7 @@ suite("fieldFallback", () => {
             calls += 1;
             return mockResponse({
                 status: 400,
-                bodyText: '{"error":{"message":"prompt_cache_retention is not supported on this model"}}',
+                bodyText: '{"error":{"message":"Unsupported parameter: temperature"}}',
             });
         };
 
@@ -164,7 +287,7 @@ suite("fieldFallback", () => {
             fetchWithFieldFallback({
                 url: "https://example.test/v1/chat/completions",
                 headers: {},
-                body: { prompt_cache_retention: "24h", model: "gpt" },
+                body: { temperature: 0.7, model: "gpt" },
                 retryConfig: noRetry,
                 apiLabel: "OAIProxy API",
             }),

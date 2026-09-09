@@ -20,7 +20,31 @@ const UNSUPPORTED_FIELD_PATTERNS: RegExp[] = [
     // Unknown/Unrecognized/Unsupported/Invalid parameter|argument|field|option|property: 'field_name'
     /(?:unknown|unrecognized|unsupported|invalid)\s+(?:request\s+)?(?:parameter|argument|field|option|property)\s*(?:\bsupplied\b)?\s*[:\s]+["']?([A-Za-z_][A-Za-z0-9_.-]*)["']?/i,
 ];
+/**
+ * 声明"不支持"后禁止自动移除的字段（大小写不敏感比较）。
+ *
+ * 移除这些字段会导致请求语义变化：缓存字段被删会让网关缓存失效
+ * （命中率下降、输入 token 重新计费），thinking 被删会改变模型行为，
+ * previous_response_id 被删会丢失对话状态。因此这些字段一旦被网关
+ * 拒绝，应直接按正常流程抛出错误，不做降级重试。
+ *
+ * 该集合可被 FetchWithFieldFallbackOptions.protectedFields 覆盖。
+ */
+export const PROTECTED_UNSUPPORTED_FIELDS: ReadonlySet<string> = new Set([
+    "PROMPT_CACHE_KEY",
+    "PROMPT_CACHE_RETENTION",
+    "THINKING",
+    "ENABLE_THINKING",
+    "PREVIOUS_RESPONSE_ID",
+]);
 
+function toLowerCaseFieldSet(fields: ReadonlySet<string>): Set<string> {
+    const normalized = new Set<string>();
+    for (const field of fields) {
+        normalized.add(field.toLowerCase());
+    }
+    return normalized;
+}
 export function parseUnsupportedFieldError(errorText: string): string | null {
     if (!errorText) {
         return null;
@@ -68,6 +92,11 @@ export interface FetchWithFieldFallbackOptions {
     readonly apiLabel: string;
     /** 字段被移除并重试时回调（可用来弹出提示）。 */
     readonly onFieldRemoved?: (field: string) => void;
+    /**
+     * 声明"不支持"后禁止自动移除的字段（大小写不敏感）。
+     * 缺省使用 {@link PROTECTED_UNSUPPORTED_FIELDS}。
+     */
+    readonly protectedFields?: ReadonlySet<string>;
 }
 
 export interface FieldFallbackResult {
@@ -88,6 +117,7 @@ export async function fetchWithFieldFallback(options: FetchWithFieldFallbackOpti
     const mutableBody = body as Record<string, unknown>;
     const removedFields: string[] = [];
     const triedFields = new Set<string>();
+    const protectedFields = toLowerCaseFieldSet(options.protectedFields ?? PROTECTED_UNSUPPORTED_FIELDS);
 
     while (true) {
         let unsupportedField: string | null = null;
@@ -104,7 +134,7 @@ export async function fetchWithFieldFallback(options: FetchWithFieldFallbackOpti
                     const errorText = await res.text();
                     if (res.status === 400 || res.status === 422) {
                         const field = parseUnsupportedFieldError(errorText);
-                        if (field && bodyHasField(mutableBody, field) && !triedFields.has(field)) {
+                        if (field && bodyHasField(mutableBody, field) && !protectedFields.has(field.toLowerCase())) {
                             unsupportedField = field;
                         }
                     }
