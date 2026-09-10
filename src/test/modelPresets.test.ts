@@ -36,15 +36,50 @@ suite("modelPresets", () => {
 		}
 	});
 
-	test("sets max reasoning as the DeepSeek V4 Quick Setup default", () => {
-		for (const presetId of ["deepseek-v4-pro", "deepseek-v4-flash"]) {
+	test("sets max reasoning as the direct DeepSeek Quick Setup default", () => {
+		for (const presetId of ["deepseek-v4-pro", "deepseek-flash"]) {
 			const preset = MODEL_PRESETS.find((item) => item.id === presetId);
 
 			assert.ok(preset);
 			assert.strictEqual(preset.model.reasoning_effort, "max");
-			assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["high", "max"]);
+			assert.deepStrictEqual(
+				preset.model.supported_reasoning_efforts,
+				presetId === "deepseek-flash" ? ["low", "high", "max"] : ["high", "max"]
+			);
 			assert.strictEqual(preset.model.default_reasoning_effort, "max");
 		}
+	});
+
+	test("replaces legacy direct Flash cards with the vision-capable DeepSeek Flash preset", () => {
+		const directPresets = MODEL_PRESETS.filter((preset) => preset.providerPresetId === "deepseek");
+		assert.deepStrictEqual(
+			directPresets.map((preset) => preset.id),
+			["deepseek-v4-pro", "deepseek-flash"]
+		);
+		assert.deepStrictEqual(
+			directPresets.map((preset) => preset.model.id),
+			["deepseek-v4-pro", "deepseek-flash"]
+		);
+
+		const preset = directPresets.find((item) => item.id === "deepseek-flash");
+		assert.ok(preset);
+		assert.strictEqual(preset.label, "DeepSeek Flash");
+		assert.strictEqual(preset.category, "fast");
+		assert.deepStrictEqual(preset.tags, ["DeepSeek", "Fast", "Vision", "Reasoning", "Tools"]);
+		assert.strictEqual(preset.model.displayName, "DeepSeek Flash");
+		assert.strictEqual(preset.model.owned_by, "deepseek");
+		assert.strictEqual(preset.model.baseUrl, "https://api.deepseek.com");
+		assert.strictEqual(preset.model.apiMode, "openai");
+		assert.strictEqual(preset.model.context_length, 1048576);
+		assert.strictEqual(preset.model.max_tokens, 393216);
+		assert.strictEqual(preset.model.max_completion_tokens, undefined);
+		assert.strictEqual(preset.model.vision, true);
+		assert.strictEqual(preset.model.toolCalling, true);
+		assert.strictEqual(preset.model.include_reasoning_in_request, true);
+		assert.deepStrictEqual(preset.model.thinking, { type: "enabled" });
+		assert.strictEqual(preset.model.prompt_cache, undefined);
+		assert.ok(preset.model._comment?.includes("https://api-docs.deepseek.com/api/create-chat-completion"));
+		assert.ok(preset.model._comment?.includes("https://api-docs.deepseek.com/guides/vision"));
 	});
 
 	test("contains the two direct Azure Foundry presets with verified defaults", () => {

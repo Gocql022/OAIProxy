@@ -109,6 +109,25 @@ export function normalizeReasoningEffortForModel(model: HFModelItem, value: stri
 		return undefined;
 	}
 
+	if (model.id.trim().toLowerCase() === "deepseek-flash" && model.owned_by?.trim().toLowerCase() === "deepseek") {
+		// Direct Flash uses the current API tiers and aliases, unlike the legacy DeepSeek presets.
+		// https://api-docs.deepseek.com/guides/thinking_mode
+		switch (normalized) {
+			case "minimal":
+			case "low":
+				return "low";
+			case "medium":
+			case "high":
+			case "xhigh":
+				return "high";
+			case "max":
+			case "ultra":
+				return "max";
+			default:
+				return undefined;
+		}
+	}
+
 	if (isNativeDeepSeekModel(model)) {
 		if (normalized === "low" || normalized === "medium" || normalized === "high") {
 			return "high";

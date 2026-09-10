@@ -27,7 +27,7 @@ All parameters support individual configuration for different models, providing 
 | `thinking_budget` | no | `number` | — | Max token count for thinking chain output |
 | `reasoning_effort` | no | `string` | — | Reasoning effort level (OpenAI configuration) |
 | `supports_reasoning_effort` | no | `boolean` | — | Expose VS Code's per-model Thinking Effort control |
-| `supported_reasoning_efforts` | no | `string[]` | varies | Supported effort values (DeepSeek: `high`,`max`; others: `minimal`..`max`) |
+| `supported_reasoning_efforts` | no | `string[]` | varies | Supported effort values (direct DeepSeek Flash card: `low`,`high`,`max`; legacy DeepSeek: `high`,`max`) |
 | `default_reasoning_effort` | no | `string` | — | Default Thinking Effort value in the model picker |
 | `toolCalling` | no | `boolean` | `true` | Advertise tool calling support to VS Code |
 | `headers` | no | `object` | — | Custom HTTP headers per request |
@@ -73,7 +73,7 @@ For `apiMode: "litellm"`, OAIProxy sends thinking controls through LiteLLM's lit
 
 ### `supported_reasoning_efforts`
 
-Custom list of Thinking Effort values shown in the model picker dropdown. DeepSeek models default to `["high", "max"]`; other models default to `["minimal", "low", "medium", "high", "xhigh", "max"]`.
+Custom list of Thinking Effort values shown in the model picker dropdown. The direct `deepseek-flash` Quick Setup card sets `["low", "high", "max"]` and defaults to `max`. DeepSeek models without a custom list fall back to `["high", "max"]`; other models default to `["minimal", "low", "medium", "high", "xhigh", "max"]`.
 
 ### `default_reasoning_effort`
 

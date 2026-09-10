@@ -2,7 +2,7 @@
 
 VS Code 1.120+ exposes a **Thinking Effort** dropdown in the model picker, allowing you to adjust how much reasoning the model performs — without editing your settings JSON.
 
-OAIProxy surfaces this control automatically for any model that has a `reasoning_effort`, `reasoning.effort`, `default_reasoning_effort`, or `supported_reasoning_efforts` configured. DeepSeek models default to `high` and `max` values.
+OAIProxy surfaces this control automatically for any model that has a `reasoning_effort`, `reasoning.effort`, `default_reasoning_effort`, or `supported_reasoning_efforts` configured. The direct DeepSeek Flash Quick Setup card offers `low`, `high`, and `max`, with `max` selected by default.
 
 ## How to enable Thinking Effort in the picker
 
@@ -47,11 +47,18 @@ If `default_reasoning_effort` is omitted, OAIProxy still sends VS Code a safe pi
 
 ## DeepSeek models
 
-DeepSeek models (models whose ID or provider contains "deepseek") use a special effort mapping:
+The direct `deepseek-flash` model with provider `deepseek` preserves `low`, `high`, and `max`. Its Quick Setup card enables thinking and selects `max` by default. Compatibility aliases follow the official [Thinking Mode guide](https://api-docs.deepseek.com/guides/thinking_mode):
+
+- `minimal` → `low`
+- `medium`/`xhigh` → `high`
+- `ultra` → `max`
+
+Other DeepSeek models retain the legacy effort mapping (TokenRouter uses its configured tiers):
+
 - `low`/`medium`/`high` → maps to `high`
 - `xhigh`/`max` → maps to `max`
 
-The picker shows only `high` and `max` for DeepSeek models by default.
+When no custom `supported_reasoning_efforts` list is configured, the DeepSeek picker falls back to `high` and `max`.
 
 ## Anthropic Claude models
 

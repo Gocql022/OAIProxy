@@ -3,10 +3,35 @@ import * as vscode from "vscode";
 import { CommonApi } from "../commonApi";
 import { MODEL_PRESETS } from "../modelPresets";
 import { OpenaiApi } from "../openai/openaiApi";
+import { getRequestedReasoningEffort, normalizeReasoningEffortForModel } from "../reasoningEffort";
 import { COPILOT_USAGE_MIME } from "../responseUsage";
 import type { HFModelItem } from "../types";
 
 suite("openaiApi", () => {
+	test("sends DeepSeek Flash limits, thinking, and normalized per-request effort", () => {
+		const preset = MODEL_PRESETS.find((item) => item.id === "deepseek-flash");
+		assert.ok(preset);
+		const api = new OpenaiApi(preset.model.id);
+		for (const selected of [undefined, "low", "high", "max"]) {
+			const effort = normalizeReasoningEffortForModel(
+				preset.model,
+				getRequestedReasoningEffort({ reasoningEffort: "max" }, selected ? { reasoningEffort: selected } : undefined)
+			);
+			const body = api.prepareRequestBody(
+				{ model: preset.model.id, messages: [], stream: true },
+				{ ...preset.model, reasoning_effort: effort }
+			);
+			assert.strictEqual(body.model, "deepseek-flash");
+			assert.strictEqual(body.max_tokens, 393216);
+			assert.strictEqual(body.max_completion_tokens, undefined);
+			assert.strictEqual(body.reasoning_effort, selected ?? "max");
+			assert.deepStrictEqual(body.thinking, { type: "enabled" });
+			assert.strictEqual(body.prompt_cache_key, undefined);
+			assert.strictEqual(body.prompt_cache_retention, undefined);
+		}
+		assert.strictEqual(preset.model.reasoning_effort, "max");
+	});
+
 	test("uses the Azure Foundry api-key header without bearer authorization", () => {
 		const headers = CommonApi.prepareHeaders("foundry-secret", "azure-foundry");
 
