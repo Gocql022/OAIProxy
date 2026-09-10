@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.1.34 (2026-09-10)
+
+- Update the direct DeepSeek Flash Quick Setup card to use `deepseek-flash`, with vision, tool calling, a 1M context window, and a 384K output limit.
+- Enable thinking with `max` reasoning by default and offer `low`, `high`, and `max` effort choices while preserving existing saved models and third-party DeepSeek cards.
+- Fix direct DeepSeek Flash effort normalization so `low` stays `low`, and map compatibility aliases according to the current official API documentation.
+- Update English/Chinese reasoning documentation and add regression coverage for preset defaults, effort mapping, and request construction.
+
 ## 0.1.33 (2026-08-26)
 
 - Distinguish a latest provider response with unavailable cache telemetry from a confirmed cache miss, so the OAIProxy status no longer presents an older hit as the current response state.
