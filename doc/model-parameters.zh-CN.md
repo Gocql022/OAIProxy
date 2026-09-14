@@ -27,7 +27,7 @@
 | `thinking_budget` | 否 | `number` | — | 思维链输出的最大 token 数 |
 | `reasoning_effort` | 否 | `string` | — | 推理力度级别（OpenAI 配置） |
 | `supports_reasoning_effort` | 否 | `boolean` | — | 显示 VS Code 的按模型 Thinking Effort 控件 |
-| `supported_reasoning_efforts` | 否 | `string[]` | 因模型而异 | 支持的力度值（DeepSeek：`high`,`max`；其他：`minimal`..`max`） |
+| `supported_reasoning_efforts` | 否 | `string[]` | 因模型而异 | 支持的力度值（DeepSeek 官方直连 Flash 卡片：`low`,`high`,`max`；旧版 DeepSeek：`high`,`max`） |
 | `default_reasoning_effort` | 否 | `string` | — | 模型选择器中的默认 Thinking Effort 值 |
 | `toolCalling` | 否 | `boolean` | `true` | 向 VS Code 声明工具调用支持 |
 | `headers` | 否 | `object` | — | 每次请求的自定义 HTTP 请求头 |
@@ -73,7 +73,7 @@ MiniMax M3 在 OpenAI 兼容模式和 Anthropic 兼容模式下都支持 `thinki
 
 ### `supported_reasoning_efforts`
 
-模型选择器下拉菜单中显示的自定义 Thinking Effort 值列表。DeepSeek 模型默认使用 `["high", "max"]`；其他模型默认使用 `["minimal", "low", "medium", "high", "xhigh", "max"]`。
+模型选择器下拉菜单中显示的自定义 Thinking Effort 值列表。官方直连 `deepseek-flash` Quick Setup 卡片设置为 `["low", "high", "max"]`，默认选择 `max`。未配置自定义列表的 DeepSeek 模型回退到 `["high", "max"]`；其他模型默认使用 `["minimal", "low", "medium", "high", "xhigh", "max"]`。
 
 ### `default_reasoning_effort`
 

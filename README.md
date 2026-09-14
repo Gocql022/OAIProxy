@@ -117,6 +117,12 @@ Fireworks prompt caching is enabled by default upstream. OAIProxy adds a stable 
 
 TokenRouter is configured as an OpenAI-compatible provider at `https://api.tokenrouter.com/v1`. The Quick Setup cards use the exact gateway model IDs `deepseek/deepseek-v4-pro-0813`, `qwen/qwen3.8-max`, `moonshotai/kimi-k3`, and `z-ai/glm-5.3`; the provider key is stored separately as `oaicopilot.apiKey.tokenrouter`. TokenRouter credit checks use a separate Management Key stored as `oaicopilot.usageApiKey.tokenrouter` and call the Management API wallet endpoint.
 
+## DeepSeek Flash
+
+The direct DeepSeek Quick Setup card uses `deepseek-flash`, displayed as **DeepSeek Flash**, at `https://api.deepseek.com` in OpenAI Chat Completions mode. It enables vision, tools, and thinking with a 1M context window and `max_tokens: 393216` (384K). Thinking Effort offers `low`, `high`, and `max`, with `max` selected by default; reasoning history is forwarded for tool conversations, and prompt caching is managed by DeepSeek.
+
+This card replaces the legacy Flash names `deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` in Quick Setup. Existing saved models remain as configured. See the official [model details](https://api-docs.deepseek.com/quick_start/pricing), [Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion), and [vision guide](https://api-docs.deepseek.com/guides/vision).
+
 ## Z.AI GLM-5.2
 
 Use `glm-5.2` as the model ID with the Z.AI GLM Coding Plan endpoint (`https://api.z.ai/api/coding/paas/v4`). Z.AI's docs list GLM-5.2 as a text model with a 1,000,000-token context window, 131,072 max output tokens, thinking/reasoning support, reasoning effort, and tool use. The Quick Setup preset enables thinking, sets `reasoning_effort: "max"`, and sets `thinking.clear_thinking: false` to preserve returned reasoning content in follow-up requests.
@@ -147,7 +153,7 @@ Define multiple configurations for the same model ID via `configId` (e.g., `glm-
 
 ## Thinking Effort Control
 
-VS Code 1.120+ exposes a per-model Thinking Effort dropdown in the model picker. Enable it with `supports_reasoning_effort: true`. DeepSeek models default to `high`/`max`; Claude Sonnet 4.6 is detected automatically and maps to Anthropic `output_config.effort`.
+VS Code 1.120+ exposes a per-model Thinking Effort dropdown in the model picker. Enable it with `supports_reasoning_effort: true`. The direct DeepSeek Flash card offers `low`/`high`/`max` and defaults to `max`; legacy DeepSeek presets use `high`/`max`. Claude Sonnet 4.6 is detected automatically and maps to Anthropic `output_config.effort`.
 
 → [Thinking Effort Guide](doc/thinking-effort.md)
 

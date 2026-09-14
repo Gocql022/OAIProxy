@@ -2,7 +2,7 @@
 
 VS Code 1.120+ 在模型选择器中提供了 **Thinking Effort** 下拉菜单，允许你实时调整模型的推理力度——无需编辑 settings JSON。
 
-OAIProxy 会自动为任何配置了 `reasoning_effort`、`reasoning.effort`、`default_reasoning_effort` 或 `supported_reasoning_efforts` 的模型显示此控件。DeepSeek 模型默认使用 `high` 和 `max` 两个等级。
+OAIProxy 会自动为任何配置了 `reasoning_effort`、`reasoning.effort`、`default_reasoning_effort` 或 `supported_reasoning_efforts` 的模型显示此控件。DeepSeek 官方直连的 Flash Quick Setup 卡片提供 `low`、`high` 和 `max`，默认选择 `max`。
 
 ## 如何在选择器中启用 Thinking Effort
 
@@ -47,11 +47,18 @@ OAIProxy 会自动为任何配置了 `reasoning_effort`、`reasoning.effort`、`
 
 ## DeepSeek 模型
 
-DeepSeek 模型（模型 ID 或供应商中包含 "deepseek"）使用特殊的力度映射：
+供应商为 `deepseek` 的直连 `deepseek-flash` 模型会保留 `low`、`high` 和 `max`。其 Quick Setup 卡片启用 thinking，默认选择 `max`。兼容别名遵循官方 [Thinking Mode 指南](https://api-docs.deepseek.com/guides/thinking_mode)：
+
+- `minimal` → `low`
+- `medium`/`xhigh` → `high`
+- `ultra` → `max`
+
+其他 DeepSeek 模型保留原有的力度映射（TokenRouter 使用其配置的等级）：
+
 - `low`/`medium`/`high` → 映射为 `high`
 - `xhigh`/`max` → 映射为 `max`
 
-选择器默认只为 DeepSeek 模型显示 `high` 和 `max` 两个选项。
+未配置自定义 `supported_reasoning_efforts` 列表时，DeepSeek 选择器回退到 `high` 和 `max` 两个选项。
 
 ## Anthropic Claude 模型
 
