@@ -1,620 +1,620 @@
 {
-	"name": "oaiproxy",
-	"publisher": "lqdflying",
-	"displayName": "OAIProxy",
-	"description": "Azure Foundry/OpenAI/LiteLLM/Ollama/Anthropic/Gemini provider for Copilot Chat, with Azure Foundry, OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax presets",
-	"icon": "assets/icon.png",
-	"keywords": [
-		"ai",
-		"chat",
-		"copilot",
-		"github-copilot",
-		"language-model",
-		"llm",
-		"openai",
-		"tokenrouter",
-		"kimi",
-		"moonshot",
-		"deepseek",
-		"fireworks",
-		"zai",
-		"zhipu",
-		"glm",
-		"mimo",
-		"xiaomi",
-		"minimax",
-		"ollama",
-		"anthropic",
-		"claude",
-		"gemini",
-		"litellm",
-		"openai-compatible",
-		"openai-responses",
-		"git-commit",
-		"thinking"
-	],
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/lqdflying/OAIProxy"
-	},
-	"version": "0.1.34",
-	"engines": {
-		"vscode": "^1.120.0"
-	},
-	"categories": [
-		"AI",
-		"Chat"
-	],
-	"activationEvents": [
-		"onStartupFinished",
-		"onLanguageModelChatProvider:oaiproxy",
-		"onCommand:oaiproxy.setApikey",
-		"onCommand:oaiproxy.setProviderApikey",
-		"onCommand:oaiproxy.openConfig",
-		"onCommand:oaiproxy.generateGitCommitMessage",
-		"onCommand:oaiproxy.abortGitCommitMessage"
-	],
-	"badges": [
-		{
-			"url": "https://img.shields.io/github/stars/lqdflying/OAIProxy?style=social",
-			"description": "Star OAIProxy on Github",
-			"href": "https://github.com/lqdflying/OAIProxy"
-		}
-	],
-	"bugs": {
-		"url": "https://github.com/lqdflying/OAIProxy/issues"
-	},
-	"license": "MIT",
-	"l10n": "./l10n",
-	"contributes": {
-		"languageModelChatProviders": [
-			{
-				"vendor": "oaiproxy",
-				"displayName": "OAIProxy",
-				"managementCommand": "oaiproxy.setApikey"
-			}
-		],
-		"commands": [
-			{
-				"command": "oaiproxy.setApikey",
-				"category": "OAIProxy",
-				"title": "%command.setApikey.title%"
-			},
-			{
-				"command": "oaiproxy.setProviderApikey",
-				"category": "OAIProxy",
-				"title": "%command.setProviderApikey.title%"
-			},
-			{
-				"command": "oaiproxy.openConfig",
-				"category": "OAIProxy",
-				"title": "%command.openConfig.title%"
-			},
-			{
-				"command": "oaiproxy.checkProviderUsage",
-				"category": "OAIProxy",
-				"title": "%command.checkProviderUsage.title%"
-			},
-			{
-				"command": "oaiproxy.generateGitCommitMessage",
-				"title": "%command.generateGitCommitMessage.title%",
-				"category": "OAIProxy",
-				"icon": "$(wand)"
-			},
-			{
-				"command": "oaiproxy.abortGitCommitMessage",
-				"title": "%command.abortGitCommitMessage.title%",
-				"category": "OAIProxy",
-				"icon": "$(debug-stop)"
-			}
-		],
-		"menus": {
-			"scm/title": [
-				{
-					"command": "oaiproxy.generateGitCommitMessage",
-					"group": "navigation",
-					"when": "config.git.enabled && scmProvider == git && !oaiproxy.isGeneratingCommit"
-				},
-				{
-					"command": "oaiproxy.abortGitCommitMessage",
-					"group": "navigation",
-					"when": "config.git.enabled && scmProvider == git && oaiproxy.isGeneratingCommit"
-				}
-			],
-			"commandPalette": [
-				{
-					"command": "oaiproxy.generateGitCommitMessage",
-					"when": "config.git.enabled && !oaiproxy.isGeneratingCommit"
-				},
-				{
-					"command": "oaiproxy.abortGitCommitMessage",
-					"when": "config.git.enabled && oaiproxy.isGeneratingCommit"
-				}
-			]
-		},
-		"configuration": {
-			"title": "%configuration.title%",
-			"properties": {
-				"oaicopilot.logLevel": {
-					"type": "string",
-					"default": "off",
-					"enum": [
-						"off",
-						"debug",
-						"info",
-						"warn",
-						"error"
-					],
-					"description": "%config.logLevel.description%"
-				},
-				"oaicopilot.baseUrl": {
-					"type": "string",
-					"default": "https://router.huggingface.co/v1",
-					"description": "%config.baseUrl.description%"
-				},
-				"oaicopilot.models": {
-					"type": "array",
-					"default": [],
-					"items": {
-						"type": "object",
-						"properties": {
-							"id": {
-								"type": "string",
-								"description": "%config.models.id.description%"
-							},
-							"_comment": {
-								"type": "string",
-								"description": "%config.models._comment.description%"
-							},
-							"displayName": {
-								"type": "string",
-								"description": "%config.models.displayName.description%"
-							},
-							"configId": {
-								"type": "string",
-								"description": "%config.models.configId.description%"
-							},
-							"owned_by": {
-								"type": "string",
-								"description": "%config.models.owned_by.description%"
-							},
-							"provider": {
-								"type": "string",
-								"description": "%config.models.provider.description%"
-							},
-							"provide": {
-								"type": "string",
-								"description": "%config.models.provide.description%"
-							},
-							"family": {
-								"type": "string",
-								"description": "%config.models.family.description%"
-							},
-							"baseUrl": {
-								"type": "string",
-								"description": "%config.models.baseUrl.description%"
-							},
-							"context_length": {
-								"type": "number",
-								"default": 128000,
-								"minimum": 1000,
-								"maximum": 10000000,
-								"description": "%config.models.context_length.description%"
-							},
-							"max_input_tokens": {
-								"type": "number",
-								"minimum": 1,
-								"maximum": 10000000,
-								"description": "%config.models.max_input_tokens.description%"
-							},
-							"vision": {
-								"type": "boolean",
-								"default": false,
-								"description": "%config.models.vision.description%"
-							},
-							"toolCalling": {
-								"type": "boolean",
-								"default": true,
-								"description": "%config.models.toolCalling.description%"
-							},
-							"max_tokens": {
-								"type": "number",
-								"default": 4096,
-								"minimum": 1,
-								"maximum": 10000000,
-								"description": "%config.models.max_tokens.description%"
-							},
-							"max_completion_tokens": {
-								"type": "number",
-								"default": 4096,
-								"minimum": 1,
-								"maximum": 10000000,
-								"description": "%config.models.max_completion_tokens.description%"
-							},
-							"reasoning_effort": {
-								"type": "string",
-								"default": "medium",
-								"enum": [
-									"max",
-									"xhigh",
-									"high",
-									"medium",
-									"low",
-									"minimal",
-									"none"
-								],
-								"description": "%config.models.reasoning_effort.description%"
-							},
-							"supports_reasoning_effort": {
-								"type": "boolean",
-								"default": false,
-								"description": "%config.models.supports_reasoning_effort.description%"
-							},
-							"supported_reasoning_efforts": {
-								"type": "array",
-								"description": "%config.models.supported_reasoning_efforts.description%",
-								"items": {
-									"type": "string"
-								}
-							},
-							"default_reasoning_effort": {
-								"type": "string",
-								"description": "%config.models.default_reasoning_effort.description%"
-							},
-							"thinking": {
-								"type": "object",
-								"description": "%config.models.thinking.description%",
-								"properties": {
-									"type": {
-										"type": "string",
-										"enum": [
-											"enabled",
-											"disabled",
-											"adaptive"
-										],
-										"description": "%config.models.thinking.type.description%"
-									},
-									"clear_thinking": {
-										"type": "boolean",
-										"description": "%config.models.thinking.clear_thinking.description%"
-									}
-								}
-							},
-							"enable_thinking": {
-								"type": "boolean",
-								"default": false,
-								"description": "%config.models.enable_thinking.description%"
-							},
-							"thinking_budget": {
-								"type": "number",
-								"default": 128,
-								"minimum": 128,
-								"maximum": 10000000,
-								"description": "%config.models.thinking_budget.description%"
-							},
-							"temperature": {
-								"type": "number",
-								"default": 0,
-								"minimum": 0,
-								"maximum": 2,
-								"description": "%config.models.temperature.description%"
-							},
-							"top_p": {
-								"type": "number",
-								"default": 1,
-								"minimum": 0,
-								"maximum": 1,
-								"description": "%config.models.top_p.description%"
-							},
-							"top_k": {
-								"type": "number",
-								"default": 50,
-								"minimum": 1,
-								"description": "%config.models.top_k.description%"
-							},
-							"min_p": {
-								"type": "number",
-								"default": 0,
-								"minimum": 0,
-								"maximum": 1,
-								"description": "%config.models.min_p.description%"
-							},
-							"frequency_penalty": {
-								"type": "number",
-								"default": 0,
-								"minimum": -2,
-								"maximum": 2,
-								"description": "%config.models.frequency_penalty.description%"
-							},
-							"presence_penalty": {
-								"type": "number",
-								"default": 0,
-								"minimum": -2,
-								"maximum": 2,
-								"description": "%config.models.presence_penalty.description%"
-							},
-							"repetition_penalty": {
-								"type": "number",
-								"default": 0,
-								"minimum": 0,
-								"maximum": 2,
-								"description": "%config.models.repetition_penalty.description%"
-							},
-							"reasoning": {
-								"type": "object",
-								"default": {
-									"effort": "medium"
-								},
-								"properties": {
-									"effort": {
-										"type": "string",
-										"default": "medium",
-										"enum": [
-											"max",
-											"xhigh",
-											"high",
-											"medium",
-											"low",
-											"minimal",
-											"auto"
-										],
-										"description": "%config.models.reasoning.effort.description%"
-									},
-									"exclude": {
-										"type": "boolean",
-										"default": false,
-										"description": "%config.models.reasoning.exclude.description%"
-									},
-									"max_tokens": {
-										"type": "number",
-										"default": 2000,
-										"minimum": 1,
-										"description": "%config.models.reasoning.max_tokens.description%"
-									},
-									"enabled": {
-										"type": "boolean",
-										"default": true,
-										"description": "%config.models.reasoning.enabled.description%"
-									}
-								},
-								"description": "%config.models.reasoning.description%"
-							},
-							"prompt_cache": {
-								"type": "object",
-								"description": "%config.models.prompt_cache.description%",
-								"properties": {
-									"enabled": {
-										"type": "boolean",
-										"default": true,
-										"description": "%config.models.prompt_cache.enabled.description%"
-									},
-									"key": {
-										"type": "string",
-										"description": "%config.models.prompt_cache.key.description%"
-									},
-									"retention": {
-										"type": "string",
-										"enum": [
-											"in_memory",
-											"24h"
-										],
-										"description": "%config.models.prompt_cache.retention.description%"
-									},
-									"anthropic": {
-										"type": "object",
-										"description": "%config.models.prompt_cache.anthropic.description%",
-										"properties": {
-											"enabled": {
-												"type": "boolean",
-												"default": false,
-												"description": "%config.models.prompt_cache.anthropic.enabled.description%"
-											},
-											"ttl": {
-												"type": "string",
-												"enum": [
-													"5m",
-													"1h"
-												],
-												"default": "5m",
-												"description": "%config.models.prompt_cache.anthropic.ttl.description%"
-											},
-											"cache_system": {
-												"type": "boolean",
-												"default": true,
-												"description": "%config.models.prompt_cache.anthropic.cache_system.description%"
-											},
-											"cache_tools": {
-												"type": "boolean",
-												"default": true,
-												"description": "%config.models.prompt_cache.anthropic.cache_tools.description%"
-											}
-										}
-									}
-								}
-							},
-							"extra": {
-								"type": "object",
-								"description": "%config.models.extra.description%"
-							},
-							"extra_body": {
-								"type": "object",
-								"description": "%config.models.extra_body.description%"
-							},
-							"headers": {
-								"type": "object",
-								"additionalProperties": {
-									"type": "string"
-								},
-								"description": "%config.models.headers.description%"
-							},
-							"include_reasoning_in_request": {
-								"type": "boolean",
-								"default": false,
-								"description": "%config.models.include_reasoning_in_request.description%"
-							},
-							"apiMode": {
-								"type": "string",
-								"enum": [
-									"openai",
-									"azure-foundry",
-									"litellm",
-									"openai-responses",
-									"ollama",
-									"anthropic",
-									"gemini"
-								],
-								"default": "openai",
-								"description": "%config.models.apiMode.description%"
-							},
-							"useForCommitGeneration": {
-								"type": "boolean",
-								"default": false,
-								"description": "%config.models.useForCommitGeneration.description%"
-							},
-							"delay": {
-								"type": "number",
-								"default": 0,
-								"minimum": 0,
-								"description": "%config.models.delay.description%"
-							}
-						},
-						"required": [
-							"id"
-						],
-						"anyOf": [
-							{
-								"required": [
-									"owned_by"
-								]
-							},
-							{
-								"required": [
-									"provider"
-								]
-							},
-							{
-								"required": [
-									"provide"
-								]
-							}
-						]
-					},
-					"description": "%config.models.description%"
-				},
-				"oaicopilot.retry": {
-					"type": "object",
-					"default": {
-						"enabled": true,
-						"max_attempts": 3,
-						"interval_ms": 1000,
-						"status_codes": []
-					},
-					"properties": {
-						"enabled": {
-							"type": "boolean",
-							"default": true,
-							"description": "%config.retry.enabled.description%"
-						},
-						"max_attempts": {
-							"type": "number",
-							"default": 3,
-							"minimum": 1,
-							"description": "%config.retry.max_attempts.description%"
-						},
-						"interval_ms": {
-							"type": "number",
-							"default": 1000,
-							"minimum": 1,
-							"description": "%config.retry.interval_ms.description%"
-						},
-						"status_codes": {
-							"type": "array",
-							"items": {
-								"type": "number"
-							},
-							"description": "%config.retry.status_codes.description%"
-						}
-					},
-					"description": "%config.retry.description%"
-				},
-				"oaicopilot.delay": {
-					"type": "number",
-					"default": 0,
-					"minimum": 0,
-					"description": "%config.delay.description%"
-				},
-				"oaicopilot.commitLanguage": {
-					"type": "string",
-					"default": "English",
-					"enum": [
-						"English",
-						"French",
-						"Italian",
-						"German",
-						"Spanish",
-						"Russian",
-						"Chinese (Simplified)",
-						"Chinese (Traditional)",
-						"Japanese",
-						"Korean",
-						"Czech",
-						"Portuguese (Brazil)",
-						"Turkish",
-						"Polish"
-					],
-					"description": "%config.commitLanguage.description%"
-				},
-				"oaicopilot.commitMessagePrompt": {
-					"type": "string",
-					"default": "",
-					"description": "%config.commitMessagePrompt.description%"
-				},
-				"oaicopilot.readFileLines": {
-					"type": "number",
-					"default": 0,
-					"minimum": 0,
-					"maximum": 10000,
-					"description": "%config.readFileLines.description%"
-				},
-				"oaicopilot.visionBridgeModel": {
-					"type": "string",
-					"default": "",
-					"description": "%config.visionBridgeModel.description%"
-				},
-				"oaicopilot.visionBridgePrompt": {
-					"type": "string",
-					"default": "",
-					"description": "%config.visionBridgePrompt.description%"
-				}
-			}
-		}
-	},
-	"main": "./out/extension.js",
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"download-api": "dts dev && mv vscode.proposed.*.ts src",
-		"compile": "tsc -p ./",
-		"lint": "eslint",
-		"format": "prettier --write .",
-		"watch": "tsc -watch -p ./",
-		"test": "npm run compile && vscode-test",
-		"build": "npm exec --yes --package @vscode/vsce -- vsce package"
-	},
-	"dependencies": {
-		"@microsoft/tiktokenizer": "^1.0.10"
-	},
-	"devDependencies": {
-		"@eslint/js": "^9.13.0",
-		"@stylistic/eslint-plugin": "^2.9.0",
-		"@types/node": "^22",
-		"@types/mocha": "^10.0.6",
-		"@vscode/dts": "^0.4.1",
-		"@types/vscode": "^1.118.0",
-		"@vscode/test-cli": "^0.0.11",
-		"@vscode/test-electron": "^2.5.2",
-		"eslint": "^9.13.0",
-		"prettier": "^3.1.0",
-		"typescript": "^5.9.2",
-		"typescript-eslint": "^8.39.0"
-	}
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguageModelChatProvider:oaiproxy",
+    "onCommand:oaiproxy.setApikey",
+    "onCommand:oaiproxy.setProviderApikey",
+    "onCommand:oaiproxy.openConfig",
+    "onCommand:oaiproxy.generateGitCommitMessage",
+    "onCommand:oaiproxy.abortGitCommitMessage"
+  ],
+  "badges": [
+    {
+      "description": "Star OAIProxy on Github",
+      "href": "https://github.com/lqdflying/OAIProxy",
+      "url": "https://img.shields.io/github/stars/lqdflying/OAIProxy?style=social"
+    }
+  ],
+  "bugs": {
+    "url": "https://github.com/lqdflying/OAIProxy/issues"
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.setApikey",
+        "title": "%command.setApikey.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.setProviderApikey",
+        "title": "%command.setProviderApikey.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.openConfig",
+        "title": "%command.openConfig.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.checkProviderUsage",
+        "title": "%command.checkProviderUsage.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.generateGitCommitMessage",
+        "icon": "$(wand)",
+        "title": "%command.generateGitCommitMessage.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.abortGitCommitMessage",
+        "icon": "$(debug-stop)",
+        "title": "%command.abortGitCommitMessage.title%"
+      }
+    ],
+    "configuration": {
+      "properties": {
+        "oaicopilot.baseUrl": {
+          "default": "https://router.huggingface.co/v1",
+          "description": "%config.baseUrl.description%",
+          "type": "string"
+        },
+        "oaicopilot.commitLanguage": {
+          "default": "English",
+          "description": "%config.commitLanguage.description%",
+          "enum": [
+            "English",
+            "French",
+            "Italian",
+            "German",
+            "Spanish",
+            "Russian",
+            "Chinese (Simplified)",
+            "Chinese (Traditional)",
+            "Japanese",
+            "Korean",
+            "Czech",
+            "Portuguese (Brazil)",
+            "Turkish",
+            "Polish"
+          ],
+          "type": "string"
+        },
+        "oaicopilot.commitMessagePrompt": {
+          "default": "",
+          "description": "%config.commitMessagePrompt.description%",
+          "type": "string"
+        },
+        "oaicopilot.delay": {
+          "default": 0,
+          "description": "%config.delay.description%",
+          "minimum": 0,
+          "type": "number"
+        },
+        "oaicopilot.logLevel": {
+          "default": "off",
+          "description": "%config.logLevel.description%",
+          "enum": [
+            "off",
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "type": "string"
+        },
+        "oaicopilot.models": {
+          "default": [],
+          "description": "%config.models.description%",
+          "items": {
+            "anyOf": [
+              {
+                "required": [
+                  "owned_by"
+                ]
+              },
+              {
+                "required": [
+                  "provider"
+                ]
+              },
+              {
+                "required": [
+                  "provide"
+                ]
+              }
+            ],
+            "properties": {
+              "_comment": {
+                "description": "%config.models._comment.description%",
+                "type": "string"
+              },
+              "apiMode": {
+                "default": "openai",
+                "description": "%config.models.apiMode.description%",
+                "enum": [
+                  "openai",
+                  "azure-foundry",
+                  "litellm",
+                  "openai-responses",
+                  "ollama",
+                  "anthropic",
+                  "gemini"
+                ],
+                "type": "string"
+              },
+              "baseUrl": {
+                "description": "%config.models.baseUrl.description%",
+                "type": "string"
+              },
+              "configId": {
+                "description": "%config.models.configId.description%",
+                "type": "string"
+              },
+              "context_length": {
+                "default": 128000,
+                "description": "%config.models.context_length.description%",
+                "maximum": 10000000,
+                "minimum": 1000,
+                "type": "number"
+              },
+              "default_reasoning_effort": {
+                "description": "%config.models.default_reasoning_effort.description%",
+                "type": "string"
+              },
+              "delay": {
+                "default": 0,
+                "description": "%config.models.delay.description%",
+                "minimum": 0,
+                "type": "number"
+              },
+              "displayName": {
+                "description": "%config.models.displayName.description%",
+                "type": "string"
+              },
+              "enable_thinking": {
+                "default": false,
+                "description": "%config.models.enable_thinking.description%",
+                "type": "boolean"
+              },
+              "extra": {
+                "description": "%config.models.extra.description%",
+                "type": "object"
+              },
+              "extra_body": {
+                "description": "%config.models.extra_body.description%",
+                "type": "object"
+              },
+              "family": {
+                "description": "%config.models.family.description%",
+                "type": "string"
+              },
+              "frequency_penalty": {
+                "default": 0,
+                "description": "%config.models.frequency_penalty.description%",
+                "maximum": 2,
+                "minimum": -2,
+                "type": "number"
+              },
+              "headers": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "%config.models.headers.description%",
+                "type": "object"
+              },
+              "id": {
+                "description": "%config.models.id.description%",
+                "type": "string"
+              },
+              "include_reasoning_in_request": {
+                "default": false,
+                "description": "%config.models.include_reasoning_in_request.description%",
+                "type": "boolean"
+              },
+              "max_completion_tokens": {
+                "default": 4096,
+                "description": "%config.models.max_completion_tokens.description%",
+                "maximum": 10000000,
+                "minimum": 1,
+                "type": "number"
+              },
+              "max_input_tokens": {
+                "description": "%config.models.max_input_tokens.description%",
+                "maximum": 10000000,
+                "minimum": 1,
+                "type": "number"
+              },
+              "max_tokens": {
+                "default": 4096,
+                "description": "%config.models.max_tokens.description%",
+                "maximum": 10000000,
+                "minimum": 1,
+                "type": "number"
+              },
+              "min_p": {
+                "default": 0,
+                "description": "%config.models.min_p.description%",
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "owned_by": {
+                "description": "%config.models.owned_by.description%",
+                "type": "string"
+              },
+              "presence_penalty": {
+                "default": 0,
+                "description": "%config.models.presence_penalty.description%",
+                "maximum": 2,
+                "minimum": -2,
+                "type": "number"
+              },
+              "prompt_cache": {
+                "description": "%config.models.prompt_cache.description%",
+                "properties": {
+                  "anthropic": {
+                    "description": "%config.models.prompt_cache.anthropic.description%",
+                    "properties": {
+                      "cache_system": {
+                        "default": true,
+                        "description": "%config.models.prompt_cache.anthropic.cache_system.description%",
+                        "type": "boolean"
+                      },
+                      "cache_tools": {
+                        "default": true,
+                        "description": "%config.models.prompt_cache.anthropic.cache_tools.description%",
+                        "type": "boolean"
+                      },
+                      "enabled": {
+                        "default": false,
+                        "description": "%config.models.prompt_cache.anthropic.enabled.description%",
+                        "type": "boolean"
+                      },
+                      "ttl": {
+                        "default": "5m",
+                        "description": "%config.models.prompt_cache.anthropic.ttl.description%",
+                        "enum": [
+                          "5m",
+                          "1h"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "enabled": {
+                    "default": true,
+                    "description": "%config.models.prompt_cache.enabled.description%",
+                    "type": "boolean"
+                  },
+                  "key": {
+                    "description": "%config.models.prompt_cache.key.description%",
+                    "type": "string"
+                  },
+                  "retention": {
+                    "description": "%config.models.prompt_cache.retention.description%",
+                    "enum": [
+                      "in_memory",
+                      "24h"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "provide": {
+                "description": "%config.models.provide.description%",
+                "type": "string"
+              },
+              "provider": {
+                "description": "%config.models.provider.description%",
+                "type": "string"
+              },
+              "reasoning": {
+                "default": {
+                  "effort": "medium"
+                },
+                "description": "%config.models.reasoning.description%",
+                "properties": {
+                  "effort": {
+                    "default": "medium",
+                    "description": "%config.models.reasoning.effort.description%",
+                    "enum": [
+                      "max",
+                      "xhigh",
+                      "high",
+                      "medium",
+                      "low",
+                      "minimal",
+                      "auto"
+                    ],
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "default": true,
+                    "description": "%config.models.reasoning.enabled.description%",
+                    "type": "boolean"
+                  },
+                  "exclude": {
+                    "default": false,
+                    "description": "%config.models.reasoning.exclude.description%",
+                    "type": "boolean"
+                  },
+                  "max_tokens": {
+                    "default": 2000,
+                    "description": "%config.models.reasoning.max_tokens.description%",
+                    "minimum": 1,
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "reasoning_effort": {
+                "default": "medium",
+                "description": "%config.models.reasoning_effort.description%",
+                "enum": [
+                  "max",
+                  "xhigh",
+                  "high",
+                  "medium",
+                  "low",
+                  "minimal",
+                  "none"
+                ],
+                "type": "string"
+              },
+              "repetition_penalty": {
+                "default": 0,
+                "description": "%config.models.repetition_penalty.description%",
+                "maximum": 2,
+                "minimum": 0,
+                "type": "number"
+              },
+              "supported_reasoning_efforts": {
+                "description": "%config.models.supported_reasoning_efforts.description%",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "supports_reasoning_effort": {
+                "default": false,
+                "description": "%config.models.supports_reasoning_effort.description%",
+                "type": "boolean"
+              },
+              "temperature": {
+                "default": 0,
+                "description": "%config.models.temperature.description%",
+                "maximum": 2,
+                "minimum": 0,
+                "type": "number"
+              },
+              "thinking": {
+                "description": "%config.models.thinking.description%",
+                "properties": {
+                  "clear_thinking": {
+                    "description": "%config.models.thinking.clear_thinking.description%",
+                    "type": "boolean"
+                  },
+                  "type": {
+                    "description": "%config.models.thinking.type.description%",
+                    "enum": [
+                      "enabled",
+                      "disabled",
+                      "adaptive"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "thinking_budget": {
+                "default": 128,
+                "description": "%config.models.thinking_budget.description%",
+                "maximum": 10000000,
+                "minimum": 128,
+                "type": "number"
+              },
+              "toolCalling": {
+                "default": true,
+                "description": "%config.models.toolCalling.description%",
+                "type": "boolean"
+              },
+              "top_k": {
+                "default": 50,
+                "description": "%config.models.top_k.description%",
+                "minimum": 1,
+                "type": "number"
+              },
+              "top_p": {
+                "default": 1,
+                "description": "%config.models.top_p.description%",
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "useForCommitGeneration": {
+                "default": false,
+                "description": "%config.models.useForCommitGeneration.description%",
+                "type": "boolean"
+              },
+              "vision": {
+                "default": false,
+                "description": "%config.models.vision.description%",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "oaicopilot.readFileLines": {
+          "default": 0,
+          "description": "%config.readFileLines.description%",
+          "maximum": 10000,
+          "minimum": 0,
+          "type": "number"
+        },
+        "oaicopilot.retry": {
+          "default": {
+            "enabled": true,
+            "interval_ms": 1000,
+            "max_attempts": 3,
+            "status_codes": []
+          },
+          "description": "%config.retry.description%",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "description": "%config.retry.enabled.description%",
+              "type": "boolean"
+            },
+            "interval_ms": {
+              "default": 1000,
+              "description": "%config.retry.interval_ms.description%",
+              "minimum": 1,
+              "type": "number"
+            },
+            "max_attempts": {
+              "default": 3,
+              "description": "%config.retry.max_attempts.description%",
+              "minimum": 1,
+              "type": "number"
+            },
+            "status_codes": {
+              "description": "%config.retry.status_codes.description%",
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "oaicopilot.visionBridgeModel": {
+          "default": "",
+          "description": "%config.visionBridgeModel.description%",
+          "type": "string"
+        },
+        "oaicopilot.visionBridgePrompt": {
+          "default": "",
+          "description": "%config.visionBridgePrompt.description%",
+          "type": "string"
+        }
+      },
+      "title": "%configuration.title%"
+    },
+    "languageModelChatProviders": [
+      {
+        "displayName": "OAIProxy",
+        "managementCommand": "oaiproxy.setApikey",
+        "vendor": "oaiproxy"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "oaiproxy.generateGitCommitMessage",
+          "when": "config.git.enabled && !oaiproxy.isGeneratingCommit"
+        },
+        {
+          "command": "oaiproxy.abortGitCommitMessage",
+          "when": "config.git.enabled && oaiproxy.isGeneratingCommit"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "oaiproxy.generateGitCommitMessage",
+          "group": "navigation",
+          "when": "config.git.enabled && scmProvider == git && !oaiproxy.isGeneratingCommit"
+        },
+        {
+          "command": "oaiproxy.abortGitCommitMessage",
+          "group": "navigation",
+          "when": "config.git.enabled && scmProvider == git && oaiproxy.isGeneratingCommit"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "@microsoft/tiktokenizer": "^1.0.10"
+  },
+  "description": "Azure Foundry/OpenAI/LiteLLM/Ollama/Anthropic/Gemini provider for Copilot Chat, with Azure Foundry, OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax presets",
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@stylistic/eslint-plugin": "^2.9.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^22",
+    "@types/vscode": "^1.118.0",
+    "@vscode/dts": "^0.4.1",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.13.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.0"
+  },
+  "displayName": "OAIProxy",
+  "engines": {
+    "vscode": "^1.120.0"
+  },
+  "icon": "assets/icon.png",
+  "keywords": [
+    "ai",
+    "chat",
+    "copilot",
+    "github-copilot",
+    "language-model",
+    "llm",
+    "openai",
+    "tokenrouter",
+    "kimi",
+    "moonshot",
+    "deepseek",
+    "fireworks",
+    "zai",
+    "zhipu",
+    "glm",
+    "mimo",
+    "xiaomi",
+    "minimax",
+    "ollama",
+    "anthropic",
+    "claude",
+    "gemini",
+    "litellm",
+    "openai-compatible",
+    "openai-responses",
+    "git-commit",
+    "thinking"
+  ],
+  "l10n": "./l10n",
+  "license": "MIT",
+  "main": "./out/extension.js",
+  "name": "oaiproxy",
+  "publisher": "lqdflying",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lqdflying/OAIProxy"
+  },
+  "scripts": {
+    "build": "npm exec --yes --package @vscode/vsce -- vsce package",
+    "compile": "tsc -p ./",
+    "download-api": "dts dev && mv vscode.proposed.*.ts src",
+    "format": "prettier --write .",
+    "lint": "eslint",
+    "test": "npm run compile && vscode-test",
+    "vscode:prepublish": "npm run compile",
+    "watch": "tsc -watch -p ./"
+  },
+  "version": "0.1.35"
 }
