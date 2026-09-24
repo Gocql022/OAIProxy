@@ -11,6 +11,7 @@ const state = {
 	models: [],
 	providerKeys: {},
 	providerUsageKeys: {},
+	xaiOAuthSignedIn: false,
 	providerInfo: {},
 	providers: [],
 	providerPresets: [],
@@ -1549,6 +1550,7 @@ window.addEventListener("message", (event) => {
 				providers,
 				providerKeys,
 				providerUsageKeys,
+				xaiOAuthSignedIn,
 				providerPresets,
 				modelPresets,
 				commitLanguage,
@@ -1570,6 +1572,7 @@ window.addEventListener("message", (event) => {
 			state.commitModel = commitModel || "";
 			state.providerKeys = providerKeys || {};
 			state.providerUsageKeys = providerUsageKeys || {};
+			state.xaiOAuthSignedIn = Boolean(xaiOAuthSignedIn);
 			state.providerPresets = providerPresets || [];
 			state.modelPresets = modelPresets || [];
 
@@ -1726,23 +1729,37 @@ function renderProviders() {
 			const baseUrl = providerConfig.baseUrl || "";
 			const headersJson = providerConfig.headers ? JSON.stringify(providerConfig.headers, null, 2) : "";
 			const providerAttr = escapeHtml(provider);
+			const isXaiProvider = provider.trim().toLowerCase() === "xai";
 			const hasProviderKey = Boolean(state.providerKeys[provider]);
 			const keyPlaceholder = hasProviderKey ? t("Saved - leave blank to keep") : t("API Key");
 			const modelCount = providerEntry.modelCount;
-			const oauthActions =
-				provider.trim().toLowerCase() === "xai"
-					? `<button class="login-xai-oauth-btn compact" data-provider="${providerAttr}" title="Sign in to xAI / Grok with OAuth">${t("Sign in")}</button>
-						<button class="logout-xai-oauth-btn secondary compact" data-provider="${providerAttr}" title="Remove the saved xAI / Grok OAuth credential">${t("Sign out")}</button>`
-					: "";
+			const oauthActions = isXaiProvider
+				? `<button class="login-xai-oauth-btn compact" data-provider="${providerAttr}" title="Sign in to xAI / Grok with OAuth" ${
+						state.xaiOAuthSignedIn ? "disabled" : ""
+					}>${t("Sign in")}</button>
+						<button class="logout-xai-oauth-btn secondary compact" data-provider="${providerAttr}" title="Remove the saved xAI / Grok OAuth credential" ${
+							state.xaiOAuthSignedIn ? "" : "disabled"
+						}>${t("Sign out")}</button>`
+				: "";
+			const authMethodCell = isXaiProvider
+				? `<span class="status-pill ${state.xaiOAuthSignedIn ? "success" : "idle"}">${
+						state.xaiOAuthSignedIn ? t("OAuth · Signed in") : t("OAuth · Sign in required")
+					}</span>`
+				: `<input type="password" class="provider-input" data-field="apiKey" value="" placeholder="${escapeHtml(keyPlaceholder)}" />`;
+			const providerLabel = escapeHtml(isXaiProvider ? "xAI OAuth" : provider);
+			const modelCountText = `${modelCount} ${modelCount === 1 ? t("model") : t("models")}`;
+			const providerMeta = isXaiProvider
+				? `${t("Provider ID: {0}", escapeHtml(provider))} · ${modelCountText}`
+				: modelCountText;
 
 			return `
 				<tr data-provider="${providerAttr}">
 					<td class="provider-id-cell">
-						<div class="provider-name">${escapeHtml(provider)}</div>
-						<div class="provider-meta">${modelCount} ${modelCount === 1 ? t("model") : t("models")}</div>
+						<div class="provider-name">${providerLabel}</div>
+						<div class="provider-meta">${providerMeta}</div>
 					</td>
 					<td class="provider-url-cell"><input type="text" class="provider-input" data-field="baseUrl" value="${escapeHtml(baseUrl)}" placeholder="${t("Base URL")}" /></td>
-					<td class="provider-key-cell"><input type="password" class="provider-input" data-field="apiKey" value="" placeholder="${escapeHtml(keyPlaceholder)}" /></td>
+					<td class="provider-key-cell">${authMethodCell}</td>
 					<td class="provider-mode-cell">
 						<select class="provider-input" data-field="apiMode">
 							<option value="openai" ${apiMode === "openai" ? "selected" : ""}>OpenAI</option>
@@ -1759,7 +1776,7 @@ function renderProviders() {
 						<div class="action-buttons">
 							${oauthActions}
 							<button class="update-provider-btn compact" data-provider="${providerAttr}">${t("Save")}</button>
-							<button class="clear-provider-key-btn secondary compact" data-provider="${providerAttr}" ${hasProviderKey ? "" : "disabled"}>${t("Clear Key")}</button>
+							${isXaiProvider ? "" : `<button class="clear-provider-key-btn secondary compact" data-provider="${providerAttr}" ${hasProviderKey ? "" : "disabled"}>${t("Clear Key")}</button>`}
 							<button class="delete-provider-btn danger compact" data-provider="${providerAttr}">${t("Delete")}</button>
 						</div>
 					</td>
@@ -1772,12 +1789,18 @@ function renderProviders() {
 	// Add event listeners for provider rows
 	document.querySelectorAll(".login-xai-oauth-btn").forEach((btn) => {
 		btn.addEventListener("click", () => {
+			document.querySelectorAll(".login-xai-oauth-btn, .logout-xai-oauth-btn").forEach((action) => {
+				action.disabled = true;
+			});
 			vscode.postMessage({ type: "loginXaiOAuth" });
 		});
 	});
 
 	document.querySelectorAll(".logout-xai-oauth-btn").forEach((btn) => {
 		btn.addEventListener("click", () => {
+			document.querySelectorAll(".login-xai-oauth-btn, .logout-xai-oauth-btn").forEach((action) => {
+				action.disabled = true;
+			});
 			vscode.postMessage({ type: "logoutXaiOAuth" });
 		});
 	});

@@ -27,7 +27,7 @@ import {
 	type ProviderUsageAdapter,
 	type ProviderUsageResult,
 } from "../providerUsage";
-import { getXaiOAuthAccessToken, isXaiGrokOAuthBaseUrl } from "../xaiOAuth";
+import { getXaiOAuthAccessToken, isXaiGrokOAuthBaseUrl, loadXaiOAuthCredential } from "../xaiOAuth";
 
 interface InitPayload {
 	baseUrl: string;
@@ -48,6 +48,7 @@ interface InitPayload {
 	providers: ProviderConfigItem[];
 	providerKeys: Record<string, string>;
 	providerUsageKeys: Record<string, string>;
+	xaiOAuthSignedIn: boolean;
 	providerPresets: readonly ProviderPreset[];
 	modelPresets: readonly ModelPreset[];
 }
@@ -462,9 +463,11 @@ export class ConfigViewPanel {
 				break;
 			case "loginXaiOAuth":
 				await vscode.commands.executeCommand("oaiproxy.loginXaiOAuth");
+				await this.sendInit();
 				break;
 			case "logoutXaiOAuth":
 				await vscode.commands.executeCommand("oaiproxy.logoutXaiOAuth");
+				await this.sendInit();
 				break;
 			case "saveGlobalConfig":
 				await this.saveGlobalConfig(
@@ -648,6 +651,7 @@ export class ConfigViewPanel {
 		const apiKey = (await this.secrets.get("oaicopilot.apiKey")) ?? "";
 		const providerKeys: Record<string, string> = {};
 		const providerUsageKeys: Record<string, string> = {};
+		const xaiOAuthSignedIn = Boolean(await loadXaiOAuthCredential(this.secrets));
 		const providerIds = Array.from(
 			new Set([
 				...models.map((m) => m.owned_by).filter(Boolean),
@@ -709,6 +713,7 @@ export class ConfigViewPanel {
 			providers: providerConfigs,
 			providerKeys,
 			providerUsageKeys,
+			xaiOAuthSignedIn,
 			providerPresets: PROVIDER_PRESETS,
 			modelPresets: MODEL_PRESETS,
 		};
