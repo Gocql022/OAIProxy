@@ -26,6 +26,8 @@ import {
 } from "./providerUsage";
 import {
 	clearXaiOAuthCredential,
+	getXaiOAuthAccessToken,
+	isXaiGrokOAuthBaseUrl,
 	loginXaiOAuth as completeXaiOAuthLogin,
 	saveXaiOAuthCredential,
 } from "./xaiOAuth";
@@ -376,18 +378,23 @@ async function runProviderUsageCheck(
 			);
 			return;
 		}
+		const isXaiOAuth = adapter === "xai" && isXaiGrokOAuthBaseUrl(baseUrl);
 
-		let apiKey = await context.secrets.get(
-			providerRequiresUsageApiKey(adapter) ? getProviderUsageSecretKey(provider) : getProviderSecretKey(provider)
-		);
+		let apiKey = isXaiOAuth
+			? await getXaiOAuthAccessToken(context.secrets)
+			: await context.secrets.get(
+				providerRequiresUsageApiKey(adapter) ? getProviderUsageSecretKey(provider) : getProviderSecretKey(provider)
+			);
 		if (!apiKey && providerRequiresUsageApiKey(adapter)) {
 			apiKey = await promptForUsageApiKey(context, provider, adapter);
 		}
 		if (!apiKey) {
 			vscode.window.showErrorMessage(
-				providerRequiresUsageApiKey(adapter)
-					? getMissingUsageApiKeyMessage(provider, adapter)
-					: vscode.l10n.t("No API key found for provider {0}. Configure its provider API key first.", provider)
+				isXaiOAuth
+					? vscode.l10n.t("Sign in to xAI / Grok with OAuth before checking weekly usage.")
+					: providerRequiresUsageApiKey(adapter)
+						? getMissingUsageApiKeyMessage(provider, adapter)
+						: vscode.l10n.t("No API key found for provider {0}. Configure its provider API key first.", provider)
 			);
 			return;
 		}

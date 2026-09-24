@@ -8,7 +8,25 @@ export type ProviderUsageAdapter =
 	| "litellm"
 	| "minimax"
 	| "openai"
+	| "xai"
 	| "tokenrouter";
+
+export const XAI_GROK_BILLING_ENDPOINT = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
+export const XAI_GROK_USAGE_CLIENT_MODE = "cli";
+export const XAI_GROK_USAGE_CLIENT_VERSION = "1.0.4";
+const XAI_GROK_OAUTH_BASE_HOST = "cli-chat-proxy.grok.com";
+
+function isXaiGrokOAuthBaseUrl(baseUrl: string | undefined): boolean {
+	if (!baseUrl) {
+		return false;
+	}
+	try {
+		const url = new URL(baseUrl);
+		return url.protocol === "https:" && url.hostname.toLowerCase() === XAI_GROK_OAUTH_BASE_HOST;
+	} catch {
+		return false;
+	}
+}
 
 export interface ProviderUsageResult {
 	provider: string;
@@ -125,6 +143,9 @@ export function getProviderUsageUnsupportedReason(provider: string, baseUrl?: st
 export function getProviderUsageAdapter(provider: string, baseUrl?: string): ProviderUsageAdapter | undefined {
 	const normalizedProvider = provider.trim().toLowerCase();
 	const normalizedBaseUrl = (baseUrl ?? "").trim().toLowerCase();
+	if (normalizedProvider === "xai" && isXaiGrokOAuthBaseUrl(baseUrl)) {
+		return "xai";
+	}
 
 	if (isTokenRouterProvider(provider, baseUrl)) {
 		return "tokenrouter";
@@ -203,6 +224,8 @@ export async function checkProviderUsage(request: ProviderUsageRequest): Promise
 		parsed = parseTokenRouterWallet(
 			await fetchJson(buildTokenRouterWalletEndpoint(request.baseUrl), "TokenRouter", bearerHeaders(request.apiKey))
 		);
+	} else if (adapter === "xai") {
+		parsed = parseXaiGrokUsage(await fetchJson(XAI_GROK_BILLING_ENDPOINT, "xAI/Grok", xaiGrokUsageHeaders(request.apiKey)));
 	} else {
 		if (!request.targetApiKey) {
 			throw new Error(
@@ -307,6 +330,62 @@ export function parseTokenRouterWallet(payload: unknown): ParsedProviderUsage {
 			`Topped-up spent: ${formatDecimal(toppedUpSpent)}`,
 			`Voucher spent: ${formatDecimal(voucherSpent)}`,
 		],
+	};
+}
+
+export function parseXaiGrokUsage(payload: unknown): ParsedProviderUsage {
+	const obj = asRecord(payload, "xAI/Grok billing response");
+	const config = asRecord(obj.config, "xAI/Grok billing config");
+	const currentPeriodValue = config.currentPeriod ?? config.current_period;
+	const currentPeriod =
+		currentPeriodValue && typeof currentPeriodValue === "object" && !Array.isArray(currentPeriodValue)
+			? (currentPeriodValue as Record<string, unknown>)
+			: {};
+	const periodType = optionalString(currentPeriod.type) ?? "";
+	const rawPercent = config.creditUsagePercent ?? config.credit_usage_percent;
+	const explicitPercent = parseXaiValue(rawPercent);
+	const used = parseXaiValue(config.used);
+	const limit = parseXaiValue(config.monthlyLimit ?? config.monthly_limit);
+	const usagePercent =
+		explicitPercent !== undefined
+			? explicitPercent
+			: used !== undefined && limit !== undefined && limit > 0
+				? (used / limit) * 100
+				: undefined;
+	if (usagePercent === undefined || !Number.isFinite(usagePercent) || usagePercent < 0 || usagePercent > 100) {
+		return {
+			summary: "Weekly credit usage unavailable",
+			details: [
+				"Source: xAI Grok subscription billing endpoint.",
+				"The billing response did not include an explicit weekly credit usage percentage.",
+			],
+		};
+	}
+
+	const label = periodType.endsWith("WEEKLY") ? "Weekly" : periodType.endsWith("MONTHLY") ? "Monthly" : "Usage";
+	const remainingPercent = Math.max(100 - usagePercent, 0);
+	const periodEnd = optionalString(currentPeriod.end) ?? optionalString(config.billingPeriodEnd ?? config.billing_period_end);
+	const resetText = periodEnd ? ", resets " + periodEnd : "";
+	const plan = optionalString(obj.subscription_tier) ?? optionalString(obj.subscriptionTier);
+	const prepaidBalance = parseXaiValue(config.prepaidBalance ?? config.prepaid_balance);
+	const details = [
+		"Source: xAI Grok subscription billing endpoint.",
+		...(plan ? ["Plan: " + plan] : []),
+		label + " credit remaining: " + trimFixed(remainingPercent, 1) + "%",
+		label + " credit used: " + trimFixed(usagePercent, 1) + "%",
+		...(periodEnd ? [label + " period ends: " + periodEnd] : []),
+		...(prepaidBalance !== undefined ? ["Prepaid balance: USD " + formatDecimal(prepaidBalance / 100)] : []),
+	];
+	return {
+		summary:
+			label +
+			" credit remaining: " +
+			trimFixed(remainingPercent, 1) +
+			"% (" +
+			trimFixed(usagePercent, 1) +
+			"% used)" +
+			resetText,
+		details,
 	};
 }
 
@@ -735,6 +814,14 @@ function bearerHeaders(apiKey: string): Record<string, string> {
 	};
 }
 
+function xaiGrokUsageHeaders(apiKey: string): Record<string, string> {
+	return {
+		...bearerHeaders(apiKey),
+		"x-grok-client-mode": XAI_GROK_USAGE_CLIENT_MODE,
+		"x-grok-client-version": XAI_GROK_USAGE_CLIENT_VERSION,
+	};
+}
+
 function anthropicAdminHeaders(apiKey: string): Record<string, string> {
 	return {
 		Accept: "application/json",
@@ -862,6 +949,18 @@ function optionalNumber(value: unknown, label: string): number | undefined {
 		return undefined;
 	}
 	return asNumber(value, label);
+}
+
+function parseXaiValue(value: unknown): number | undefined {
+	const raw = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>).val : value;
+	if (typeof raw === "number" && Number.isFinite(raw)) {
+		return raw;
+	}
+	if (typeof raw === "string" && raw.trim()) {
+		const parsed = Number(raw);
+		return Number.isFinite(parsed) ? parsed : undefined;
+	}
+	return undefined;
 }
 
 function optionalString(value: unknown): string | undefined {
