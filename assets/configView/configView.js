@@ -503,6 +503,9 @@ function hasConfiguredModel(model) {
 }
 
 function requiresProviderKey(model) {
+	if (model?.authMode === "oauth") {
+		return false;
+	}
 	if (!isProviderConfigured(model)) {
 		return false;
 	}
@@ -512,6 +515,9 @@ function requiresProviderKey(model) {
 }
 
 function isProviderConfigured(model) {
+	if (model?.authMode === "oauth" && model?.baseUrl) {
+		return true;
+	}
 	const providerTransport = getProviderTransportModel(model.owned_by) || {};
 	return Boolean(providerTransport.baseUrl);
 }
@@ -1966,6 +1972,9 @@ function collectModelFormData() {
 		vision: modelVisionInput.value ? modelVisionInput.value === "true" : undefined,
 		toolCalling: modelToolCallingInput.value ? modelToolCallingInput.value === "true" : undefined,
 		apiMode: modelApiModeInput.value || undefined,
+		authMode:
+			originalModel.authMode ||
+			(modelBaseUrlInput.value.includes("cli-chat-proxy.grok.com") ? "oauth" : undefined),
 		temperature: modelTemperatureInput.value !== "" ? parseFloat(modelTemperatureInput.value) : undefined,
 		top_p: modelTopPInput.value !== "" ? parseFloat(modelTopPInput.value) : undefined,
 		delay: modelDelayInput.value ? parseInt(modelDelayInput.value) : undefined,
