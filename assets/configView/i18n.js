@@ -64,6 +64,8 @@
 		// Provider management
 		"Provider Management": "供应商管理",
 		"Add Provider": "添加供应商",
+		"Sign in to Grok": "登录 Grok",
+		"Sign out of Grok": "退出 Grok",
 		"Provider ID": "供应商 ID",
 		"Base URL": "Base URL",
 		"API Key": "API Key",
