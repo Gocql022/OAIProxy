@@ -213,10 +213,31 @@ function applyProviderPreset(row, presetId) {
 	const providerInput = row.querySelector('[data-field="provider"]');
 	const baseUrlInput = row.querySelector('[data-field="baseUrl"]');
 	const apiModeInput = row.querySelector('[data-field="apiMode"]');
+	const keyCell = row.querySelector(".provider-key-cell");
 
 	providerInput.value = preset.provider;
 	baseUrlInput.value = preset.baseUrl;
 	apiModeInput.value = preset.apiMode;
+	if (preset.authMode) {
+		row.dataset.authMode = preset.authMode;
+		if (preset.authMode === "oauth" && keyCell) {
+			keyCell.innerHTML = '<span class="status-pill idle">OAuth · Sign in required</span>';
+		}
+	} else {
+		delete row.dataset.authMode;
+		if (keyCell) {
+			keyCell.innerHTML = '<input type="password" class="provider-input" data-field="apiKey" placeholder="API Key" />';
+		}
+	}
+}
+
+function isOpenAIOAuthProvider(provider, baseUrl, authMode) {
+	const normalizedProvider = (provider || "").trim().toLowerCase();
+	const normalizedBaseUrl = (baseUrl || "").trim().toLowerCase();
+	return (
+		normalizedProvider === "openai-oauth" ||
+		(normalizedProvider === "openai" && authMode === "oauth" && normalizedBaseUrl.includes("chatgpt.com/backend-api/codex"))
+	);
 }
 
 function getProviderUsageKind(provider, baseUrl) {
@@ -225,7 +246,7 @@ function getProviderUsageKind(provider, baseUrl) {
 	if (normalizedProvider === "xai" && normalizedBaseUrl.includes("cli-chat-proxy.grok.com")) {
 		return "xai";
 	}
-	if (normalizedProvider === "openai" && normalizedBaseUrl.includes("chatgpt.com/backend-api/codex")) {
+	if ((normalizedProvider === "openai-oauth" || normalizedProvider === "openai") && normalizedBaseUrl.includes("chatgpt.com/backend-api/codex")) {
 		return "openai-codex";
 	}
 	if (normalizedProvider === "tokenrouter" || normalizedBaseUrl.includes("api.tokenrouter.com")) {
@@ -554,7 +575,12 @@ function getPresetProviderState(model) {
 	}
 	if (model?.authMode === "oauth") {
 		const provider = (model.owned_by || "").trim().toLowerCase();
-		const signedIn = provider === "xai" ? state.xaiOAuthSignedIn : provider === "openai" ? state.openaiOAuthSignedIn : true;
+		const signedIn =
+			provider === "xai"
+				? state.xaiOAuthSignedIn
+				: provider === "openai-oauth" || provider === "openai"
+					? state.openaiOAuthSignedIn
+					: true;
 		if (!signedIn) {
 			return {
 				className: "warning",
@@ -703,6 +729,7 @@ function getProviderTransportModel(provider) {
 			owned_by: providerConfig.provider,
 			baseUrl: providerConfig.baseUrl,
 			apiMode: providerConfig.apiMode,
+			authMode: providerConfig.authMode,
 			headers: providerConfig.headers,
 		};
 	}
@@ -724,6 +751,7 @@ function getKnownProviderEntries(configuredProviders) {
 			label: getProviderLabel(provider),
 			baseUrl: transportModel.baseUrl || providerEntry.baseUrl || state.baseUrl,
 			apiMode: transportModel.apiMode || providerEntry.apiMode || "openai",
+			authMode: transportModel.authMode || providerEntry.authMode,
 			headers: transportModel.headers ?? providerEntry.headers,
 		});
 	}
@@ -735,6 +763,7 @@ function getKnownProviderEntries(configuredProviders) {
 				label: preset.label,
 				baseUrl: preset.baseUrl || state.baseUrl,
 				apiMode: preset.apiMode || "openai",
+				authMode: preset.authMode,
 				headers: undefined,
 			});
 		}
@@ -749,6 +778,7 @@ function getKnownProviderEntries(configuredProviders) {
 				label: getProviderLabel(provider),
 				baseUrl: model.baseUrl || state.baseUrl,
 				apiMode: model.apiMode || "openai",
+				authMode: model.authMode,
 				headers: model.headers,
 			});
 		}
@@ -765,6 +795,7 @@ function syncModelProviderOptions(configuredProviders) {
 			state.providerInfo[entry.provider] = {
 				baseUrl: entry.baseUrl || state.baseUrl,
 				apiMode: entry.apiMode || "openai",
+				authMode: entry.authMode,
 				apiKey: state.providerKeys[entry.provider] || state.apiKey,
 				headers: entry.headers,
 			};
@@ -799,6 +830,7 @@ function getConfiguredProviders() {
 			provider,
 			baseUrl: providerConfig.baseUrl || "",
 			apiMode: providerConfig.apiMode || "",
+			authMode: providerConfig.authMode,
 			headers: providerConfig.headers,
 			modelCount: 0,
 			modelIds: [],
@@ -813,6 +845,7 @@ function getConfiguredProviders() {
 			provider,
 			baseUrl: model.baseUrl || "",
 			apiMode: model.apiMode || "",
+			authMode: model.authMode,
 			headers: model.headers,
 			modelCount: 0,
 			modelIds: [],
@@ -820,6 +853,7 @@ function getConfiguredProviders() {
 		if (isProviderPlaceholderModel(model)) {
 			current.baseUrl = model.baseUrl || "";
 			current.apiMode = model.apiMode || "";
+			current.authMode = model.authMode;
 			current.headers = model.headers;
 		} else if (!current.baseUrl && model.baseUrl) {
 			current.baseUrl = model.baseUrl;
@@ -850,10 +884,10 @@ function getProviderUsageRows() {
 	return getConfiguredProviders()
 		.map((entry) => {
 			const codexOAuthModel =
-				(entry.provider || "").trim().toLowerCase() === "openai"
+				(entry.provider || "").trim().toLowerCase() === "openai-oauth" || (entry.provider || "").trim().toLowerCase() === "openai"
 					? state.models.find(
 							(model) =>
-								(model.owned_by || "").trim().toLowerCase() === "openai" &&
+								((model.owned_by || "").trim().toLowerCase() === "openai-oauth" || (model.owned_by || "").trim().toLowerCase() === "openai") &&
 								model.authMode === "oauth" &&
 								(model.baseUrl || "").toLowerCase().includes("chatgpt.com/backend-api/codex")
 						)
@@ -1366,7 +1400,7 @@ document.getElementById("addProvider").addEventListener("click", () => {
 			<input type="text" class="provider-input" data-field="provider" placeholder="${t("Provider ID")}" />
 		</td>
 		<td><input type="text" class="provider-input" data-field="baseUrl" placeholder="${t("Base URL")}" /></td>
-		<td><input type="password" class="provider-input" data-field="apiKey" placeholder="${t("API Key")}" /></td>
+		<td class="provider-key-cell"><input type="password" class="provider-input" data-field="apiKey" placeholder="${t("API Key")}" /></td>
 		<td>
 			<select class="provider-input" data-field="apiMode">
 				<option value="openai">OpenAI</option>
@@ -1406,6 +1440,7 @@ document.getElementById("addProvider").addEventListener("click", () => {
 			baseUrl: providerData.baseUrl || undefined,
 			apiKey: providerData.apiKey || undefined,
 			apiMode: providerData.apiMode || undefined,
+			authMode: newRow.dataset.authMode || undefined,
 			headers: headers,
 		});
 
@@ -1768,7 +1803,7 @@ function renderProviders() {
 			const headersJson = providerConfig.headers ? JSON.stringify(providerConfig.headers, null, 2) : "";
 			const providerAttr = escapeHtml(provider);
 			const isXaiProvider = provider.trim().toLowerCase() === "xai";
-			const isOpenAIProvider = provider.trim().toLowerCase() === "openai";
+			const isOpenAIOAuth = isOpenAIOAuthProvider(provider, baseUrl, providerConfig.authMode || providerEntry.authMode);
 			const hasProviderKey = Boolean(state.providerKeys[provider]);
 			const keyPlaceholder = hasProviderKey ? t("Saved - leave blank to keep") : t("API Key");
 			const modelCount = providerEntry.modelCount;
@@ -1779,7 +1814,7 @@ function renderProviders() {
 						<button class="logout-xai-oauth-btn secondary compact" data-provider="${providerAttr}" title="Remove the saved xAI / Grok OAuth credential" ${
 							state.xaiOAuthSignedIn ? "" : "disabled"
 						}>${t("Sign out")}</button>`
-				: isOpenAIProvider
+				: isOpenAIOAuth
 					? `<button class="login-openai-oauth-btn compact" data-provider="${providerAttr}" title="Sign in to OpenAI / Codex with OAuth" ${
 							state.openaiOAuthSignedIn ? "disabled" : ""
 						}>${t("Sign in")}</button>
@@ -1791,19 +1826,19 @@ function renderProviders() {
 				? `<span class="status-pill ${state.xaiOAuthSignedIn ? "success" : "idle"}">${
 						state.xaiOAuthSignedIn ? t("OAuth · Signed in") : t("OAuth · Sign in required")
 					}</span>`
-				: isOpenAIProvider
-					? `<div class="provider-auth-stack"><span class="status-pill ${state.openaiOAuthSignedIn ? "success" : "idle"}">${
+				: isOpenAIOAuth
+					? `<span class="status-pill ${state.openaiOAuthSignedIn ? "success" : "idle"}">${
 							state.openaiOAuthSignedIn ? t("OAuth · Signed in") : t("OAuth · Sign in required")
-						}</span><input type="password" class="provider-input" data-field="apiKey" value="" placeholder="${escapeHtml(keyPlaceholder)}" /></div>`
+						}</span>`
 					: `<input type="password" class="provider-input" data-field="apiKey" value="" placeholder="${escapeHtml(keyPlaceholder)}" />`;
-			const providerLabel = escapeHtml(isXaiProvider ? "xAI OAuth" : provider);
+			const providerLabel = escapeHtml(isXaiProvider ? "xAI OAuth" : isOpenAIOAuth ? "OpenAI OAuth (Codex)" : provider);
 			const modelCountText = `${modelCount} ${modelCount === 1 ? t("model") : t("models")}`;
-			const providerMeta = isXaiProvider
+			const providerMeta = isXaiProvider || isOpenAIOAuth
 				? `${t("Provider ID: {0}", escapeHtml(provider))} · ${modelCountText}`
 				: modelCountText;
 
 			return `
-				<tr data-provider="${providerAttr}">
+				<tr data-provider="${providerAttr}" data-auth-mode="${escapeHtml(providerConfig.authMode || (isXaiProvider || isOpenAIOAuth ? "oauth" : "api-key"))}">
 					<td class="provider-id-cell">
 						<div class="provider-name">${providerLabel}</div>
 						<div class="provider-meta">${providerMeta}</div>
@@ -1826,7 +1861,7 @@ function renderProviders() {
 						<div class="action-buttons">
 							${oauthActions}
 							<button class="update-provider-btn compact" data-provider="${providerAttr}">${t("Save")}</button>
-							${isXaiProvider ? "" : `<button class="clear-provider-key-btn secondary compact" data-provider="${providerAttr}" ${hasProviderKey ? "" : "disabled"}>${t("Clear Key")}</button>`}
+							${isXaiProvider || isOpenAIOAuth ? "" : `<button class="clear-provider-key-btn secondary compact" data-provider="${providerAttr}" ${hasProviderKey ? "" : "disabled"}>${t("Clear Key")}</button>`}
 							<button class="delete-provider-btn danger compact" data-provider="${providerAttr}">${t("Delete")}</button>
 						</div>
 					</td>
@@ -1885,6 +1920,7 @@ function renderProviders() {
 				baseUrl: providerData.baseUrl || undefined,
 				apiKey: providerData.apiKey || undefined,
 				apiMode: providerData.apiMode || undefined,
+				authMode: row.dataset.authMode || undefined,
 				headers: headers,
 			});
 		});

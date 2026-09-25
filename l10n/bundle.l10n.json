@@ -136,5 +136,10 @@
   "{0} / {1} context · {2} output reserve": "{0} / {1} context · {2} output reserve",
   "{0} already configured.": "{0} already configured.",
   "{0} model(s) have been added.{1}": "{0} model(s) have been added.{1}",
-  "{0} model(s) have been deleted.": "{0} model(s) have been deleted."
+  "{0} model(s) have been deleted.": "{0} model(s) have been deleted.",
+  "Copy device code": "Copy device code",
+  "Open sign-in page": "Open sign-in page",
+  "Open {0} manually and enter code {1}.": "Open {0} manually and enter code {1}.",
+  "OpenAI OAuth device sign-in\n\nDevice code: {0}\n\nSign-in page: {1}\n\nThe code expires in about {2} minutes.": "OpenAI OAuth device sign-in\n\nDevice code: {0}\n\nSign-in page: {1}\n\nThe code expires in about {2} minutes.",
+  "OpenAI device code copied to the clipboard.": "OpenAI device code copied to the clipboard."
 }

@@ -136,5 +136,10 @@
   "{0} / {1} context · {2} output reserve": "{0} / {1} 上下文 · {2} 输出预留",
   "{0} already configured.": "{0} 个已配置。",
   "{0} model(s) have been added.{1}": "已添加 {0} 个模型。{1}",
-  "{0} model(s) have been deleted.": "已删除 {0} 个模型。"
+  "{0} model(s) have been deleted.": "已删除 {0} 个模型。",
+  "Copy device code": "复制设备码",
+  "Open sign-in page": "打开登录页面",
+  "Open {0} manually and enter code {1}.": "请手动打开 {0} 并输入代码 {1}。",
+  "OpenAI OAuth device sign-in\n\nDevice code: {0}\n\nSign-in page: {1}\n\nThe code expires in about {2} minutes.": "OpenAI OAuth 设备登录\n\n设备码：{0}\n\n登录页面：{1}\n\n该代码约 {2} 分钟后过期。",
+  "OpenAI device code copied to the clipboard.": "OpenAI 设备码已复制到剪贴板。"
 }

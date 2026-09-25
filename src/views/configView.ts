@@ -28,7 +28,12 @@ import {
 	type ProviderUsageResult,
 } from "../providerUsage";
 import { getXaiOAuthAccessToken, isXaiGrokOAuthBaseUrl, loadXaiOAuthCredential } from "../xaiOAuth";
-import { getOpenAIOAuthCredential, isOpenAICodexOAuthBaseUrl, loadOpenAIOAuthCredential } from "../openaiOAuth";
+import {
+	getOpenAIOAuthCredential,
+	isOpenAICodexOAuthBaseUrl,
+	isOpenAICodexOAuthProvider,
+	loadOpenAIOAuthCredential,
+} from "../openaiOAuth";
 
 interface InitPayload {
 	baseUrl: string;
@@ -308,6 +313,7 @@ type IncomingMessage =
 			apiKey?: string;
 			clearApiKey?: boolean;
 			apiMode?: string;
+			authMode?: "api-key" | "oauth";
 			headers?: Record<string, string>;
 	  }
 	| {
@@ -317,6 +323,7 @@ type IncomingMessage =
 			apiKey?: string;
 			clearApiKey?: boolean;
 			apiMode?: string;
+			authMode?: "api-key" | "oauth";
 			headers?: Record<string, string>;
 	  }
 	| { type: "deleteProvider"; provider: string }
@@ -512,6 +519,7 @@ export class ConfigViewPanel {
 					message.apiKey,
 					message.clearApiKey,
 					message.apiMode,
+					message.authMode,
 					message.headers
 				);
 				break;
@@ -522,6 +530,7 @@ export class ConfigViewPanel {
 					message.apiKey,
 					message.clearApiKey,
 					message.apiMode,
+					message.authMode,
 					message.headers
 				);
 				break;
@@ -860,6 +869,7 @@ export class ConfigViewPanel {
 		apiKey?: string,
 		clearApiKey?: boolean,
 		apiMode?: string,
+		authMode?: "api-key" | "oauth",
 		headers?: Record<string, string>
 	) {
 		const trimmedProvider = provider.trim();
@@ -867,7 +877,12 @@ export class ConfigViewPanel {
 			vscode.window.showErrorMessage(vscode.l10n.t("Provider ID is required."));
 			return;
 		}
-		await this.applyProviderApiKeyChange(trimmedProvider, apiKey, clearApiKey);
+		const effectiveAuthMode = authMode ?? (isOpenAICodexOAuthProvider(trimmedProvider) ? "oauth" : undefined);
+		await this.applyProviderApiKeyChange(
+			trimmedProvider,
+			effectiveAuthMode === "oauth" ? undefined : apiKey,
+			effectiveAuthMode === "oauth" || clearApiKey
+		);
 
 		const config = vscode.workspace.getConfiguration();
 		const models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
@@ -876,6 +891,7 @@ export class ConfigViewPanel {
 		const updatedProviders = upsertProviderConfig(migrated.providers, trimmedProvider, {
 			baseUrl,
 			apiMode: (apiMode as HFApiMode) || "openai",
+			authMode: effectiveAuthMode,
 			headers,
 		});
 
@@ -895,6 +911,7 @@ export class ConfigViewPanel {
 		apiKey?: string,
 		clearApiKey?: boolean,
 		apiMode?: string,
+		authMode?: "api-key" | "oauth",
 		headers?: Record<string, string>
 	) {
 		const trimmedProvider = provider.trim();
@@ -902,7 +919,12 @@ export class ConfigViewPanel {
 			vscode.window.showErrorMessage(vscode.l10n.t("Provider ID is required."));
 			return;
 		}
-		await this.applyProviderApiKeyChange(trimmedProvider, apiKey, clearApiKey);
+		const effectiveAuthMode = authMode ?? (isOpenAICodexOAuthProvider(trimmedProvider) ? "oauth" : undefined);
+		await this.applyProviderApiKeyChange(
+			trimmedProvider,
+			effectiveAuthMode === "oauth" ? undefined : apiKey,
+			effectiveAuthMode === "oauth" || clearApiKey
+		);
 
 		const config = vscode.workspace.getConfiguration();
 		const models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
@@ -912,6 +934,7 @@ export class ConfigViewPanel {
 		const updatedProviders = upsertProviderConfig(migrated.providers, trimmedProvider, {
 			baseUrl: baseUrl || existingProviderModel?.baseUrl,
 			apiMode: ((apiMode as HFApiMode) || existingProviderModel?.apiMode || "openai") as HFApiMode,
+			authMode: effectiveAuthMode,
 			headers,
 		});
 
@@ -964,12 +987,12 @@ export class ConfigViewPanel {
 			const providers = this.getProviderConfigs();
 			const openAICodexOAuthModel = models.find(
 				(item) =>
-					item.owned_by?.trim().toLowerCase() === "openai" &&
+					isOpenAICodexOAuthProvider(item.owned_by) &&
 					item.authMode === "oauth" &&
 					isOpenAICodexOAuthBaseUrl(item.baseUrl)
 			);
 			const model =
-				(trimmedProvider.toLowerCase() === "openai" ? openAICodexOAuthModel : undefined) ??
+				(isOpenAICodexOAuthProvider(trimmedProvider) ? openAICodexOAuthModel : undefined) ??
 				findProviderTransportModel(models, trimmedProvider, providers) ??
 				models.find((item) => item.owned_by?.trim().toLowerCase() === normalizedProvider && item.baseUrl);
 			const baseUrl = model?.baseUrl;
