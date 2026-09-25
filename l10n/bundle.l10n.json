@@ -27,6 +27,7 @@
   "API key for {0} cleared.": "API key for {0} cleared.",
   "API key for {0} saved.": "API key for {0} saved.",
   "Sign in to xAI / Grok with OAuth before checking weekly usage.": "Sign in to xAI / Grok with OAuth before checking weekly usage.",
+  "Sign in to OpenAI / Codex with OAuth before checking quota.": "Sign in to OpenAI / Codex with OAuth before checking quota.",
   "Anthropic Admin API Key for Usage": "Anthropic Admin API Key for Usage",
   "Anthropic usage/cost checks require an Admin API key (sk-ant-admin...). It is stored separately from the chat API key.": "Anthropic usage/cost checks require an Admin API key (sk-ant-admin...). It is stored separately from the chat API key.",
   "Azure Foundry usage checks are unavailable with an inference API key; use Azure Monitor or Cost Management with Azure RBAC.": "Azure Foundry usage checks are unavailable with an inference API key; use Azure Monitor or Cost Management with Azure RBAC.",

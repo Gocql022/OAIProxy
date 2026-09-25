@@ -4,6 +4,10 @@
     "onLanguageModelChatProvider:oaiproxy",
     "onCommand:oaiproxy.setApikey",
     "onCommand:oaiproxy.setProviderApikey",
+    "onCommand:oaiproxy.loginXaiOAuth",
+    "onCommand:oaiproxy.logoutXaiOAuth",
+    "onCommand:oaiproxy.loginOpenAIOAuth",
+    "onCommand:oaiproxy.logoutOpenAIOAuth",
     "onCommand:oaiproxy.openConfig",
     "onCommand:oaiproxy.generateGitCommitMessage",
     "onCommand:oaiproxy.abortGitCommitMessage"
@@ -33,6 +37,26 @@
         "category": "OAIProxy",
         "command": "oaiproxy.setProviderApikey",
         "title": "%command.setProviderApikey.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.loginXaiOAuth",
+        "title": "%command.loginXaiOAuth.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.logoutXaiOAuth",
+        "title": "%command.logoutXaiOAuth.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.loginOpenAIOAuth",
+        "title": "%command.loginOpenAIOAuth.title%"
+      },
+      {
+        "category": "OAIProxy",
+        "command": "oaiproxy.logoutOpenAIOAuth",
+        "title": "%command.logoutOpenAIOAuth.title%"
       },
       {
         "category": "OAIProxy",
@@ -147,6 +171,14 @@
                   "gemini"
                 ],
                 "type": "string"
+              },
+              "authMode": {
+                "type": "string",
+                "enum": [
+                  "api-key",
+                  "oauth"
+                ],
+                "description": "%config.models.authMode.description%"
               },
               "baseUrl": {
                 "description": "%config.models.baseUrl.description%",
@@ -548,7 +580,7 @@
   "dependencies": {
     "@microsoft/tiktokenizer": "^1.0.10"
   },
-  "description": "Azure Foundry/OpenAI/LiteLLM/Ollama/Anthropic/Gemini provider for Copilot Chat, with Azure Foundry, OpenAI, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, and MiniMax presets",
+  "description": "Azure Foundry/OpenAI/LiteLLM/Ollama/Anthropic/Gemini/xAI provider for Copilot Chat, with Azure Foundry, OpenAI, OpenAI Codex OAuth, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, MiniMax, and Grok OAuth/API-key presets",
   "devDependencies": {
     "@eslint/js": "^9.13.0",
     "@stylistic/eslint-plugin": "^2.9.0",
@@ -591,6 +623,10 @@
     "anthropic",
     "claude",
     "gemini",
+    "xai",
+    "grok",
+    "codex",
+    "openai-oauth",
     "litellm",
     "openai-compatible",
     "openai-responses",

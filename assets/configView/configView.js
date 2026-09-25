@@ -12,6 +12,7 @@ const state = {
 	providerKeys: {},
 	providerUsageKeys: {},
 	xaiOAuthSignedIn: false,
+	openaiOAuthSignedIn: false,
 	providerInfo: {},
 	providers: [],
 	providerPresets: [],
@@ -224,6 +225,9 @@ function getProviderUsageKind(provider, baseUrl) {
 	if (normalizedProvider === "xai" && normalizedBaseUrl.includes("cli-chat-proxy.grok.com")) {
 		return "xai";
 	}
+	if (normalizedProvider === "openai" && normalizedBaseUrl.includes("chatgpt.com/backend-api/codex")) {
+		return "openai-codex";
+	}
 	if (normalizedProvider === "tokenrouter" || normalizedBaseUrl.includes("api.tokenrouter.com")) {
 		return "tokenrouter";
 	}
@@ -330,6 +334,9 @@ function getProviderUsagePlan(usageKind) {
 	if (usageKind === "openai" || usageKind === "anthropic") {
 		return t("Cost usage");
 	}
+	if (usageKind === "openai-codex") {
+		return "Codex quota";
+	}
 	if (usageKind === "tokenrouter") {
 		return "Credit balance";
 	}
@@ -351,6 +358,9 @@ function getProviderUsageTargetDescription(usageKind) {
 	}
 	if (usageKind === "fireworks") {
 		return t("Month-to-date serverless tokens");
+	}
+	if (usageKind === "openai-codex") {
+		return "Plan quota windows and credits";
 	}
 	if (usageKind === "openai" || usageKind === "anthropic") {
 		return t("Month-to-date spend");
@@ -384,10 +394,12 @@ function isProviderPlaceholderModel(model) {
 function toProviderBackedModel(model) {
 	const next = cloneModel(model);
 	const providerInfo = state.providerInfo[next.owned_by] || {};
-	next.baseUrl = providerInfo.baseUrl || next.baseUrl;
-	next.apiMode = providerInfo.apiMode || next.apiMode || "openai";
-	if (providerInfo.headers !== undefined) {
-		next.headers = providerInfo.headers;
+	if (next.authMode !== "oauth") {
+		next.baseUrl = providerInfo.baseUrl || next.baseUrl;
+		next.apiMode = providerInfo.apiMode || next.apiMode || "openai";
+		if (providerInfo.headers !== undefined) {
+			next.headers = providerInfo.headers;
+		}
 	}
 	delete next.inheritProvider;
 	return next;
@@ -539,6 +551,17 @@ function getPresetProviderState(model) {
 			filterValue: "provider-needed",
 			label: t("Provider Needed"),
 		};
+	}
+	if (model?.authMode === "oauth") {
+		const provider = (model.owned_by || "").trim().toLowerCase();
+		const signedIn = provider === "xai" ? state.xaiOAuthSignedIn : provider === "openai" ? state.openaiOAuthSignedIn : true;
+		if (!signedIn) {
+			return {
+				className: "warning",
+				filterValue: "oauth-needed",
+				label: "OAuth Sign-in Required",
+			};
+		}
 	}
 	if (requiresProviderKey(model)) {
 		return {
@@ -825,12 +848,25 @@ function getProviderUsageTargets() {
 
 function getProviderUsageRows() {
 	return getConfiguredProviders()
-		.map((entry) => ({
-			...entry,
-			usageKind: getProviderUsageKind(entry.provider, entry.baseUrl),
-			unsupportedReason: getProviderUsageUnsupportedReason(entry.provider, entry.baseUrl),
-			unsupportedLink: getProviderUsageUnsupportedLink(entry.provider, entry.baseUrl),
-		}))
+		.map((entry) => {
+			const codexOAuthModel =
+				(entry.provider || "").trim().toLowerCase() === "openai"
+					? state.models.find(
+							(model) =>
+								(model.owned_by || "").trim().toLowerCase() === "openai" &&
+								model.authMode === "oauth" &&
+								(model.baseUrl || "").toLowerCase().includes("chatgpt.com/backend-api/codex")
+						)
+					: undefined;
+			const usageBaseUrl = codexOAuthModel?.baseUrl || entry.baseUrl;
+			return {
+				...entry,
+				usageBaseUrl,
+				usageKind: getProviderUsageKind(entry.provider, usageBaseUrl),
+				unsupportedReason: getProviderUsageUnsupportedReason(entry.provider, usageBaseUrl),
+				unsupportedLink: getProviderUsageUnsupportedLink(entry.provider, usageBaseUrl),
+			};
+		})
 		.filter((entry) => entry.usageKind || entry.unsupportedReason);
 }
 
@@ -879,7 +915,7 @@ function renderProviderUsageKeyCell(provider, usageKind, unsupportedReason) {
 	if (unsupportedReason) {
 		return `<div class="usage-key-note">${t("Not used")}</div>`;
 	}
-	if (usageKind === "xai") {
+	if (usageKind === "xai" || usageKind === "openai-codex") {
 		return '<div class="usage-key-note">OAuth sign-in</div>';
 	}
 	if (providerUsageNeedsSeparateKey(usageKind)) {
@@ -1551,6 +1587,7 @@ window.addEventListener("message", (event) => {
 				providerKeys,
 				providerUsageKeys,
 				xaiOAuthSignedIn,
+				openaiOAuthSignedIn,
 				providerPresets,
 				modelPresets,
 				commitLanguage,
@@ -1573,6 +1610,7 @@ window.addEventListener("message", (event) => {
 			state.providerKeys = providerKeys || {};
 			state.providerUsageKeys = providerUsageKeys || {};
 			state.xaiOAuthSignedIn = Boolean(xaiOAuthSignedIn);
+			state.openaiOAuthSignedIn = Boolean(openaiOAuthSignedIn);
 			state.providerPresets = providerPresets || [];
 			state.modelPresets = modelPresets || [];
 
@@ -1730,6 +1768,7 @@ function renderProviders() {
 			const headersJson = providerConfig.headers ? JSON.stringify(providerConfig.headers, null, 2) : "";
 			const providerAttr = escapeHtml(provider);
 			const isXaiProvider = provider.trim().toLowerCase() === "xai";
+			const isOpenAIProvider = provider.trim().toLowerCase() === "openai";
 			const hasProviderKey = Boolean(state.providerKeys[provider]);
 			const keyPlaceholder = hasProviderKey ? t("Saved - leave blank to keep") : t("API Key");
 			const modelCount = providerEntry.modelCount;
@@ -1740,12 +1779,23 @@ function renderProviders() {
 						<button class="logout-xai-oauth-btn secondary compact" data-provider="${providerAttr}" title="Remove the saved xAI / Grok OAuth credential" ${
 							state.xaiOAuthSignedIn ? "" : "disabled"
 						}>${t("Sign out")}</button>`
-				: "";
+				: isOpenAIProvider
+					? `<button class="login-openai-oauth-btn compact" data-provider="${providerAttr}" title="Sign in to OpenAI / Codex with OAuth" ${
+							state.openaiOAuthSignedIn ? "disabled" : ""
+						}>${t("Sign in")}</button>
+						<button class="logout-openai-oauth-btn secondary compact" data-provider="${providerAttr}" title="Remove the saved OpenAI / Codex OAuth credential" ${
+							state.openaiOAuthSignedIn ? "" : "disabled"
+						}>${t("Sign out")}</button>`
+					: "";
 			const authMethodCell = isXaiProvider
 				? `<span class="status-pill ${state.xaiOAuthSignedIn ? "success" : "idle"}">${
 						state.xaiOAuthSignedIn ? t("OAuth · Signed in") : t("OAuth · Sign in required")
 					}</span>`
-				: `<input type="password" class="provider-input" data-field="apiKey" value="" placeholder="${escapeHtml(keyPlaceholder)}" />`;
+				: isOpenAIProvider
+					? `<div class="provider-auth-stack"><span class="status-pill ${state.openaiOAuthSignedIn ? "success" : "idle"}">${
+							state.openaiOAuthSignedIn ? t("OAuth · Signed in") : t("OAuth · Sign in required")
+						}</span><input type="password" class="provider-input" data-field="apiKey" value="" placeholder="${escapeHtml(keyPlaceholder)}" /></div>`
+					: `<input type="password" class="provider-input" data-field="apiKey" value="" placeholder="${escapeHtml(keyPlaceholder)}" />`;
 			const providerLabel = escapeHtml(isXaiProvider ? "xAI OAuth" : provider);
 			const modelCountText = `${modelCount} ${modelCount === 1 ? t("model") : t("models")}`;
 			const providerMeta = isXaiProvider
@@ -1802,6 +1852,24 @@ function renderProviders() {
 				action.disabled = true;
 			});
 			vscode.postMessage({ type: "logoutXaiOAuth" });
+		});
+	});
+
+	document.querySelectorAll(".login-openai-oauth-btn").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			document.querySelectorAll(".login-openai-oauth-btn, .logout-openai-oauth-btn").forEach((action) => {
+				action.disabled = true;
+			});
+			vscode.postMessage({ type: "loginOpenAIOAuth" });
+		});
+	});
+
+	document.querySelectorAll(".logout-openai-oauth-btn").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			document.querySelectorAll(".login-openai-oauth-btn, .logout-openai-oauth-btn").forEach((action) => {
+				action.disabled = true;
+			});
+			vscode.postMessage({ type: "logoutOpenAIOAuth" });
 		});
 	});
 
@@ -2027,7 +2095,10 @@ function collectModelFormData() {
 		apiMode: modelApiModeInput.value || undefined,
 		authMode:
 			originalModel.authMode ||
-			(modelBaseUrlInput.value.includes("cli-chat-proxy.grok.com") ? "oauth" : undefined),
+			(modelBaseUrlInput.value.includes("cli-chat-proxy.grok.com") ||
+			modelBaseUrlInput.value.includes("chatgpt.com/backend-api/codex")
+				? "oauth"
+				: undefined),
 		temperature: modelTemperatureInput.value !== "" ? parseFloat(modelTemperatureInput.value) : undefined,
 		top_p: modelTopPInput.value !== "" ? parseFloat(modelTopPInput.value) : undefined,
 		delay: modelDelayInput.value ? parseInt(modelDelayInput.value) : undefined,
