@@ -618,6 +618,27 @@
 				</div>
 			</section>
 
+			<!-- Ask dialog. Rendered here (instead of using a native modal) so the button
+			     order is fixed to Cancel | Yes | No; VS Code reorders native dialog buttons
+			     by platform HIG rules and extensions cannot control that order. -->
+			<div id="askDialog" class="ask-dialog-overlay" hidden>
+				<div class="ask-dialog" role="dialog" aria-modal="true" aria-labelledby="askDialogMessage">
+					<div class="ask-dialog-body">
+						<svg class="ask-dialog-icon" viewBox="0 0 16 16" aria-hidden="true">
+							<circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2" />
+							<path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+							<circle cx="8" cy="4.9" r="0.85" fill="currentColor" />
+						</svg>
+						<div class="ask-dialog-message" id="askDialogMessage"></div>
+					</div>
+					<div class="ask-dialog-actions">
+						<button id="askDialogCancel" type="button" class="secondary" data-i18n="Cancel">Cancel</button>
+						<button id="askDialogYes" type="button" data-i18n="Yes">Yes</button>
+						<button id="askDialogNo" type="button" data-i18n="No">No</button>
+					</div>
+				</div>
+			</div>
+
 			<script src="%I18N_SCRIPT_URI%" nonce="%NONCE%"></script>
 			<script src="%SCRIPT_URI%" nonce="%NONCE%"></script>
 	</body>

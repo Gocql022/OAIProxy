@@ -279,6 +279,10 @@ interface ExportConfig {
 	providerKeys: Record<string, string>;
 	providerUsageKeys?: Record<string, string>;
 	readFileLines: number;
+	/** Whether API keys were included in this export. Backward-compatible with older files that predate this field. */
+	includeApiKey?: boolean;
+	visionBridgeModel?: string;
+	visionBridgePrompt?: string;
 }
 
 type IncomingMessage =
@@ -343,7 +347,7 @@ type IncomingMessage =
 	| { type: "testModel"; requestId: string; modelId: string }
 	| { type: "testAllModels"; requestId: string }
 	| { type: "requestConfirm"; id: string; message: string; action: string }
-	| { type: "exportConfig" }
+	| { type: "exportConfig"; includeApiKey: boolean }
 	| { type: "importConfig" };
 
 type OutgoingMessage =
@@ -571,7 +575,7 @@ export class ConfigViewPanel {
 				await this.startModelTests(message.requestId, this.getConfiguredModelIds());
 				break;
 			case "exportConfig":
-				await this.exportConfig();
+				await this.exportConfig(message.includeApiKey);
 				break;
 			case "importConfig":
 				await this.importConfig();
@@ -1213,8 +1217,26 @@ export class ConfigViewPanel {
 		await this.sendInit();
 	}
 
-	private async exportConfig() {
+	private async exportConfig(includeApiKey: boolean) {
 		try {
+			// The include-API-keys question is asked by the configuration webview so the
+			// buttons can be ordered explicitly; VS Code reorders native modal buttons by
+			// platform HIG and offers no way for an extension to control that order.
+			if (includeApiKey) {
+				const confirmLabel = vscode.l10n.t("Export with API Keys");
+				const proceed = await vscode.window.showWarningMessage(
+					vscode.l10n.t(
+						"The exported configuration will contain your API keys in plain text. Anyone with this file can use your accounts. Only export with API keys if you need to move them to another machine, and keep the file secure."
+					),
+					{ modal: true },
+					confirmLabel
+				);
+				if (proceed !== confirmLabel) {
+					vscode.window.showInformationMessage(vscode.l10n.t("Export configuration cancelled."));
+					return;
+				}
+			}
+
 			const config = vscode.workspace.getConfiguration();
 			const baseUrl = config.get<string>("oaicopilot.baseUrl", "https://api.openai.com/v1");
 			const apiKey = (await this.secrets.get("oaicopilot.apiKey")) ?? "";
@@ -1233,24 +1255,28 @@ export class ConfigViewPanel {
 			const readFileLines = config.get<number>("oaicopilot.readFileLines", 0);
 			const models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
 			const providerConfigs = this.getProviderConfigs();
+			const visionBridgeModel = config.get<string>("oaicopilot.visionBridgeModel", "");
+			const visionBridgePrompt = config.get<string>("oaicopilot.visionBridgePrompt", "");
 
 			const foundModel = models.find((model) => model.useForCommitGeneration === true);
 			const commitModel = foundModel ? `${foundModel.id}${foundModel.configId ? "::" + foundModel.configId : ""}` : "";
 
 			const providerKeys: Record<string, string> = {};
 			const providerUsageKeys: Record<string, string> = {};
-			const providerIds = Array.from(
-				new Set([...models.map((m) => m.owned_by).filter(Boolean), ...providerConfigs.map((item) => item.provider)])
-			);
-			for (const provider of providerIds) {
-				const normalized = provider.toLowerCase();
-				const key = await this.secrets.get(`oaicopilot.apiKey.${normalized}`);
-				if (key) {
-					providerKeys[provider] = key;
-				}
-				const usageKey = await this.secrets.get(getProviderUsageSecretKey(provider));
-				if (usageKey) {
-					providerUsageKeys[provider] = usageKey;
+			if (includeApiKey) {
+				const providerIds = Array.from(
+					new Set([...models.map((m) => m.owned_by).filter(Boolean), ...providerConfigs.map((item) => item.provider)])
+				);
+				for (const provider of providerIds) {
+					const normalized = provider.toLowerCase();
+					const key = await this.secrets.get(`oaicopilot.apiKey.${normalized}`);
+					if (key) {
+						providerKeys[provider] = key;
+					}
+					const usageKey = await this.secrets.get(getProviderUsageSecretKey(provider));
+					if (usageKey) {
+						providerUsageKeys[provider] = usageKey;
+					}
 				}
 			}
 
@@ -1258,7 +1284,7 @@ export class ConfigViewPanel {
 				version: VersionManager.getVersion(),
 				exportDate: new Date().toISOString(),
 				baseUrl,
-				apiKey,
+				apiKey: includeApiKey ? apiKey : "",
 				delay,
 				retry,
 				commitLanguage,
@@ -1266,8 +1292,11 @@ export class ConfigViewPanel {
 				models,
 				providers: providerConfigs,
 				readFileLines,
+				includeApiKey,
 				providerKeys,
 				providerUsageKeys,
+				visionBridgeModel,
+				visionBridgePrompt,
 			};
 
 			const uri = await vscode.window.showSaveDialog({
@@ -1324,32 +1353,39 @@ export class ConfigViewPanel {
 			await config.update("oaicopilot.retry", importData.retry, vscode.ConfigurationTarget.Global);
 			await config.update("oaicopilot.readFileLines", importData.readFileLines, vscode.ConfigurationTarget.Global);
 			await config.update("oaicopilot.commitLanguage", importData.commitLanguage, vscode.ConfigurationTarget.Global);
+			if (importData.visionBridgeModel !== undefined) {
+				await config.update(
+					"oaicopilot.visionBridgeModel",
+					(importData.visionBridgeModel ?? "").trim(),
+					vscode.ConfigurationTarget.Global
+				);
+			}
+			if (importData.visionBridgePrompt !== undefined) {
+				await config.update(
+					"oaicopilot.visionBridgePrompt",
+					(importData.visionBridgePrompt ?? "").trim(),
+					vscode.ConfigurationTarget.Global
+				);
+			}
 
 			if (importData.apiKey) {
 				await this.secrets.store("oaicopilot.apiKey", importData.apiKey);
-			} else {
+			} else if (importData.includeApiKey === undefined) {
+				// Legacy exports predating the includeApiKey flag always carried the
+				// stored key when present, so an empty value cleared it.
 				await this.secrets.delete("oaicopilot.apiKey");
 			}
+			// Newer exports are explicit: only touch secrets when the file actually
+			// contains them (includeApiKey: true). Plain exports never modify keys.
 
 			await config.update("oaicopilot.models", migratedImport.models, vscode.ConfigurationTarget.Global);
 			await this.updateProviderConfigs(migratedImport.providers);
 
-			for (const [provider, key] of Object.entries(importData.providerKeys)) {
-				const normalized = provider.toLowerCase();
-				if (key) {
-					await this.secrets.store(`oaicopilot.apiKey.${normalized}`, key);
-				} else {
-					await this.secrets.delete(`oaicopilot.apiKey.${normalized}`);
-				}
+			if (importData.includeApiKey === true || importData.includeApiKey === undefined) {
+				// Newer keyed exports restore keys; legacy files also carried them.
+				await this.restoreProviderKeys(importData);
 			}
-			for (const [provider, key] of Object.entries(importData.providerUsageKeys ?? {})) {
-				const normalized = provider.toLowerCase();
-				if (key) {
-					await this.secrets.store(getProviderUsageSecretKey(normalized), key);
-				} else {
-					await this.secrets.delete(getProviderUsageSecretKey(normalized));
-				}
-			}
+			// Plain exports (includeApiKey: false) never modify stored secrets.
 
 			vscode.window.showInformationMessage(vscode.l10n.t("Configuration imported successfully."));
 			this.refreshConfiguration();
@@ -1357,6 +1393,25 @@ export class ConfigViewPanel {
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : "Unknown error";
 			vscode.window.showErrorMessage(vscode.l10n.t("Failed to import configuration: {0}", errorMessage));
+		}
+	}
+
+	private async restoreProviderKeys(importData: ExportConfig) {
+		for (const [provider, key] of Object.entries(importData.providerKeys)) {
+			const normalized = provider.toLowerCase();
+			if (key) {
+				await this.secrets.store(`oaicopilot.apiKey.${normalized}`, key);
+			} else {
+				await this.secrets.delete(`oaicopilot.apiKey.${normalized}`);
+			}
+		}
+		for (const [provider, key] of Object.entries(importData.providerUsageKeys ?? {})) {
+			const normalized = provider.toLowerCase();
+			if (key) {
+				await this.secrets.store(getProviderUsageSecretKey(normalized), key);
+			} else {
+				await this.secrets.delete(getProviderUsageSecretKey(normalized));
+			}
 		}
 	}
 }

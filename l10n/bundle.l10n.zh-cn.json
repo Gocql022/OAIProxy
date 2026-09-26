@@ -49,6 +49,7 @@
   "Enter your OAIProxy API key for {0}": "输入 {0} 的 OAIProxy API 密钥",
   "Export OAIProxy Configuration": "导出 OAIProxy 配置",
   "Export configuration cancelled.": "导出配置已取消。",
+  "Export with API Keys": "导出（包含 API Key）",
   "Failed to export configuration: {0}": "导出配置失败：{0}",
   "Failed to generate commit message: {0}": "生成提交消息失败：{0}",
   "Failed to import configuration: {0}": "导入配置失败：{0}",
@@ -63,6 +64,7 @@
   "Images / Binary": "图像 / 二进制",
   "Import OAIProxy Configuration": "导入 OAIProxy 配置",
   "Import configuration cancelled.": "导入配置已取消。",
+
   "Input Tokens: {0} / {1} ({2})": "输入 Token：{0} / {1}（{2}）",
   "Invalid OpenAI API key format. Enter an OpenAI API key that starts with sk-.": "OpenAI API 密钥格式无效。请输入以 sk- 开头的 OpenAI API 密钥。",
   "Invalid configuration file: models must be an array": "配置文件无效：models 必须是数组",
@@ -115,6 +117,7 @@
   "Select repository for commit message generation": "选择用于生成提交消息的仓库",
   "Stored OpenAI API key is malformed. OAIProxy removed it; enter a valid OpenAI key starting with sk-.": "存储的 OpenAI API 密钥格式无效。OAIProxy 已将其移除；请输入以 sk- 开头的有效 OpenAI 密钥。",
   "System / Project Context": "系统 / 项目上下文",
+  "The exported configuration will contain your API keys in plain text. Anyone with this file can use your accounts. Only export with API keys if you need to move them to another machine, and keep the file secure.": "导出的配置将包含明文形式的 API 密钥。任何获得此文件的人都可以使用你的密钥。仅在需要在另一台机器上迁移密钥时才导出，并请妥善保管该文件，不要泄露给除自己以外的任何人！",
   "Thinking Effort": "思考力度",
   "Tool Calls / Results": "工具调用 / 结果",
   "Tool Definitions": "工具定义",

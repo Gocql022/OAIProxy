@@ -157,9 +157,53 @@ const handleRefresh = () => {
 	vscode.postMessage({ type: "requestInit" });
 };
 
+// Ask dialog (Cancel | Yes | No). Kept inside the webview because VS Code reorders
+// native modal buttons by platform HIG rules, so an extension cannot pin this order.
+const askDialogOverlay = document.getElementById("askDialog");
+const askDialogMessage = document.getElementById("askDialogMessage");
+let askDialogHandlers = null;
+
+function openAskDialog(message, handlers) {
+	if (!askDialogOverlay.hidden) {
+		return;
+	}
+	askDialogMessage.textContent = message;
+	askDialogHandlers = handlers;
+	askDialogOverlay.hidden = false;
+	document.getElementById("askDialogYes").focus();
+}
+
+function resolveAskDialog(choice) {
+	const handlers = askDialogHandlers;
+	askDialogHandlers = null;
+	askDialogOverlay.hidden = true;
+	if (handlers && typeof handlers[choice] === "function") {
+		handlers[choice]();
+	}
+}
+
+document.getElementById("askDialogCancel").addEventListener("click", () => resolveAskDialog("cancel"));
+document.getElementById("askDialogYes").addEventListener("click", () => resolveAskDialog("yes"));
+document.getElementById("askDialogNo").addEventListener("click", () => resolveAskDialog("no"));
+askDialogOverlay.addEventListener("click", (event) => {
+	// Clicking the backdrop dismisses the dialog, matching native modal behavior.
+	if (event.target === askDialogOverlay) {
+		resolveAskDialog("cancel");
+	}
+});
+document.addEventListener("keydown", (event) => {
+	if (event.key === "Escape" && !askDialogOverlay.hidden) {
+		event.preventDefault();
+		resolveAskDialog("cancel");
+	}
+});
+
 // Export and Import buttons event listeners
 document.getElementById("exportConfig").addEventListener("click", () => {
-	vscode.postMessage({ type: "exportConfig" });
+	openAskDialog(t("Include API keys in the exported configuration?"), {
+		yes: () => vscode.postMessage({ type: "exportConfig", includeApiKey: true }),
+		no: () => vscode.postMessage({ type: "exportConfig", includeApiKey: false }),
+	});
 });
 
 document.getElementById("importConfig").addEventListener("click", () => {

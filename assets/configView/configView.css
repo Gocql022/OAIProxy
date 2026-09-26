@@ -679,6 +679,61 @@ button:disabled {
 	}
 }
 
+/* Ask dialog. Rendered inside the webview because VS Code reorders native dialog
+   buttons by platform HIG rules and extensions cannot pin a button order there. */
+.ask-dialog-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: rgba(0, 0, 0, 0.35);
+}
+.ask-dialog-overlay[hidden] {
+	display: none;
+}
+.ask-dialog {
+	width: 100%;
+	max-width: 460px;
+	padding: 16px;
+	border: 1px solid var(--vscode-editorWidget-border);
+	border-radius: 8px;
+	background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+	color: var(--vscode-foreground);
+	box-shadow: 0 8px 26px rgba(0, 0, 0, 0.36);
+}
+.ask-dialog-body {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+}
+.ask-dialog-icon {
+	flex: 0 0 20px;
+	width: 20px;
+	height: 20px;
+	margin-top: 1px;
+	color: var(--vscode-icon-foreground, var(--vscode-foreground));
+}
+.ask-dialog-message {
+	flex: 1;
+	min-width: 0;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+.ask-dialog-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 16px;
+}
+.ask-dialog-actions button {
+	margin-right: 0;
+	min-width: 72px;
+}
+
 button:not(.secondary):not(.danger) {
 	background: var(--vscode-button-background);
 	color: var(--vscode-button-foreground);

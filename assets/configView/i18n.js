@@ -207,6 +207,11 @@
 		"Provider-aware prompt/KV cache configuration.": "供应商感知的提示/KV 缓存配置。",
 		"Save Model": "保存模型",
 		"Cancel": "取消",
+		"Yes": "是",
+		"No": "否",
+
+		// Export / import
+		"Include API keys in the exported configuration?": "导出配置中包含 API Key？",
 
 		// Provider usage check
 		"Provider Usage Check": "供应商余额检查",
