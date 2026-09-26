@@ -532,6 +532,11 @@
           },
           "type": "object"
         },
+        "oaicopilot.visionBridgeEnabled": {
+          "default": true,
+          "description": "%config.visionBridgeEnabled.description%",
+          "type": "boolean"
+        },
         "oaicopilot.visionBridgeModel": {
           "default": "",
           "description": "%config.visionBridgeModel.description%",

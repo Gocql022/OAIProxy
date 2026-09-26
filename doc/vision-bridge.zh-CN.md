@@ -6,6 +6,16 @@ OAIProxy 可以为纯文本模型自动描述图像。当模型显式配置 `"vi
 
 这意味着你可以在不支持原生视觉能力的模型中使用图像——当你偏好的编码模型缺乏视觉能力，但仍想分享截图或架构图时非常有用。
 
+## 启用 / 禁用
+
+桥接默认启用（`"oaicopilot.visionBridgeEnabled": true`）。你可以通过配置界面（全局配置 → 视觉桥接 → **启用视觉桥接**）或直接在设置中关闭：
+
+```json
+"oaicopilot.visionBridgeEnabled": false
+```
+
+关闭后，OAIProxy 将不再为 `"vision": false` 的模型宣传图像支持，并保持图像原样传递——供应商将收到未经处理的图像部分（可能因此拒绝请求）。
+
 ## 工作原理
 
 1. 当聊天消息包含图像且目标模型 `"vision": false` 时，OAIProxy 会查找配置了 `"vision": true` 的模型（或通过 `oaicopilot.visionBridgeModel` 指定的模型）。
@@ -42,7 +52,9 @@ OAIProxy 可以为纯文本模型自动描述图像。当模型显式配置 `"vi
 "oaicopilot.visionBridgeModel": "Qwen/Qwen2.5-VL-72B-Instruct"
 ```
 
-对于多配置的模型，请使用完整 ID `baseId::configId`（例如 `Qwen/Qwen2.5-VL-72B-Instruct::myconfig`）。留空则回退到自动选择。也可以在配置面板（Global Configuration → Vision Bridge）中从列表选择或手动输入任意模型 ID。
+对于多配置的模型，请使用完整 ID `baseId::configId`（例如 `Qwen/Qwen2.5-VL-72B-Instruct::myconfig`）。留空则回退到自动选择。
+
+在配置面板（Global Configuration → Vision Bridge）中，下拉列表仅包含你配置了 `"vision": true` 的模型，以及 **自动（第一个已配置的视觉模型）**。如果要使用不在该列表中的模型 ID（例如其他扩展提供的模型），请直接修改 `settings.json` 中的 `oaicopilot.visionBridgeModel`。
 
 ## 自定义视觉代理提示词
 

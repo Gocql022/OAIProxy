@@ -108,8 +108,8 @@ const cancelModelBtn = document.getElementById("cancelModel");
 const toggleAdvancedSettingsBtn = document.getElementById("toggleAdvancedSettings");
 const commitModelInput = document.getElementById("commitModel");
 const commitLanguageInput = document.getElementById("commitLanguage");
+const visionBridgeEnabledInput = document.getElementById("visionBridgeEnabled");
 const visionBridgeModelInput = document.getElementById("visionBridgeModel");
-const visionBridgeModelOptions = document.getElementById("visionBridgeModelOptions");
 const visionBridgePromptInput = document.getElementById("visionBridgePrompt");
 const advancedSettingsContent = document.getElementById("advancedSettingsContent");
 
@@ -143,6 +143,7 @@ document.getElementById("saveBase").addEventListener("click", () => {
 		retry: retry,
 		commitModel: commitModelInput.value,
 		commitLanguage: commitLanguageInput.value,
+		visionBridgeEnabled: visionBridgeEnabledInput.checked,
 		visionBridgeModel: visionBridgeModelInput.value,
 		visionBridgePrompt: visionBridgePromptInput.value,
 	});
@@ -1417,7 +1418,11 @@ function collectProviderRowData(row) {
 	const providerData = {};
 	inputs.forEach((input) => {
 		const field = input.getAttribute("data-field");
-		providerData[field] = input.value;
+		if (input.type === "checkbox") {
+			providerData[field] = input.checked ? "on" : "off";
+		} else {
+			providerData[field] = input.value;
+		}
 	});
 
 	let headers = undefined;
@@ -1670,6 +1675,7 @@ window.addEventListener("message", (event) => {
 				providerPresets,
 				modelPresets,
 				commitLanguage,
+				visionBridgeEnabled,
 				visionBridgeModel,
 				visionBridgePrompt,
 			} = message.payload;
@@ -1708,9 +1714,10 @@ window.addEventListener("message", (event) => {
 			commitModelInput.value = state.commitModel || "";
 			commitLanguageInput.value = commitLanguage;
 
-			// Populate vision bridge model options and current values
+			// Populate vision bridge options and current values
 			populateVisionBridgeModelOptions();
-			visionBridgeModelInput.value = visionBridgeModel || "";
+			visionBridgeEnabledInput.checked = message.payload.visionBridgeEnabled !== false;
+			setVisionBridgeModelValue(visionBridgeModel);
 			visionBridgePromptInput.value = visionBridgePrompt || "";
 
 			// Render provider and model management
@@ -2476,12 +2483,17 @@ function populateCommitModelDropdown() {
 	});
 }
 
-// Function to populate the vision bridge model datalist with vision-capable models
+// Function to populate the vision bridge model select with vision-capable models
 function populateVisionBridgeModelOptions() {
-	// Clear existing options
-	while (visionBridgeModelOptions.children.length > 0) {
-		visionBridgeModelOptions.removeChild(visionBridgeModelOptions.lastChild);
+	// Rebuild the list as: automatic selection, then configured vision models.
+	while (visionBridgeModelInput.children.length > 0) {
+		visionBridgeModelInput.removeChild(visionBridgeModelInput.lastChild);
 	}
+
+	const autoOption = document.createElement("option");
+	autoOption.value = "";
+	autoOption.textContent = t("Auto (first configured vision model)");
+	visionBridgeModelInput.appendChild(autoOption);
 
 	const visionModels = state.models
 		.filter((model) => model.vision === true && !isProviderPlaceholderModel(model))
@@ -2492,8 +2504,28 @@ function populateVisionBridgeModelOptions() {
 		const fullModelId = `${model.id}${model.configId ? "::" + model.configId : ""}`;
 		option.value = fullModelId;
 		option.textContent = model.displayName || fullModelId;
-		visionBridgeModelOptions.appendChild(option);
+		visionBridgeModelInput.appendChild(option);
 	});
+}
+
+// Apply a saved vision bridge model id to the select. A value that is not among
+// the configured vision models (for example a model exposed by another
+// extension) is kept as an extra option so saving does not silently drop it.
+function setVisionBridgeModelValue(value) {
+	const trimmed = (value || "").trim();
+	if (!trimmed) {
+		visionBridgeModelInput.value = "";
+		return;
+	}
+
+	const isListedModel = Array.from(visionBridgeModelInput.options).some((option) => option.value === trimmed);
+	if (!isListedModel) {
+		const option = document.createElement("option");
+		option.value = trimmed;
+		option.textContent = trimmed;
+		visionBridgeModelInput.appendChild(option);
+	}
+	visionBridgeModelInput.value = trimmed;
 }
 
 // Dropdown visibility functions

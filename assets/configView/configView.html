@@ -56,7 +56,7 @@
 					<div class="field">
 						<label for="retryEnabled" data-i18n="Enable Retry">Enable Retry</label>
 						<div class="field-description" data-i18n="Enable retry mechanism for api errors.">Enable retry mechanism for api errors.</div>
-						<input id="retryEnabled" type="checkbox" />
+						<input id="retryEnabled" type="checkbox" class="checkbox" />
 					</div>
 					<div class="field">
 						<label for="maxAttempts" data-i18n="Max Attempts">Max Attempts</label>
@@ -111,13 +111,25 @@
 				<h3 data-i18n="Vision Bridge">Vision Bridge</h3>
 				<div class="row">
 					<div class="field">
-						<label for="visionBridgeModel" data-i18n="Vision Bridge Model">Vision Bridge Model</label>
-						<div class="field-description" data-i18n="Model used to describe images for text-only models. Pick one from the list or type any registered model id. Leave empty for automatic selection.">
-							Model used to describe images for text-only models. Pick one from the list or type any
-							registered model id. Leave empty for automatic selection.
+						<label class="vision-bridge-toggle" for="visionBridgeEnabled">
+							<span data-i18n="Enable Vision Bridge">Enable Vision Bridge</span>
+							<input id="visionBridgeEnabled" type="checkbox" checked />
+						</label>
+						<div class="field-description" data-i18n="Describe images for text-only models using a vision-capable model. Disable this to stop advertising image support for text-only models and leave images untouched.">
+							Describe images for text-only models using a vision-capable model. Disable this to stop advertising image support for text-only models and leave images untouched.
 						</div>
-						<input id="visionBridgeModel" type="text" list="visionBridgeModelOptions" placeholder="Auto (first configured vision model)" data-i18n-placeholder="Auto (first configured vision model)" />
-						<datalist id="visionBridgeModelOptions"></datalist>
+					</div>
+				</div>
+				<div class="row">
+					<div class="field">
+						<label for="visionBridgeModel" data-i18n="Vision Bridge Model">Vision Bridge Model</label>
+						<div class="field-description" data-i18n="Model used to describe images for text-only models. Pick one from the configured vision-capable models. Leave empty for automatic selection.">
+							Model used to describe images for text-only models. Pick one from the configured
+							vision-capable models. Leave empty for automatic selection.
+						</div>
+						<select id="visionBridgeModel" class="model-input">
+							<option value="" data-i18n="Auto (first configured vision model)">Auto (first configured vision model)</option>
+						</select>
 					</div>
 				</div>
 				<div class="row">

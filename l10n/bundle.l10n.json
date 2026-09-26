@@ -107,6 +107,7 @@
   "Provider {0} does not support usage checks yet.": "Provider {0} does not support usage checks yet.",
   "Provider {0} has been added.": "Provider {0} has been added.",
   "Provider {0} has been updated.": "Provider {0} has been updated.",
+  "Provider {0} has been updated, and the API mode has been synced to {1} model(s) under it.": "Provider {0} has been updated, and the API mode has been synced to {1} model(s) under it.",
   "Reasoning History": "Reasoning History",
   "Run /compact in this Copilot chat, start a new chat, or remove large attached files/tool output/terminal output before retrying.": "Run /compact in this Copilot chat, start a new chat, or remove large attached files/tool output/terminal output before retrying.",
   "Select API Key Scope": "Select API Key Scope",

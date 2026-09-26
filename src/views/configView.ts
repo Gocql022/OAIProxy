@@ -14,6 +14,7 @@ import {
 	normalizeProviderConfigs,
 	PROVIDER_CONFIG_STORAGE_KEY,
 	resolveInheritedProviderModels,
+	syncProviderApiModeToModels,
 	toProviderInheritedModel,
 	upsertProviderConfig,
 } from "../providerTransport";
@@ -48,6 +49,7 @@ interface InitPayload {
 	};
 	commitModel: string;
 	commitLanguage: string;
+	visionBridgeEnabled: boolean;
 	visionBridgeModel: string;
 	visionBridgePrompt: string;
 	models: HFModelItem[];
@@ -281,6 +283,7 @@ interface ExportConfig {
 	readFileLines: number;
 	/** Whether API keys were included in this export. Backward-compatible with older files that predate this field. */
 	includeApiKey?: boolean;
+	visionBridgeEnabled?: boolean;
 	visionBridgeModel?: string;
 	visionBridgePrompt?: string;
 }
@@ -300,6 +303,7 @@ type IncomingMessage =
 			retry: { enabled?: boolean; max_attempts?: number; interval_ms?: number; status_codes?: number[] };
 			commitModel: string;
 			commitLanguage: string;
+			visionBridgeEnabled: boolean;
 			visionBridgeModel: string;
 			visionBridgePrompt: string;
 	  }
@@ -501,6 +505,7 @@ export class ConfigViewPanel {
 					message.retry,
 					message.commitModel,
 					message.commitLanguage,
+					message.visionBridgeEnabled,
 					message.visionBridgeModel,
 					message.visionBridgePrompt
 				);
@@ -723,6 +728,7 @@ export class ConfigViewPanel {
 		const commitModel = foundModel ? `${foundModel.id}${foundModel.configId ? "::" + foundModel.configId : ""}` : "";
 		const commitLanguage = config.get<string>("oaicopilot.commitLanguage", "English");
 		const readFileLines = config.get<number>("oaicopilot.readFileLines", 0);
+		const visionBridgeEnabled = config.get<boolean>("oaicopilot.visionBridgeEnabled", true);
 		const visionBridgeModel = config.get<string>("oaicopilot.visionBridgeModel", "");
 		const visionBridgePrompt = config.get<string>("oaicopilot.visionBridgePrompt", "");
 		const payload: InitPayload = {
@@ -733,6 +739,7 @@ export class ConfigViewPanel {
 			retry,
 			commitModel,
 			commitLanguage,
+			visionBridgeEnabled,
 			visionBridgeModel,
 			visionBridgePrompt,
 			models,
@@ -755,6 +762,7 @@ export class ConfigViewPanel {
 		retry: { enabled?: boolean; max_attempts?: number; interval_ms?: number; status_codes?: number[] },
 		commitModel: string,
 		commitLanguage: string,
+		visionBridgeEnabled: boolean,
 		visionBridgeModel: string,
 		visionBridgePrompt: string
 	) {
@@ -766,6 +774,11 @@ export class ConfigViewPanel {
 		await config.update("oaicopilot.readFileLines", readFileLines, vscode.ConfigurationTarget.Global);
 		await config.update("oaicopilot.retry", retry, vscode.ConfigurationTarget.Global);
 		await config.update("oaicopilot.commitLanguage", commitLanguage, vscode.ConfigurationTarget.Global);
+		await config.update(
+			"oaicopilot.visionBridgeEnabled",
+			visionBridgeEnabled !== false,
+			vscode.ConfigurationTarget.Global
+		);
 		await config.update(
 			"oaicopilot.visionBridgeModel",
 			visionBridgeModel.trim(),
@@ -935,18 +948,35 @@ export class ConfigViewPanel {
 		const providers = this.getProviderConfigs();
 		const migrated = migrateProviderPlaceholderModels(models, providers);
 		const existingProviderModel = findProviderTransportModel(migrated.models, trimmedProvider, migrated.providers);
+		const nextApiMode = ((apiMode as HFApiMode) || existingProviderModel?.apiMode || "openai") as HFApiMode;
 		const updatedProviders = upsertProviderConfig(migrated.providers, trimmedProvider, {
 			baseUrl: baseUrl || existingProviderModel?.baseUrl,
-			apiMode: ((apiMode as HFApiMode) || existingProviderModel?.apiMode || "openai") as HFApiMode,
+			apiMode: nextApiMode,
 			authMode: effectiveAuthMode,
 			headers,
 		});
 
-		if (migrated.changed) {
-			await config.update("oaicopilot.models", migrated.models, vscode.ConfigurationTarget.Global);
+		// Always sync the chosen API mode onto every model of this provider
+		// that carries its own transport (baseUrl). Inherited models keep
+		// resolving from Provider Management at runtime, so they are left
+		// untouched.
+		const syncResult = syncProviderApiModeToModels(migrated.models, trimmedProvider, nextApiMode);
+		const modelsToSave = syncResult.updatedModels.length > 0 ? syncResult.models : migrated.models;
+
+		if (migrated.changed || syncResult.updatedModels.length > 0) {
+			await config.update("oaicopilot.models", modelsToSave, vscode.ConfigurationTarget.Global);
 		}
 		await this.updateProviderConfigs(updatedProviders);
-		vscode.window.showInformationMessage(vscode.l10n.t("Provider {0} has been updated.", provider));
+		const syncedCount = syncResult.updatedModels.length;
+		vscode.window.showInformationMessage(
+			syncedCount > 0
+				? vscode.l10n.t(
+						"Provider {0} has been updated, and the API mode has been synced to {1} model(s) under it.",
+						provider,
+						syncedCount
+					)
+				: vscode.l10n.t("Provider {0} has been updated.", provider)
+		);
 		this.refreshConfiguration();
 		// Send refresh signal to frontend
 		await this.sendInit();
@@ -1255,6 +1285,7 @@ export class ConfigViewPanel {
 			const readFileLines = config.get<number>("oaicopilot.readFileLines", 0);
 			const models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
 			const providerConfigs = this.getProviderConfigs();
+			const visionBridgeEnabled = config.get<boolean>("oaicopilot.visionBridgeEnabled", true);
 			const visionBridgeModel = config.get<string>("oaicopilot.visionBridgeModel", "");
 			const visionBridgePrompt = config.get<string>("oaicopilot.visionBridgePrompt", "");
 
@@ -1295,6 +1326,7 @@ export class ConfigViewPanel {
 				includeApiKey,
 				providerKeys,
 				providerUsageKeys,
+				visionBridgeEnabled,
 				visionBridgeModel,
 				visionBridgePrompt,
 			};
@@ -1353,6 +1385,13 @@ export class ConfigViewPanel {
 			await config.update("oaicopilot.retry", importData.retry, vscode.ConfigurationTarget.Global);
 			await config.update("oaicopilot.readFileLines", importData.readFileLines, vscode.ConfigurationTarget.Global);
 			await config.update("oaicopilot.commitLanguage", importData.commitLanguage, vscode.ConfigurationTarget.Global);
+			if (importData.visionBridgeEnabled !== undefined) {
+				await config.update(
+					"oaicopilot.visionBridgeEnabled",
+					importData.visionBridgeEnabled !== false,
+					vscode.ConfigurationTarget.Global
+				);
+			}
 			if (importData.visionBridgeModel !== undefined) {
 				await config.update(
 					"oaicopilot.visionBridgeModel",

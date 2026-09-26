@@ -6,7 +6,7 @@ import {
 	runModelConnectionTests,
 	sanitizeModelConnectionTestError,
 } from "../views/configView";
-import { getMissingProviderSetupMessage, resolveProviderBackedModel } from "../providerTransport";
+import { getMissingProviderSetupMessage, resolveProviderBackedModel, syncProviderApiModeToModels } from "../providerTransport";
 import type { HFModelItem } from "../types";
 import type { CancellationToken } from "vscode";
 
@@ -390,6 +390,104 @@ suite("configView", () => {
 			result.models.map((item) => `${item.id}${item.configId ? "::" + item.configId : ""}`),
 			["MiniMax-M3"]
 		);
+	});
+
+	test("provider API mode sync updates every transport-bearing model of the provider", () => {
+		const models = [
+			model({
+				id: "MiniMax-M3",
+				configId: "openai",
+				owned_by: "minimax",
+				baseUrl: "https://api.minimax.io/v1",
+				apiMode: "openai",
+			}),
+			model({
+				id: "MiniMax-M3",
+				configId: "anthropic",
+				owned_by: "minimax",
+				baseUrl: "https://api.minimax.io/anthropic",
+				apiMode: "anthropic",
+			}),
+		];
+
+		const result = syncProviderApiModeToModels(models, "minimax", "openai-responses");
+
+		assert.deepStrictEqual(
+			result.updatedModels.map((item) => `${item.id}::${item.configId}`),
+			["MiniMax-M3::openai", "MiniMax-M3::anthropic"]
+		);
+		for (const updated of result.updatedModels) {
+			assert.strictEqual(updated.apiMode, "openai-responses");
+		}
+		assert.deepStrictEqual(result.models, [
+			{ ...models[0], apiMode: "openai-responses" },
+			{ ...models[1], apiMode: "openai-responses" },
+		]);
+	});
+
+	test("provider API mode sync leaves inherited and placeholder models untouched", () => {
+		const inherited = model({
+			id: "kimi-k2.5",
+			owned_by: "kimi",
+			inheritProvider: true,
+		});
+		const placeholder = model({
+			id: "__provider__kimi",
+			owned_by: "kimi",
+			baseUrl: "https://token.example.test/v1",
+			apiMode: "openai",
+		});
+		const manual = model({
+			id: "kimi-k2.5-flash",
+			owned_by: "kimi",
+			baseUrl: "https://token.example.test/v1",
+			apiMode: "openai",
+		});
+
+		const result = syncProviderApiModeToModels([inherited, placeholder, manual], "kimi", "anthropic");
+
+		assert.deepStrictEqual(result.updatedModels.map((item) => item.id), ["kimi-k2.5-flash"]);
+		assert.strictEqual(result.models[0].apiMode, undefined);
+		assert.strictEqual(result.models[1].apiMode, "openai");
+		assert.strictEqual(result.models[2].apiMode, "anthropic");
+	});
+
+	test("provider API mode sync skips models of other providers and no-op modes", () => {
+		const models = [
+			model({
+				id: "gpt-5.5",
+				owned_by: "openai",
+				baseUrl: "https://api.openai.com/v1",
+				apiMode: "openai-responses",
+			}),
+			model({
+				id: "MiniMax-M3",
+				owned_by: "minimax",
+				baseUrl: "https://api.minimax.io/v1",
+				apiMode: "openai",
+			}),
+		];
+
+		const result = syncProviderApiModeToModels(models, "minimax", "openai");
+
+		assert.deepStrictEqual(result.updatedModels, []);
+		assert.deepStrictEqual(result.models, models);
+	});
+
+	test("provider API mode sync without a mode is a no-op", () => {
+		const models = [
+			model({
+				id: "MiniMax-M3",
+				owned_by: "minimax",
+				baseUrl: "https://api.minimax.io/v1",
+				apiMode: "openai",
+			}),
+		];
+
+		const result = syncProviderApiModeToModels(models, "minimax", undefined);
+
+		assert.deepStrictEqual(result.updatedModels, []);
+		assert.deepStrictEqual(result.models, models);
 	});
 });
 

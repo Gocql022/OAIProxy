@@ -75,6 +75,7 @@
 	"config.commitLanguage.description": "生成的 Git 提交消息使用的语言。默认 English。",
 	"config.commitMessagePrompt.description": "用于生成提交消息的自定义系统提示。如果未提供，则使用默认提示。",
 	"config.readFileLines.description": "使用 `read_file` 工具时读取的行数。行数过多可能消耗更多 token。默认 0，由模型决定行数。",
+	"config.visionBridgeEnabled.description": "启用视觉桥接：使用具备视觉能力的模型为纯文本模型描述图像。默认启用。",
 	"config.visionBridgeModel.description": "用于为纯文本模型描述图像的视觉桥接模型。可以是任意已注册的语言模型 ID（例如 'Qwen/Qwen2.5-VL-72B-Instruct'）。留空将自动选择第一个配置了 \"vision\": true 的模型。",
 	"config.visionBridgePrompt.description": "视觉桥接用于描述图像的自定义提示。留空则使用默认提示：'Describe this image. Include visible text, code, UI, diagrams, and other important details.'"
 }

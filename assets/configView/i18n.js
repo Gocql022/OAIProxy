@@ -50,9 +50,12 @@
 		"Commit Language": "提交语言",
 		"Language for generated Git commit messages.": "生成的 Git 提交消息使用的语言。",
 		"Vision Bridge": "视觉桥接",
+		"Enable Vision Bridge": "启用视觉桥接",
+		"Describe images for text-only models using a vision-capable model. Disable this to stop advertising image support for text-only models and leave images untouched.":
+			"使用具备视觉能力的模型为纯文本模型描述图像，关闭后将不再为纯文本模型提供图像支持。",
 		"Vision Bridge Model": "视觉桥接模型",
-		"Model used to describe images for text-only models. Pick one from the list or type any registered model id. Leave empty for automatic selection.":
-			"用于为纯文本模型描述图像的模型。从列表中选择或输入任意已注册的模型 ID。留空则自动选择。",
+		"Model used to describe images for text-only models. Pick one from the configured vision-capable models. Leave empty for automatic selection.":
+			"用于为纯文本模型描述图像的模型。从已配置的视觉能力模型中选择。留空则自动选择。",
 		"Auto (first configured vision model)": "自动（第一个已配置的视觉模型）",
 		"Vision Bridge Prompt": "视觉桥接提示词",
 		"Custom prompt used to describe images. Leave empty to use the default prompt.":

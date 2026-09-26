@@ -25,6 +25,18 @@ export function getVisionPrompt(): string {
 }
 
 /**
+ * Whether the vision bridge is enabled. Controlled by the user setting
+ * `oaicopilot.visionBridgeEnabled` (default true, so existing setups keep
+ * working). When disabled, text-only models never have images described or
+ * advertised as image-capable.
+ */
+export function isVisionBridgeEnabled(): boolean {
+	const config = vscode.workspace.getConfiguration();
+	const enabled = config.get<boolean>("oaicopilot.visionBridgeEnabled", true);
+	return enabled !== false;
+}
+
+/**
  * Resolve the explicitly configured vision bridge model id
  * (`oaicopilot.visionBridgeModel`), trimmed. Empty means automatic selection.
  */
@@ -154,6 +166,9 @@ function fullModelId(m: HFModelItem): string {
  * bridge-eligible models.
  */
 export function hasVisionModelAvailable(userModels: HFModelItem[], excludeFullId: string): boolean {
+	if (!isVisionBridgeEnabled()) {
+		return false;
+	}
 	const configuredKey = getConfiguredVisionBridgeModel();
 	if (configuredKey && configuredKey !== excludeFullId) {
 		return true;

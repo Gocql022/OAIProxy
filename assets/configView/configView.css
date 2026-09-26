@@ -121,7 +121,7 @@ button:active {
 	min-width: 150px;
 	margin-bottom: 0;
 }
-.row input {
+.row input:not([type="checkbox"]) {
 	flex: 1;
 	margin-bottom: 0;
 }
@@ -424,6 +424,27 @@ tr:hover {
 
 .provider-id-cell {
 	overflow-wrap: anywhere;
+}
+
+.vision-bridge-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
+	margin: 0;
+	margin-bottom: 6px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.vision-bridge-toggle input[type="checkbox"] {
+	flex: 0 0 auto;
+	width: 16px;
+	min-width: 16px;
+	height: 16px;
+	margin: 0;
+	accent-color: var(--vscode-button-background);
+	cursor: pointer;
 }
 
 .provider-name {

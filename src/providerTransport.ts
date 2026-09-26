@@ -91,6 +91,52 @@ export function deleteProviderConfig(providers: readonly ProviderConfigItem[], p
 	return providers.filter((item) => normalizeProvider(item.provider) !== normalizedProvider);
 }
 
+/**
+ * Result of syncing a provider's API mode onto all of its models.
+ */
+export interface SyncProviderApiModeResult {
+	models: HFModelItem[];
+	updatedModels: HFModelItem[];
+}
+
+/**
+ * Sync a provider API mode onto every model owned by the provider that
+ * carries its own provider transport (a `baseUrl`). Inherited models
+ * (`inheritProvider: true`) resolve transport from Provider Management at
+ * runtime, and hidden `__provider__*` placeholder rows are never edited, so
+ * neither is touched here.
+ */
+export function syncProviderApiModeToModels(
+	models: readonly HFModelItem[],
+	provider: string,
+	apiMode: HFApiMode | undefined
+): SyncProviderApiModeResult {
+	if (!apiMode) {
+		return { models: [...models], updatedModels: [] };
+	}
+	const normalizedProvider = normalizeProvider(provider);
+	if (!normalizedProvider) {
+		return { models: [...models], updatedModels: [] };
+	}
+
+	const updatedModels: HFModelItem[] = [];
+	const nextModels = models.map((model) => {
+		if (
+			isProviderPlaceholderModel(model) ||
+			model.inheritProvider === true ||
+			normalizeProvider(model.owned_by) !== normalizedProvider ||
+			!model.baseUrl ||
+			model.apiMode === apiMode
+		) {
+			return model;
+		}
+		const updated: HFModelItem = { ...model, apiMode };
+		updatedModels.push(updated);
+		return updated;
+	});
+	return { models: nextModels, updatedModels };
+}
+
 export function getProviderConfig(
 	providers: readonly ProviderConfigItem[],
 	provider: string | undefined

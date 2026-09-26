@@ -75,6 +75,7 @@
 	"config.commitLanguage.description": "Language for generated Git commit messages. Default is English.",
 	"config.commitMessagePrompt.description": "Custom system prompt for commit message generation. If not provided, uses the default prompt.",
 	"config.readFileLines.description": "Number of lines to read when using `read_file` tool. Large lines may cost more tokens. Default is 0, let model decide lines.",
+	"config.visionBridgeEnabled.description": "Enable the vision bridge, which describes images for text-only models using a vision-capable model. Default is true.",
 	"config.visionBridgeModel.description": "Vision bridge model used to describe images for text-only models. Can be any registered language model id (for example 'Qwen/Qwen2.5-VL-72B-Instruct'). Leave empty to automatically pick the first configured model with \"vision\": true.",
 	"config.visionBridgePrompt.description": "Custom prompt used by the vision bridge to describe images. Leave empty to use the default prompt: 'Describe this image. Include visible text, code, UI, diagrams, and other important details.'"
 }

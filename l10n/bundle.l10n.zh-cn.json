@@ -108,6 +108,7 @@
   "Provider {0} does not support usage checks yet.": "供应商 {0} 尚不支持用量检查。",
   "Provider {0} has been added.": "供应商 {0} 已添加。",
   "Provider {0} has been updated.": "供应商 {0} 已更新。",
+  "Provider {0} has been updated, and the API mode has been synced to {1} model(s) under it.": "供应商 {0} 已更新，并将 API 模式同步到下属的 {1} 个模型。",
   "Reasoning History": "推理历史",
   "Run /compact in this Copilot chat, start a new chat, or remove large attached files/tool output/terminal output before retrying.": "重试前请在 Copilot 聊天中运行 /compact、开始新聊天，或移除较大的附件文件/工具输出/终端输出。",
   "Select API Key Scope": "选择 API 密钥范围",

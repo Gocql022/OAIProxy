@@ -27,7 +27,12 @@ import {
 	PROVIDER_CONFIG_STORAGE_KEY,
 	resolveProviderBackedModel,
 } from "./providerTransport";
-import { messagesContainImages, processMessagesForVision, VISION_BRIDGE_REQUEST_OPTION } from "./visionBridge";
+import {
+	isVisionBridgeEnabled,
+	messagesContainImages,
+	processMessagesForVision,
+	VISION_BRIDGE_REQUEST_OPTION,
+} from "./visionBridge";
 
 import { prepareLanguageModelChatInformation } from "./provideModel";
 import { countMessageTokens } from "./provideToken";
@@ -430,9 +435,12 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			}
 
 			// Vision bridge: for non-vision models, replace images with text descriptions
-			// obtained from a configured vision-capable model.
+			// obtained from a configured vision-capable model. The whole bridge can
+			// be turned off with oaicopilot.visionBridgeEnabled, in which case image
+			// parts are removed only for invalid placeholders and otherwise passed
+			// through unchanged.
 			let workingMessages: readonly LanguageModelChatRequestMessage[] = messages;
-			if (um?.vision === false && inputContainsImages) {
+			if (um?.vision === false && inputContainsImages && isVisionBridgeEnabled()) {
 				try {
 					workingMessages = await processMessagesForVision(messages, model.id, token);
 					if (token.isCancellationRequested) {
