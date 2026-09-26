@@ -141,5 +141,12 @@
   "Open sign-in page": "打开登录页面",
   "Open {0} manually and enter code {1}.": "请手动打开 {0} 并输入代码 {1}。",
   "OpenAI OAuth device sign-in\n\nDevice code: {0}\n\nSign-in page: {1}\n\nThe code expires in about {2} minutes.": "OpenAI OAuth 设备登录\n\n设备码：{0}\n\n登录页面：{1}\n\n该代码约 {2} 分钟后过期。",
-  "OpenAI device code copied to the clipboard.": "OpenAI 设备码已复制到剪贴板。"
+  "OpenAI device code copied to the clipboard.": "OpenAI 设备码已复制到剪贴板。",
+  "xAI OAuth device sign-in: open {0} and enter code {1}.": "xAI OAuth 设备登录：请打开 {0} 并输入代码 {1}。",
+  "Signed in to xAI/Grok as {0}.": "已登录 xAI/Grok：{0}。",
+  "Signed in to xAI/Grok.": "已登录 xAI/Grok。",
+  "Signed out of xAI/Grok OAuth.": "已退出 xAI/Grok OAuth。",
+  "Signed in to OpenAI/Codex as {0}.": "已登录 OpenAI/Codex：{0}。",
+  "Signed in to OpenAI/Codex.": "已登录 OpenAI/Codex。",
+  "Signed out of OpenAI/Codex OAuth.": "已退出 OpenAI/Codex OAuth。"
 }

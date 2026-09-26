@@ -141,5 +141,12 @@
   "Open sign-in page": "Open sign-in page",
   "Open {0} manually and enter code {1}.": "Open {0} manually and enter code {1}.",
   "OpenAI OAuth device sign-in\n\nDevice code: {0}\n\nSign-in page: {1}\n\nThe code expires in about {2} minutes.": "OpenAI OAuth device sign-in\n\nDevice code: {0}\n\nSign-in page: {1}\n\nThe code expires in about {2} minutes.",
-  "OpenAI device code copied to the clipboard.": "OpenAI device code copied to the clipboard."
+  "OpenAI device code copied to the clipboard.": "OpenAI device code copied to the clipboard.",
+  "xAI OAuth device sign-in: open {0} and enter code {1}.": "xAI OAuth device sign-in: open {0} and enter code {1}.",
+  "Signed in to xAI/Grok as {0}.": "Signed in to xAI/Grok as {0}.",
+  "Signed in to xAI/Grok.": "Signed in to xAI/Grok.",
+  "Signed out of xAI/Grok OAuth.": "Signed out of xAI/Grok OAuth.",
+  "Signed in to OpenAI/Codex as {0}.": "Signed in to OpenAI/Codex as {0}.",
+  "Signed in to OpenAI/Codex.": "Signed in to OpenAI/Codex.",
+  "Signed out of OpenAI/Codex OAuth.": "Signed out of OpenAI/Codex OAuth."
 }

@@ -168,14 +168,20 @@ export function activate(context: vscode.ExtensionContext) {
 							// Remote/headless VS Code may not have a local browser bridge.
 						}
 						void vscode.window.showInformationMessage(
-							`xAI OAuth device sign-in: open ${verificationUri} and enter code ${info.userCode}.`
+							vscode.l10n.t(
+								"xAI OAuth device sign-in: open {0} and enter code {1}.",
+								verificationUri,
+								info.userCode
+							)
 						);
 					},
 				});
 				await saveXaiOAuthCredential(context.secrets, credential);
 				refreshLanguageModels(chatProvider);
 				vscode.window.showInformationMessage(
-					credential.email ? `Signed in to xAI/Grok as ${credential.email}.` : "Signed in to xAI/Grok."
+					credential.email
+						? vscode.l10n.t("Signed in to xAI/Grok as {0}.", credential.email)
+						: vscode.l10n.t("Signed in to xAI/Grok.")
 				);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
@@ -188,7 +194,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand("oaiproxy.logoutXaiOAuth", async () => {
 			await clearXaiOAuthCredential(context.secrets);
 			refreshLanguageModels(chatProvider);
-			vscode.window.showInformationMessage("Signed out of xAI/Grok OAuth.");
+			vscode.window.showInformationMessage(vscode.l10n.t("Signed out of xAI/Grok OAuth."));
 		})
 	);
 
@@ -203,7 +209,9 @@ export function activate(context: vscode.ExtensionContext) {
 				await saveOpenAIOAuthCredential(context.secrets, credential);
 				refreshLanguageModels(chatProvider);
 				vscode.window.showInformationMessage(
-					credential.email ? `Signed in to OpenAI/Codex as ${credential.email}.` : "Signed in to OpenAI/Codex."
+					credential.email
+						? vscode.l10n.t("Signed in to OpenAI/Codex as {0}.", credential.email)
+						: vscode.l10n.t("Signed in to OpenAI/Codex.")
 				);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
@@ -216,7 +224,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand("oaiproxy.logoutOpenAIOAuth", async () => {
 			await clearOpenAIOAuthCredential(context.secrets);
 			refreshLanguageModels(chatProvider);
-			vscode.window.showInformationMessage("Signed out of OpenAI/Codex OAuth.");
+			vscode.window.showInformationMessage(vscode.l10n.t("Signed out of OpenAI/Codex OAuth."));
 		})
 	);
 
