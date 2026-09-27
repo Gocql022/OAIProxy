@@ -173,12 +173,12 @@
                 "type": "string"
               },
               "authMode": {
-                "type": "string",
+                "description": "%config.models.authMode.description%",
                 "enum": [
                   "api-key",
                   "oauth"
                 ],
-                "description": "%config.models.authMode.description%"
+                "type": "string"
               },
               "baseUrl": {
                 "description": "%config.models.baseUrl.description%",
@@ -657,5 +657,5 @@
     "vscode:prepublish": "npm run compile",
     "watch": "tsc -watch -p ./"
   },
-  "version": "0.1.42"
+  "version": "0.1.43"
 }

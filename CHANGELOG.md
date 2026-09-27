@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.1.43 (2026-09-27)
+
+- Fix DeepSeek LiteLLM thinking requests through Nube by omitting named or required tool choices that the vLLM backend rejects, while preserving automatic tool selection and tool definitions.
+- Add regression coverage for DeepSeek thinking tool requests.
+
 ## 0.1.42 (2026-09-26)
 
 - Add OpenAI Codex OAuth sign-in/sign-out with device-code authentication, GPT-6/GPT-5.6 Quick Setup cards, credential refresh, and Codex quota usage checks.
