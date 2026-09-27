@@ -89,6 +89,13 @@ export class LiteLLMApi extends OpenaiApi {
 			delete extraBody.thinking;
 		}
 		if (usesDeepSeekThinking(um)) {
+			if (isThinkingEnabled(rb, extraBody)) {
+				// Nube's DeepSeek vLLM backend rejects named/required tool_choice
+				// values while thinking is enabled. Keep the tool definitions and
+				// let the backend select a tool automatically instead of turning the
+				// upstream 400 into LiteLLM's misleading fallback error.
+				delete rb.tool_choice;
+			}
 			preserveDeepSeekReasoningContent(rb, extraBody);
 		}
 		if (Object.keys(extraBody).length > 0) {
