@@ -38,7 +38,12 @@ suite("litellmApi", () => {
 			assert.strictEqual(body.enable_thinking, undefined);
 			assert.deepStrictEqual(body.extra_body, thinking ? { thinking } : undefined);
 			assert.deepStrictEqual(body.stream_options, { include_usage: true });
-			assert.deepStrictEqual(body.tool_choice, { type: "function", function: { name: "echo" } });
+			assert.deepStrictEqual(
+				body.tool_choice,
+				presetId === "litellm-deepseek-v4-1-flash"
+					? undefined
+					: { type: "function", function: { name: "echo" } }
+			);
 			assert.deepStrictEqual(body.tools, [
 				{ type: "function", function: { name: "echo", description: "Echo a value", parameters: { type: "object" } } },
 			]);
@@ -118,6 +123,29 @@ suite("litellmApi", () => {
 		);
 
 		assert.deepStrictEqual(body.messages, [{ role: "assistant", tool_calls: [{ id: "call-1" }] }]);
+	});
+
+	test("lets DeepSeek thinking choose tools automatically", () => {
+		const body = new LiteLLMApi("DeepSeek-V4.1-Flash").prepareRequestBody(
+			{
+				model: "DeepSeek-V4.1-Flash",
+				messages: [],
+				stream: true,
+			},
+			{
+				...model({ id: "DeepSeek-V4.1-Flash", thinking: { type: "enabled" } }),
+				max_tokens: 1024,
+			},
+			{
+				requestInitiator: "test",
+				toolMode: vscode.LanguageModelChatToolMode.Required,
+				tools: [{ name: "echo", description: "Echo a value", inputSchema: { type: "object" } }],
+			}
+		);
+
+		assert.ok(body.tools);
+		assert.strictEqual(body.tool_choice, undefined);
+		assert.deepStrictEqual(body.extra_body, { thinking: { type: "enabled" } });
 	});
 
 	test("maps thinking configuration into extra_body", () => {
