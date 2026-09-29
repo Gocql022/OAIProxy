@@ -1,3 +1,5 @@
+import { estimatePreparedRequest, type TokenContributor } from "./tokenEstimator";
+import type { EstimationContext } from "./tokenEstimationConfig";
 import * as vscode from "vscode";
 import { LanguageModelChatInformation, LanguageModelChatRequestMessage, LanguageModelChatTool } from "vscode";
 import { type CacheUsageRecord, getLatestCacheHitUsage, getLatestCacheUsage } from "./cacheUsage";
@@ -40,21 +42,24 @@ export interface TokenUsageReport {
 	status: TokenUsageStatus;
 	generatedAt: string;
 	note: string;
+	largestParts?: TokenContributor[];
+	partTypes?: Array<{ type: string; count: number; tokens: number }>;
 }
 
 export interface TokenUsageReportRequest {
 	messages: readonly LanguageModelChatRequestMessage[];
 	tools: readonly LanguageModelChatTool[] | undefined;
 	model: LanguageModelChatInformation;
-	modelConfig: { includeReasoningInRequest: boolean };
+	modelConfig: EstimationContext;
+	preparedBody?: unknown;
 }
 
 export interface TokenUsageEstimator {
 	countMessageDetails(
 		message: LanguageModelChatRequestMessage,
-		modelConfig: { includeReasoningInRequest: boolean }
+		modelConfig: EstimationContext
 	): Promise<MessageTokenDetails>;
-	countToolDefinitions(tools: readonly LanguageModelChatTool[]): Promise<number>;
+	countToolDefinitions(tools: readonly LanguageModelChatTool[], context?: EstimationContext): Promise<number>;
 }
 
 const DEFAULT_NOTE = vscode.l10n.t(
@@ -81,18 +86,34 @@ export async function createTokenUsageReport(
 	const categories = createTokenUsageCategories();
 	const currentUserMessageIndex = findCurrentUserPromptIndex(request.messages);
 	let messageTokens = 0;
+	let parts: TokenContributor[] = [];
 
-	for (let index = 0; index < request.messages.length; index++) {
+	for (let index = 0; request.preparedBody === undefined && index < request.messages.length; index++) {
 		const message = request.messages[index];
 		const details = await estimator.countMessageDetails(message, request.modelConfig);
 		messageTokens += details.totalTokens;
+		parts.push(...(details.parts ?? []).map((part) => ({ ...part, messageIndex: part.messageIndex ?? index })));
 		addMessageDetailsToCategories(categories, message, index, currentUserMessageIndex, details);
 	}
 
 	const toolCount = request.tools?.length ?? 0;
-	const toolDefinitionTokens = toolCount > 0 ? await estimator.countToolDefinitions(request.tools ?? []) : 0;
+	let toolDefinitionTokens = request.preparedBody === undefined && toolCount > 0 ? await estimator.countToolDefinitions(request.tools ?? [], request.modelConfig) : 0;
 	addCategoryTokens(categories, "toolDefinitions", toolDefinitionTokens);
 
+	if (request.preparedBody !== undefined) {
+		const prepared = await estimatePreparedRequest(request.preparedBody, request.modelConfig);
+		messageTokens = prepared.details.totalTokens;
+		toolDefinitionTokens = prepared.toolDefinitionTokens;
+		parts = prepared.details.parts ?? [];
+		for (const category of categories) { category.tokens = 0; }
+		for (const [category, tokens] of Object.entries(prepared.textCategories)) {
+			addCategoryTokens(categories, category as TokenUsageCategoryId, tokens);
+		}
+		addCategoryTokens(categories, "toolTraffic", prepared.details.toolCallTokens + prepared.details.toolResultTokens);
+		addCategoryTokens(categories, "media", prepared.details.imageTokens + prepared.details.binaryTokens);
+		addCategoryTokens(categories, "reasoning", prepared.details.reasoningTokens);
+		addCategoryTokens(categories, "toolDefinitions", toolDefinitionTokens);
+	}
 	const inputTokens = messageTokens + toolDefinitionTokens;
 	const maxInputTokens = Math.max(0, request.model.maxInputTokens);
 	const maxOutputTokens = Math.max(0, request.model.maxOutputTokens);
@@ -100,6 +121,13 @@ export async function createTokenUsageReport(
 	const inputUsagePercent = calculatePercentage(inputTokens, maxInputTokens);
 	const contextUsagePercent = calculatePercentage(inputTokens, maxContextTokens);
 
+	const partTypes = new Map<string, { type: string; count: number; tokens: number }>();
+	for (const part of parts) {
+		const summary = partTypes.get(part.type) ?? { type: part.type, count: 0, tokens: 0 };
+		summary.count++;
+		summary.tokens += part.tokens;
+		partTypes.set(part.type, summary);
+	}
 	return {
 		modelId: request.model.id,
 		modelName: request.model.name,
@@ -118,6 +146,8 @@ export async function createTokenUsageReport(
 		status: getTokenUsageStatus(inputUsagePercent),
 		generatedAt: new Date().toISOString(),
 		note: DEFAULT_NOTE,
+		partTypes: [...partTypes.values()],
+		largestParts: parts.sort((a, b) => b.tokens - a.tokens).slice(0, 5),
 	};
 }
 
@@ -263,6 +293,9 @@ export function getTokenBudgetErrorMessage(report: TokenUsageReport): string | u
 		.map((category) => `${category.label}: ${formatTokenCount(category.tokens)}`)
 		.join("; ");
 	const categorySuffix = largestCategories ? ` Largest categories: ${largestCategories}.` : "";
+	const parts = (report.largestParts ?? []).map((part) =>
+		`message ${part.messageIndex ?? "?"}/part ${part.partIndex}${part.callId ? ` call ${part.callId.slice(0, 128).replace(/[\r\n]/g, "")}` : ""}: ${part.type}${part.mime ? ` ${part.mime}` : ""}${part.bytes !== undefined ? ` ${part.bytes} bytes` : ""}, ${formatTokenCount(part.tokens)} tokens`
+	).join("; ");
 
 	return [
 		vscode.l10n.t(
@@ -277,6 +310,7 @@ export function getTokenBudgetErrorMessage(report: TokenUsageReport): string | u
 			"Run /compact in this Copilot chat, start a new chat, or remove large attached files/tool output/terminal output before retrying."
 		),
 		categorySuffix,
+		parts ? ` Largest parts: ${parts}.` : "",
 	].join(" ");
 }
 

@@ -1,3 +1,4 @@
+import type { EstimationContext } from "./tokenEstimationConfig";
 import * as vscode from "vscode";
 import { LanguageModelChatInformation, LanguageModelChatRequestMessage, LanguageModelChatTool } from "vscode";
 import { onDidChangeCacheUsage } from "./cacheUsage";
@@ -49,13 +50,15 @@ export async function updateContextStatusBar(
 	tools: readonly LanguageModelChatTool[] | undefined,
 	model: LanguageModelChatInformation,
 	statusBarItem: vscode.StatusBarItem,
-	modelConfig: { includeReasoningInRequest: boolean }
+	modelConfig: EstimationContext,
+	preparedBody?: unknown
 ): Promise<TokenUsageReport> {
 	const report = await createTokenUsageReport({
 		messages,
 		tools,
 		model,
 		modelConfig,
+		preparedBody,
 	});
 	latestTokenUsageReport = report;
 

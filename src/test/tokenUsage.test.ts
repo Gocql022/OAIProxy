@@ -216,7 +216,7 @@ suite("tokenUsage", () => {
 
 		assert.ok(details.overheadTokens > 0);
 		assert.ok(details.textTokens > 0);
-		assert.ok(details.binaryTokens > 0);
+		assert.strictEqual(details.binaryTokens, 0); // Unsupported binary is sent and counted as a text placeholder.
 		assert.ok(details.toolCallTokens > 0);
 		assert.ok(details.toolResultTokens > 0);
 		assert.strictEqual(

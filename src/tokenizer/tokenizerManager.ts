@@ -26,6 +26,13 @@ class TokenCache {
 		// Calculate size of new entry
 		const entrySize = key.length * 2 + 8; // Approximate size in bytes
 
+		if (entrySize > this.maxSizeBytes) {
+			return;
+		}
+		if (this.cache.delete(key)) {
+			this.currentSize -= entrySize;
+		}
+
 		// Evict if would exceed limits
 		while (
 			(this.cache.size >= this.maxSize || this.currentSize + entrySize > this.maxSizeBytes) &&
@@ -95,8 +102,13 @@ export class TokenizerManager {
 			})();
 		}
 
-		this.tokenizer = await this.tokenizerReady;
-		return this.tokenizer;
+		try {
+			this.tokenizer = await this.tokenizerReady;
+			return this.tokenizer;
+		} catch (error) {
+			this.tokenizerReady = null;
+			throw error;
+		}
 	}
 
 	async countTokens(text: string): Promise<number> {
