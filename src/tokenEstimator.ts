@@ -286,6 +286,9 @@ export async function countMessageTokens(
 	input: string | vscode.LanguageModelChatRequestMessage,
 	context: EstimationContext
 ): Promise<number> {
+	if (typeof input === "string") {
+		return textTokenLength(input, context);
+	}
 	return (await countMessageTokenDetails(input, context)).totalTokens;
 }
 
