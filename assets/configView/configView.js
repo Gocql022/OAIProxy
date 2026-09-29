@@ -140,7 +140,17 @@ document.getElementById("saveBase").addEventListener("click", () => {
 	});
 });
 
+const configurationContent = document.getElementById("configurationContent");
+const configurationLoading = document.getElementById("configurationLoading");
+const configurationLoadingText = document.getElementById("configurationLoadingText");
+const retryInitialization = document.getElementById("retryInitialization");
+
 const handleRefresh = () => {
+	configurationContent.inert = true;
+	configurationContent.setAttribute("aria-busy", "true");
+	configurationLoading.hidden = false;
+	configurationLoadingText.textContent = "Loading configuration...";
+	retryInitialization.hidden = true;
 	// Hide the model form if it's visible
 	if (modelFormSection.style.display !== "none") {
 		modelFormSection.style.display = "none";
@@ -157,6 +167,8 @@ document.getElementById("exportConfig").addEventListener("click", () => {
 document.getElementById("importConfig").addEventListener("click", () => {
 	vscode.postMessage({ type: "importConfig" });
 });
+
+retryInitialization.addEventListener("click", handleRefresh);
 
 // Refresh buttons event listeners
 document.getElementById("refreshGlobalConfig").addEventListener("click", handleRefresh);
@@ -976,8 +988,10 @@ function renderProviderUsageChecks() {
 			return `
 				<tr data-provider="${providerAttr}">
 					<td class="provider-id-cell">
-						<div class="provider-name">${providerAttr}</div>
-						<div class="provider-meta">${escapeHtml(formatModelList(target))}</div>
+						<div class="provider-identity">
+							<div class="provider-name">${providerAttr}</div>
+							<div class="provider-meta">${escapeHtml(formatModelList(target))}</div>
+						</div>
 					</td>
 					<td>
 						<div class="usage-plan">${escapeHtml(isUnsupported ? "Unavailable" : getProviderUsagePlan(target.usageKind))}</div>
@@ -1655,6 +1669,14 @@ window.addEventListener("message", (event) => {
 			renderModelPresets();
 			renderModels();
 			renderProviderUsageChecks();
+			configurationContent.inert = false;
+			configurationContent.setAttribute("aria-busy", "false");
+			configurationLoading.hidden = true;
+			break;
+		case "initError":
+			configurationLoading.hidden = false;
+			configurationLoadingText.textContent = "Unable to load configuration. Retry to continue.";
+			retryInitialization.hidden = false;
 			break;
 		case "modelsFetched":
 			// Handle the response from fetchModels
@@ -1809,8 +1831,10 @@ function renderProviders() {
 			return `
 				<tr data-provider="${providerAttr}" data-auth-mode="${escapeHtml(providerConfig.authMode || (isXaiProvider || isOpenAIOAuth ? "oauth" : "api-key"))}">
 					<td class="provider-id-cell">
-						<div class="provider-name">${providerLabel}</div>
-						<div class="provider-meta">${providerMeta}</div>
+						<div class="provider-identity">
+							<div class="provider-name">${providerLabel}</div>
+							<div class="provider-meta">${providerMeta}</div>
+						</div>
 					</td>
 					<td class="provider-url-cell"><input type="text" class="provider-input" data-field="baseUrl" value="${escapeHtml(baseUrl)}" placeholder="Base URL" /></td>
 					<td class="provider-key-cell">${authMethodCell}</td>

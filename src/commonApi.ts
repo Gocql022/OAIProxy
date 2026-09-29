@@ -13,6 +13,17 @@ import { VersionManager } from "./versionManager";
 import { createLanguageModelThinkingPart } from "./vscodeCompat";
 
 export abstract class CommonApi<TMessage, TRequestBody> {
+	private streamObserver?: () => void;
+
+	setStreamObserver(observer: () => void): void {
+		this.streamObserver = observer;
+	}
+
+	protected observeStreamChunk(): void {
+		this.streamObserver?.();
+		this.streamObserver = undefined;
+	}
+
 	private _responseCompleted = false;
 
 	get responseCompleted(): boolean {

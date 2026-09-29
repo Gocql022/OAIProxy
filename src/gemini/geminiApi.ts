@@ -795,6 +795,7 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 				}
 
 				const { done, value } = await reader.read();
+				if (value?.byteLength) { this.observeStreamChunk(); }
 				if (done) {
 					break;
 				}

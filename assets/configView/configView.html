@@ -16,6 +16,11 @@
 			</div>
 		</header>
 
+		<div id="configurationLoading" class="configuration-loading" role="status">
+			<span id="configurationLoadingText">Loading configuration...</span>
+			<button id="retryInitialization" class="secondary" hidden>Retry</button>
+		</div>
+		<main id="configurationContent" inert aria-busy="true">
 		<section id="globalConfigSection">
 			<div class="section-header">
 				<h2>Global Configuration</h2>
@@ -595,6 +600,7 @@
 				</div>
 			</section>
 
+		</main>
 			<script src="%SCRIPT_URI%" nonce="%NONCE%"></script>
 	</body>
 </html>

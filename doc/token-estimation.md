@@ -84,6 +84,16 @@ These events contain types, IDs and sizes only, never message text or base64. Im
 
 `calibration: "observe"` records numeric EWMA state without changing estimates. `"adaptive"` applies a multiplier after 20 eligible completed stateless text-only requests. EWMA α=0.1, bounded [1,2], never reduces estimates. Image/video, Vision Bridge, diagnostic, cancelled, unreported-usage and stateful requests are excluded. Actual usage is compared to the uncalibrated estimate to avoid feedback amplification. Cached input is not subtracted. Records are isolated by endpoint, API mode, full model/config ID and estimation settings/revision; only digests and numeric state are persisted, up to 100 profiles.
 
+## Panel and chat timing
+
+With `oaicopilot.logLevel: "debug"`, timing events are available without enabling token breakdowns:
+
+- `config.open`, `config.htmlReady`, `config.ready`, `config.credentialsReady`, and `config.initialized` share a panel ID. They distinguish HTML loading, the webview readiness handshake, and credential loading. The panel shows a loading state until its settings are ready; a credential failure offers Retry.
+- `request.timing` shares a request ID with `request.start`, `request.end`, and request errors. Its phases cover provider entry, optional Vision Bridge, preflight and estimation, dispatch, response headers, stream processing, first received bytes, first text/thinking/tool call, usage persistence, and completion. Dispatch/header events include the attempt number for retries. Use `dispatch`, not the earlier `request.body` summary, to measure time spent awaiting response headers.
+- `tokenCount.start` and `tokenCount.end` share a separate count ID, since Copilot can invoke counting outside a provider request. They include only model ID, input length or part count, token estimate, duration, and cancellation state.
+
+These timing events contain no prompts, response text, credentials, or request URLs. `firstChunk` can be a keepalive; `firstText` means text delivered to VS Code, not proof that the UI painted it. Durations include scheduling waits, and `complete` marks the end of the provider invocation even on failure or cancellation. Correlate with the Copilot/extension-host log to investigate delays before provider entry or after completion.
+
 ## Validation limits
 
 Headless tests cover valid PNGs with different byte sizes, all five adapters, parallel tool ordering, decoding/unknown binaries, image headers, tokenizer failure, configuration, Vision Bridge, calibration and a localhost HTTP replay. A live Copilot/OAuth replay requires the user to install the test extension. Verify actual image understanding and streaming usage there; do not treat local conversion tests as evidence that an upstream model saw an image. Collect at least 20 real eligible requests before assessing calibration accuracy. No new dependencies are required.

@@ -374,6 +374,7 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 				}
 
 				const { done, value } = await reader.read();
+				if (value?.byteLength) { this.observeStreamChunk(); }
 				if (done) {
 					break;
 				}

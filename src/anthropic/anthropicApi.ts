@@ -384,6 +384,7 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 				}
 
 				const { done, value } = await reader.read();
+				if (value?.byteLength) { this.observeStreamChunk(); }
 				if (done) {
 					break;
 				}

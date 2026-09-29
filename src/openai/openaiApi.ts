@@ -350,6 +350,7 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 				}
 
 				const { done, value } = await reader.read();
+				if (value?.byteLength) { this.observeStreamChunk(); }
 				if (done) {
 					break;
 				}
