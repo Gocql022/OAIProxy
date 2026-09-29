@@ -1,110 +1,77 @@
-export function getImageDimensions(base64: string) {
-	if (!base64.startsWith("data:image/")) {
-		throw new Error("Could not read image: invalid base64 image string");
-	}
-	const rawString = base64.split(",")[1];
-	switch (getMimeType(rawString)) {
-		case "image/png":
-			return getPngDimensions(rawString);
-		case "image/gif":
-			return getGifDimensions(rawString);
-		case "image/jpeg":
-		case "image/jpg":
-			return getJpegDimensions(rawString);
-		case "image/webp":
-			return getWebPDimensions(rawString);
-		default:
-			throw new Error("Unsupported image format");
-	}
+export interface ImageSize {
+	width: number;
+	height: number;
 }
 
-export function getPngDimensions(base64: string) {
-	const header = atob(base64.slice(0, 50)).slice(16, 24);
-	const uint8 = Uint8Array.from(header, (c) => c.charCodeAt(0));
-	const dataView = new DataView(uint8.buffer);
-
-	return {
-		width: dataView.getUint32(0, false),
-		height: dataView.getUint32(4, false),
-	};
-}
-
-export function getGifDimensions(base64: string) {
-	const header = atob(base64.slice(0, 50));
-	const uint8 = Uint8Array.from(header, (c) => c.charCodeAt(0));
-	const dataView = new DataView(uint8.buffer);
-
-	return {
-		width: dataView.getUint16(6, true),
-		height: dataView.getUint16(8, true),
-	};
-}
-
-export function getJpegDimensions(base64: string) {
-	const binary = atob(base64);
-	const uint8 = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-	const length = uint8.length;
-	let offset = 2;
-
-	while (offset < length) {
-		const marker = (uint8[offset] << 8) | uint8[offset + 1];
-		const segmentLength = (uint8[offset + 2] << 8) | uint8[offset + 3];
-
-		if (marker >= 0xffc0 && marker <= 0xffc2) {
-			const dataView = new DataView(uint8.buffer, offset + 5, 4);
-			return {
-				height: dataView.getUint16(0, false),
-				width: dataView.getUint16(2, false),
-			};
+/** Header-only reads, with bounds checks and typed-array slice support. */
+export function readImageSize(bytes: Uint8Array, mime: string): ImageSize | undefined {
+	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	const ascii = (offset: number, length: number) => String.fromCharCode(...bytes.subarray(offset, offset + length));
+	let size: ImageSize | undefined;
+	mime = mime.toLowerCase().split(";")[0].trim();
+	if (
+		mime === "image/png" &&
+		bytes.length >= 24 &&
+		view.getUint32(0) === 0x89504e47 &&
+		view.getUint32(4) === 0x0d0a1a0a &&
+		view.getUint32(8) === 13 &&
+		ascii(12, 4) === "IHDR"
+	) {
+		size = { width: view.getUint32(16), height: view.getUint32(20) };
+	} else if (mime === "image/gif" && bytes.length >= 10 && ["GIF87a", "GIF89a"].includes(ascii(0, 6))) {
+		size = { width: view.getUint16(6, true), height: view.getUint16(8, true) };
+	} else if ((mime === "image/jpeg" || mime === "image/jpg") && bytes[0] === 0xff && bytes[1] === 0xd8) {
+		let offset = 2;
+		while (offset + 1 < bytes.length) {
+			if (bytes[offset++] !== 0xff) {
+				break;
+			}
+			while (bytes[offset] === 0xff) {
+				offset++;
+			}
+			const marker = bytes[offset++];
+			if (marker === 0xda || marker === 0xd9 || marker === undefined) {
+				break;
+			}
+			if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+				continue;
+			}
+			if (offset + 2 > bytes.length) {
+				break;
+			}
+			const length = view.getUint16(offset);
+			if (length < 2 || offset + length > bytes.length) {
+				break;
+			}
+			if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker) && length >= 8) {
+				size = { height: view.getUint16(offset + 3), width: view.getUint16(offset + 5) };
+				break;
+			}
+			offset += length;
 		}
-
-		offset += 2 + segmentLength;
-	}
-
-	throw new Error("JPEG dimensions not found");
-}
-
-export function getWebPDimensions(base64String: string) {
-	const binaryString = atob(base64String);
-	const binaryData = new Uint8Array(binaryString.length);
-	for (let i = 0; i < binaryString.length; i++) {
-		binaryData[i] = binaryString.charCodeAt(i);
-	}
-
-	if (binaryString.slice(0, 4) !== "RIFF" || binaryString.slice(8, 12) !== "WEBP") {
-		throw new Error("Not a valid WebP image.");
-	}
-
-	const chunkHeader = binaryString.slice(12, 16);
-
-	if (chunkHeader === "VP8 ") {
-		const width = (binaryData[26] | (binaryData[27] << 8)) & 0x3fff;
-		const height = (binaryData[28] | (binaryData[29] << 8)) & 0x3fff;
-		return { width, height };
-	} else if (chunkHeader === "VP8L") {
-		const width = (binaryData[21] | (binaryData[22] << 8)) & 0x3fff;
-		const height = (binaryData[23] | (binaryData[24] << 8)) & 0x3fff;
-		return { width, height };
-	} else if (chunkHeader === "VP8X") {
-		const width = ((binaryData[24] | (binaryData[25] << 8) | (binaryData[26] << 16)) & 0xffffff) + 1;
-		const height = ((binaryData[27] | (binaryData[28] << 8) | (binaryData[29] << 16)) & 0xffffff) + 1;
-		return { width, height };
-	} else {
-		throw new Error("Unsupported WebP format.");
-	}
-}
-
-export function getMimeType(base64String: string): string | undefined {
-	const mimeTypes: Record<string, string> = {
-		"/9j/": "image/jpeg",
-		iVBOR: "image/png",
-		R0lGOD: "image/gif",
-		UklGR: "image/webp",
-	};
-
-	for (const prefix of Object.keys(mimeTypes)) {
-		if (base64String.startsWith(prefix)) {
-			return mimeTypes[prefix];
+	} else if (mime === "image/webp" && bytes.length >= 20 && ascii(0, 4) === "RIFF" && ascii(8, 4) === "WEBP") {
+		const end = Math.min(bytes.length, view.getUint32(4, true) + 8);
+		for (let offset = 12; offset + 8 <= end; ) {
+			const kind = ascii(offset, 4);
+			const length = view.getUint32(offset + 4, true);
+			const data = offset + 8;
+			if (data + length > end) {
+				break;
+			}
+			if (kind === "VP8X" && length >= 10) {
+				const uint24 = (at: number) => bytes[at] + bytes[at + 1] * 256 + bytes[at + 2] * 65536;
+				size = { width: uint24(data + 4) + 1, height: uint24(data + 7) + 1 };
+			} else if (kind === "VP8L" && length >= 5 && bytes[data] === 0x2f) {
+				const bits = view.getUint32(data + 1, true);
+				size = { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
+			} else if (kind === "VP8 " && length >= 10 && ascii(data + 3, 3) === "\x9d\x01\x2a") {
+				size = { width: view.getUint16(data + 6, true) & 0x3fff, height: view.getUint16(data + 8, true) & 0x3fff };
+			}
+			if (size) {
+				break;
+			}
+			offset = data + length + (length % 2);
 		}
 	}
+	return size && size.width > 0 && size.height > 0 ? size : undefined;
 }
