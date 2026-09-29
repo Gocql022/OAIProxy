@@ -1,3 +1,4 @@
+import { toolResultText, encodeImageData, type ContentOptions } from "./messageContent";
 import * as vscode from "vscode";
 import type { HFModelItem, RetryConfig } from "./types";
 import { OpenAIFunctionToolDef } from "./openai/openaiTypes";
@@ -225,8 +226,8 @@ export function isVideoMimeType(mimeType: string): boolean {
 /**
  * Create a data URL for binary message content.
  */
-export function createDataUrl(dataPart: vscode.LanguageModelDataPart): string {
-	const base64Data = Buffer.from(dataPart.data).toString("base64");
+export function createDataUrl(dataPart: vscode.LanguageModelDataPart, options?: ContentOptions): string {
+	const base64Data = encodeImageData(dataPart, options);
 	return `data:${dataPart.mimeType};base64,${base64Data}`;
 }
 
@@ -249,23 +250,7 @@ export function isToolResultPart(value: unknown): value is { callId: string; con
  * @param pr Tool result-like object with content array.
  */
 export function collectToolResultText(pr: { content?: ReadonlyArray<unknown> }): string {
-	let text = "";
-	for (const c of pr.content ?? []) {
-		if (c instanceof vscode.LanguageModelTextPart) {
-			text += c.value;
-		} else if (typeof c === "string") {
-			text += c;
-		} else if (c instanceof vscode.LanguageModelDataPart && c.mimeType === "cache_control") {
-			/* ignore */
-		} else {
-			try {
-				text += JSON.stringify(c);
-			} catch {
-				/* ignore */
-			}
-		}
-	}
-	return text;
+	return toolResultText(pr.content ?? []);
 }
 
 /**

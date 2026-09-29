@@ -1,3 +1,4 @@
+import { prepareMessagesForApi, encodeImageData, type ContentOptions } from "../messageContent";
 import * as vscode from "vscode";
 import {
 	CancellationToken,
@@ -498,8 +499,9 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 
 	convertMessages(
 		messages: readonly LanguageModelChatRequestMessage[],
-		_modelConfig: { includeReasoningInRequest: boolean }
+		modelConfig: { includeReasoningInRequest: boolean } & ContentOptions
 	): GeminiChatMessage[] {
+		messages = prepareMessagesForApi(messages, { ...modelConfig, apiMode: "gemini" });
 		const out: GeminiChatMessage[] = [];
 		const toolNameByCallId = new Map<string, string>();
 
@@ -603,7 +605,7 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 					parts.push({ text: extracted.text });
 				}
 				for (const img of extracted.imageParts) {
-					const data = Buffer.from(img.data).toString("base64");
+					const data = encodeImageData(img, modelConfig);
 					parts.push({ inlineData: { mimeType: img.mimeType, data } });
 				}
 				if (parts.length > 0) {
@@ -827,6 +829,7 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 						continue;
 					}
 					responseUsage.record(payload);
+					this.observeResponseCompletion(payload);
 					if (payload.error !== undefined && payload.error !== null) {
 						sawProviderError = true;
 					}

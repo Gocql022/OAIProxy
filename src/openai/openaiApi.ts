@@ -1,3 +1,4 @@
+import { prepareMessagesForApi, type ContentOptions } from "../messageContent";
 import * as vscode from "vscode";
 import {
 	CancellationToken,
@@ -64,8 +65,9 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 	 */
 	convertMessages(
 		messages: readonly LanguageModelChatRequestMessage[],
-		modelConfig: { includeReasoningInRequest: boolean }
+		modelConfig: { includeReasoningInRequest: boolean } & ContentOptions
 	): OpenAIChatMessage[] {
+		messages = prepareMessagesForApi(messages, { ...modelConfig, apiMode: "openai" });
 		const out: OpenAIChatMessage[] = [];
 		for (const m of messages) {
 			const role = mapRole(m);
@@ -146,7 +148,7 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 					}
 
 					for (const imagePart of imageParts) {
-						const dataUrl = createDataUrl(imagePart);
+						const dataUrl = createDataUrl(imagePart, modelConfig);
 						contentArray.push({
 							type: "image_url",
 							image_url: {
@@ -372,6 +374,7 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 					try {
 						const parsed = JSON.parse(data) as Record<string, unknown>;
 						responseUsage.record(parsed);
+						this.observeResponseCompletion(parsed);
 						if (hasErrorPayload(parsed)) {
 							sawProviderError = true;
 						}

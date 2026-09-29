@@ -1,3 +1,4 @@
+import { prepareMessagesForApi, encodeImageData, type ContentOptions } from "../messageContent";
 import * as vscode from "vscode";
 import {
 	CancellationToken,
@@ -30,8 +31,9 @@ export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 	 */
 	convertMessages(
 		messages: readonly LanguageModelChatRequestMessage[],
-		_modelConfig: { includeReasoningInRequest: boolean }
+		modelConfig: { includeReasoningInRequest: boolean } & ContentOptions
 	): OllamaMessage[] {
+		messages = prepareMessagesForApi(messages, { ...modelConfig, apiMode: "ollama" });
 		const out: OllamaMessage[] = [];
 
 		for (const m of messages) {
@@ -48,7 +50,7 @@ export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 				} else if (part instanceof vscode.LanguageModelDataPart) {
 					// Convert image data to base64 for Ollama
 					if (part.mimeType.startsWith("image/")) {
-						const base64Data = Buffer.from(part.data).toString("base64");
+						const base64Data = encodeImageData(part, modelConfig);
 						imageParts.push(base64Data);
 					}
 				} else if (isLanguageModelThinkingPart(part)) {
@@ -202,6 +204,7 @@ export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 						const chunk: OllamaStreamChunk = JSON.parse(line);
 						logger.debug("ollama.stream.chunk", { modelId, data: chunk });
 						responseUsage.record(chunk);
+						this.observeResponseCompletion(chunk);
 						if (chunk.error) {
 							sawProviderError = true;
 						}

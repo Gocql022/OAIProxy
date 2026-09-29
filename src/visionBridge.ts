@@ -1,7 +1,8 @@
+import { isToolResultContent, isImageDataPart, getPartOrigin, setPartOrigin } from "./messageContent";
 import * as vscode from "vscode";
 import * as crypto from "crypto";
 import type { HFModelItem } from "./types";
-import { isImageMimeType, normalizeUserModels } from "./utils";
+import { normalizeUserModels } from "./utils";
 import { logger } from "./logger";
 
 const CACHE_MAX_ENTRIES = 50;
@@ -81,14 +82,10 @@ function createVisionBridgeMessages(imagePart: vscode.LanguageModelDataPart): vs
  * Check whether any message in the array contains an image data part.
  */
 export function messagesContainImages(messages: readonly vscode.LanguageModelChatRequestMessage[]): boolean {
-	for (const m of messages) {
-		for (const part of m.content ?? []) {
-			if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
-				return true;
-			}
-		}
-	}
-	return false;
+	const contains = (content: readonly unknown[]): boolean => content.some((part) =>
+		isImageDataPart(part) || (isToolResultContent(part) && contains(part.content))
+	);
+	return messages.some((message) => contains(message.content ?? []));
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +151,7 @@ async function describeImage(
 	visionModel: vscode.LanguageModelChat,
 	token: vscode.CancellationToken
 ): Promise<string> {
-	const cacheKey = hashImageData(imagePart.data);
+	const cacheKey = `${visionModel.id}:${hashImageData(imagePart.data)}`;
 
 	const cached = descriptionCache.get(cacheKey);
 	if (cached !== undefined) {
@@ -243,43 +240,45 @@ export async function processMessagesForVision(
 	let convertedCount = 0;
 	const result: vscode.LanguageModelChatRequestMessage[] = [];
 
-	for (const message of messages) {
-		const content = message.content ?? [];
-		let hasImages = false;
-
+	const rewrite = async (content: readonly unknown[]): Promise<unknown[]> => {
+		const out: unknown[] = [];
 		for (const part of content) {
-			if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
-				hasImages = true;
-				break;
+			if (token.isCancellationRequested) {
+				throw new Error("Vision bridge request cancelled");
 			}
-		}
-
-		if (!hasImages) {
-			result.push(message);
-			continue;
-		}
-
-		const newContent: unknown[] = [];
-
-		for (const part of content) {
-			if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
+			if (isImageDataPart(part)) {
 				const description = await describeImage(part, visionModel, token);
-				newContent.push(new vscode.LanguageModelTextPart(`\n[Image description: ${description}]\n`));
+				const text = new vscode.LanguageModelTextPart(`\n[Image description: ${description}]\n`);
+				setPartOrigin(text, getPartOrigin(part));
+				out.push(text);
 				convertedCount++;
+			} else if (isToolResultContent(part)) {
+				const replacement = { ...part, content: await rewrite(part.content) };
+				setPartOrigin(replacement, getPartOrigin(part));
+				out.push(replacement);
 			} else {
-				newContent.push(part);
+				out.push(part);
 			}
 		}
-
-		// Build a replacement message preserving role and name.
-		const replaced = {
-			role: message.role,
-			content: newContent,
-			name: (message as { name?: string }).name,
-		} as vscode.LanguageModelChatRequestMessage;
-		result.push(replaced);
+		return out;
+	};
+	for (const message of messages) {
+		result.push({ ...message, content: await rewrite(message.content ?? []) } as vscode.LanguageModelChatRequestMessage);
 	}
 
 	logger.info("visionBridge.complete", { convertedImages: convertedCount });
 	return result;
+}
+
+/** Lookup only: token counting must never start a vision request. */
+export function getCachedVisionDescription(part: vscode.LanguageModelDataPart, targetModelId: string, models: HFModelItem[]): string | undefined {
+	for (const model of models) {
+		if (model.vision === true && fullModelId(model) !== targetModelId) {
+			const description = descriptionCache.get(`${fullModelId(model)}:${hashImageData(part.data)}`);
+			if (description !== undefined) {
+				return `\n[Image description: ${description}]\n`;
+			}
+		}
+	}
+	return undefined;
 }

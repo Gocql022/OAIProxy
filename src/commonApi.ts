@@ -13,6 +13,25 @@ import { VersionManager } from "./versionManager";
 import { createLanguageModelThinkingPart } from "./vscodeCompat";
 
 export abstract class CommonApi<TMessage, TRequestBody> {
+	private _responseCompleted = false;
+
+	get responseCompleted(): boolean {
+		return this._responseCompleted;
+	}
+
+	/** Calibration requires an explicit terminal event, not just an HTTP EOF. */
+	protected observeResponseCompletion(payload: unknown): void {
+		if (!payload || typeof payload !== "object") {
+			return;
+		}
+		const value = payload as Record<string, unknown>;
+		const choices = Array.isArray(value.choices) ? value.choices : [];
+		const candidates = Array.isArray(value.candidates) ? value.candidates : [];
+		this._responseCompleted ||= value.type === "response.completed" || value.type === "message_stop" || value.done === true ||
+			choices.some((choice) => typeof choice?.finish_reason === "string" && choice.finish_reason.length > 0) ||
+			candidates.some((candidate) => typeof candidate?.finishReason === "string" && candidate.finishReason.length > 0);
+	}
+
 	/** Buffer for assembling streamed tool calls by index. */
 	protected _toolCallBuffers: Map<number, { id?: string; name?: string; args: string }> = new Map<
 		number,

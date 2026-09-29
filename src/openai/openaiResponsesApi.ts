@@ -1,3 +1,4 @@
+import { prepareMessagesForApi, type ContentOptions } from "../messageContent";
 import * as vscode from "vscode";
 import {
 	CancellationToken,
@@ -90,9 +91,10 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 
 	convertMessages(
 		messages: readonly LanguageModelChatRequestMessage[],
-		modelConfig: { includeReasoningInRequest: boolean },
+		modelConfig: { includeReasoningInRequest: boolean } & ContentOptions,
 		options?: { replayResponsesItemIds?: boolean; codexEasyInput?: boolean }
 	): ResponsesInputItem[] {
+		messages = prepareMessagesForApi(messages, { ...modelConfig, apiMode: "openai-responses" });
 		const out: ResponsesInputItem[] = [];
 		const replayResponsesItemIds = options?.replayResponsesItemIds !== false;
 		const codexEasyInput = options?.codexEasyInput === true;
@@ -199,7 +201,7 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 					contentArray.push({ type: "input_text", text: joinedText });
 				}
 				for (const imagePart of imageParts) {
-					const dataUrl = createDataUrl(imagePart);
+					const dataUrl = createDataUrl(imagePart, modelConfig);
 					contentArray.push({ type: "input_image", image_url: dataUrl, detail: "auto" });
 				}
 				if (contentArray.length > 0) {
@@ -394,6 +396,7 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 					try {
 						const parsed = JSON.parse(data) as Record<string, unknown>;
 						responseUsage.record(parsed);
+						this.observeResponseCompletion(parsed);
 						const eventType = typeof parsed.type === "string" ? parsed.type : "";
 						if (eventType === "error" || eventType === "response.failed" || eventType === "response.cancelled") {
 							sawProviderError = true;

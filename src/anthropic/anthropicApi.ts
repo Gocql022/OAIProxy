@@ -1,3 +1,4 @@
+import { prepareMessagesForApi, encodeImageData, isImageDataPart, type ContentOptions } from "../messageContent";
 import * as vscode from "vscode";
 import {
 	CancellationToken,
@@ -14,6 +15,7 @@ import type {
 	AnthropicRequestBody,
 	AnthropicContentBlock,
 	AnthropicTextBlock,
+	AnthropicImageBlock,
 	AnthropicToolUseBlock,
 	AnthropicToolResultBlock,
 	AnthropicStreamChunk,
@@ -66,8 +68,9 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 	 */
 	convertMessages(
 		messages: readonly LanguageModelChatRequestMessage[],
-		modelConfig: { includeReasoningInRequest: boolean }
+		modelConfig: { includeReasoningInRequest: boolean } & ContentOptions
 	): AnthropicMessage[] {
+		messages = prepareMessagesForApi(messages, { ...modelConfig, apiMode: "anthropic" });
 		const out: AnthropicMessage[] = [];
 
 		for (const m of messages) {
@@ -99,7 +102,12 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 					});
 				} else if (isToolResultPart(part)) {
 					const callId = (part as { callId?: string }).callId ?? "";
-					const content = collectToolResultText(part as { content?: ReadonlyArray<unknown> });
+					const parts = (part.content ?? []).map((item): AnthropicTextBlock | AnthropicImageBlock =>
+						isImageDataPart(item)
+							? { type: "image", source: { type: "base64", media_type: item.mimeType, data: encodeImageData(item, modelConfig) } }
+							: { type: "text", text: collectToolResultText({ content: [item] }) }
+					);
+					const content = parts.some((item) => item.type === "image") ? parts : parts.map((item) => item.type === "text" ? item.text : "").join("");
 					toolResults.push({
 						type: "tool_result",
 						tool_use_id: callId,
@@ -149,7 +157,7 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 
 			// Add image content
 			for (const imagePart of imageParts) {
-				const base64Data = Buffer.from(imagePart.data).toString("base64");
+				const base64Data = encodeImageData(imagePart, modelConfig);
 				contentBlocks.push({
 					type: "image",
 					source: {
@@ -189,9 +197,7 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 			// For tool results, they should be added to user messages
 			// We'll add them to the current message if it's a user message
 			if (role === "user" && toolResults.length > 0) {
-				for (const toolResult of toolResults) {
-					contentBlocks.push(toolResult);
-				}
+				contentBlocks.unshift(...toolResults);
 			} else if (toolResults.length > 0) {
 				// If tool results appear in non-user messages, log warning
 				console.warn("[Anthropic Provider] Tool results found in non-user message, ignoring");
@@ -405,6 +411,7 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 					try {
 						const chunk: AnthropicStreamChunk = JSON.parse(data);
 						responseUsage.record(chunk);
+						this.observeResponseCompletion(chunk);
 						if (chunk.type === "error") {
 							sawProviderError = true;
 						}
