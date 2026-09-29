@@ -1,7 +1,8 @@
+import { isToolResultContent, isImageDataPart, getPartOrigin, setPartOrigin } from "./messageContent";
 import * as vscode from "vscode";
 import * as crypto from "crypto";
 import type { HFModelItem } from "./types";
-import { isImageMimeType, normalizeUserModels } from "./utils";
+import { normalizeUserModels } from "./utils";
 import { isBridgeableImageData } from "./tokenizer/imageUtils";
 import { logger } from "./logger";
 
@@ -125,12 +126,14 @@ const MIN_IMAGE_DIMENSION = 14;
  * Check whether a data part is a usable image for the vision bridge.
  * Tiny or unparseable images (e.g. placeholders injected by the host) are
  * ignored so text-only requests are not routed through the vision model
- * for them.
+ * for them. The mime type is normalized the same way `isImageDataPart`
+ * does, so a part that counts as an image there is never dropped here
+ * just because of casing or a `;charset=` suffix.
  */
 function isBridgeImage(part: vscode.LanguageModelDataPart): boolean {
 	return (
 		part instanceof vscode.LanguageModelDataPart &&
-		isBridgeableImageData(part.data, part.mimeType, MIN_IMAGE_DIMENSION)
+		isBridgeableImageData(part.data, part.mimeType.toLowerCase().split(";")[0], MIN_IMAGE_DIMENSION)
 	);
 }
 
@@ -140,14 +143,10 @@ function isBridgeImage(part: vscode.LanguageModelDataPart): boolean {
  * to be stripped before the request reaches a text-only model.
  */
 export function messagesContainImages(messages: readonly vscode.LanguageModelChatRequestMessage[]): boolean {
-	for (const m of messages) {
-		for (const part of m.content ?? []) {
-			if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
-				return true;
-			}
-		}
-	}
-	return false;
+	const contains = (content: readonly unknown[]): boolean => content.some((part) =>
+		isImageDataPart(part) || (isToolResultContent(part) && contains(part.content))
+	);
+	return messages.some((message) => contains(message.content ?? []));
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +248,7 @@ async function describeImage(
 	visionModel: vscode.LanguageModelChat,
 	token: vscode.CancellationToken
 ): Promise<string> {
-	const cacheKey = hashImageData(imagePart.data);
+	const cacheKey = `${visionModel.id}:${hashImageData(imagePart.data)}`;
 
 	const cached = descriptionCache.get(cacheKey);
 	if (cached !== undefined) {
@@ -330,110 +329,89 @@ export async function processMessagesForVision(
 	targetModelId: string,
 	token: vscode.CancellationToken
 ): Promise<vscode.LanguageModelChatRequestMessage[]> {
+	let convertedCount = 0;
+	const result: vscode.LanguageModelChatRequestMessage[] = [];
+
+	// Invalid (tiny or unparseable) images are dropped instead of described:
+	// the host injects placeholder images that providers reject. When a
+	// request only carries such placeholders, strip them without waking a
+	// vision model at all.
 	let hasValidImage = false;
 	let invalidImageCount = 0;
-	for (const message of messages) {
-		for (const part of message.content ?? []) {
-			if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
+	const scan = (content: readonly unknown[]): void => {
+		for (const part of content) {
+			if (isImageDataPart(part)) {
 				if (isBridgeImage(part)) {
 					hasValidImage = true;
 				} else {
 					invalidImageCount++;
 				}
+			} else if (isToolResultContent(part)) {
+				scan(part.content);
 			}
 		}
+	};
+	for (const message of messages) {
+		scan(message.content ?? []);
 	}
-
-	// Only invalid (tiny or unparseable) images, e.g. placeholders injected
-	// by the host. Drop them so the text-only request stays clean, without
-	// needing a vision model at all.
 	if (!hasValidImage && invalidImageCount > 0) {
 		logger.info("visionBridge.dropInvalidImages", { droppedImages: invalidImageCount });
-		return removeImageParts(messages);
 	}
 
-	const visionModel = await findVisionModel(targetModelId);
+	const visionModel = hasValidImage ? await findVisionModel(targetModelId) : undefined;
 
 	logger.info("visionBridge.processing", {
 		targetModel: targetModelId,
-		visionModel: visionModel.id,
+		visionModel: visionModel?.id,
 		messageCount: messages.length,
 	});
 
-	let convertedCount = 0;
-	const result: vscode.LanguageModelChatRequestMessage[] = [];
-
-	for (const message of messages) {
-		const content = message.content ?? [];
-		let hasValidImages = false;
-
+	const rewrite = async (content: readonly unknown[]): Promise<unknown[]> => {
+		const out: unknown[] = [];
 		for (const part of content) {
-			if (part instanceof vscode.LanguageModelDataPart && isBridgeImage(part)) {
-				hasValidImages = true;
-				break;
+			if (token.isCancellationRequested) {
+				throw new Error("Vision bridge request cancelled");
 			}
-		}
-
-		if (!hasValidImages) {
-			// No bridgeable images in this message. If it still carries
-			// invalid image parts, strip them; otherwise keep it as-is.
-			result.push(hasImageParts(content) ? removeImageParts([message])[0] : message);
-			continue;
-		}
-
-		const newContent: unknown[] = [];
-
-		for (const part of content) {
-			if (part instanceof vscode.LanguageModelDataPart && isBridgeImage(part)) {
+			if (isImageDataPart(part)) {
+				if (!visionModel || !isBridgeImage(part)) {
+					logger.debug("visionBridge.dropInvalidImage", {
+						mimeType: part.mimeType,
+						dataSize: part.data.byteLength,
+					});
+					continue;
+				}
 				const description = await describeImage(part, visionModel, token);
-				newContent.push(new vscode.LanguageModelTextPart(`\n[Image description: ${description}]\n`));
+				const text = new vscode.LanguageModelTextPart(`\n[Image description: ${description}]\n`);
+				setPartOrigin(text, getPartOrigin(part));
+				out.push(text);
 				convertedCount++;
-			} else if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
-				// Invalid/too-small image — drop it for text-only targets.
-				logger.debug("visionBridge.dropInvalidImage", {
-					mimeType: part.mimeType,
-					dataSize: part.data.byteLength,
-				});
+			} else if (isToolResultContent(part)) {
+				const replacement = { ...part, content: await rewrite(part.content) };
+				setPartOrigin(replacement, getPartOrigin(part));
+				out.push(replacement);
 			} else {
-				newContent.push(part);
+				out.push(part);
 			}
 		}
-
-		// Build a replacement message preserving role and name.
-		const replaced = {
-			role: message.role,
-			content: newContent,
-			name: (message as { name?: string }).name,
-		} as vscode.LanguageModelChatRequestMessage;
-		result.push(replaced);
+		return out;
+	};
+	for (const message of messages) {
+		result.push({ ...message, content: await rewrite(message.content ?? []) } as vscode.LanguageModelChatRequestMessage);
 	}
 
 	logger.info("visionBridge.complete", { convertedImages: convertedCount });
 	return result;
 }
 
-function hasImageParts(content: readonly unknown[]): boolean {
-	return content.some((p) => p instanceof vscode.LanguageModelDataPart && isImageMimeType(p.mimeType));
-}
-
-function removeImageParts(
-	messages: readonly vscode.LanguageModelChatRequestMessage[]
-): vscode.LanguageModelChatRequestMessage[] {
-	const result: vscode.LanguageModelChatRequestMessage[] = [];
-	for (const message of messages) {
-		const content = message.content ?? [];
-		if (!hasImageParts(content)) {
-			result.push(message);
-			continue;
+/** Lookup only: token counting must never start a vision request. */
+export function getCachedVisionDescription(part: vscode.LanguageModelDataPart, targetModelId: string, models: HFModelItem[]): string | undefined {
+	for (const model of models) {
+		if (model.vision === true && fullModelId(model) !== targetModelId) {
+			const description = descriptionCache.get(`${fullModelId(model)}:${hashImageData(part.data)}`);
+			if (description !== undefined) {
+				return `\n[Image description: ${description}]\n`;
+			}
 		}
-		const newContent = content.filter(
-			(p) => !(p instanceof vscode.LanguageModelDataPart && isImageMimeType(p.mimeType))
-		);
-		result.push({
-			role: message.role,
-			content: newContent,
-			name: (message as { name?: string }).name,
-		} as vscode.LanguageModelChatRequestMessage);
 	}
-	return result;
+	return undefined;
 }
