@@ -496,6 +496,209 @@
           "minimum": 0,
           "type": "number"
         },
+        "oaicopilot.debug.tokenBreakdown": {
+          "default": false,
+          "description": "%config.debug.tokenBreakdown.description%",
+          "type": "boolean"
+        },
+        "oaicopilot.tokenEstimation": {
+          "additionalProperties": false,
+          "default": {
+            "bridgeTokens": 8192,
+            "calibration": "observe",
+            "charsPerToken": 4,
+            "image": {
+              "areaDivisor": 750,
+              "fallbackTokens": 8192,
+              "fixedTokens": 8192,
+              "maxLongEdge": 2576,
+              "maxTokensPerImage": 8192,
+              "profile": "auto",
+              "strategy": "auto"
+            },
+            "maxSerializedPartChars": 200000,
+            "nonAsciiTokensPerChar": 1,
+            "perModel": {}
+          },
+          "description": "%config.tokenEstimation.description%",
+          "properties": {
+            "bridgeTokens": {
+              "description": "%config.tokenEstimation.bridgeTokens.description%",
+              "maximum": 1000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "calibration": {
+              "description": "%config.tokenEstimation.calibration.description%",
+              "enum": [
+                "observe",
+                "adaptive"
+              ],
+              "type": "string"
+            },
+            "charsPerToken": {
+              "description": "%config.tokenEstimation.charsPerToken.description%",
+              "maximum": 100,
+              "minimum": 0.1,
+              "type": "number"
+            },
+            "image": {
+              "additionalProperties": false,
+              "properties": {
+                "areaDivisor": {
+                  "maximum": 1000000,
+                  "minimum": 0.01,
+                  "type": "number"
+                },
+                "fallbackTokens": {
+                  "maximum": 1000000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "fixedTokens": {
+                  "maximum": 1000000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "maxLongEdge": {
+                  "maximum": 1000000,
+                  "minimum": 1,
+                  "type": "number"
+                },
+                "maxTokensPerImage": {
+                  "maximum": 1000000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "profile": {
+                  "enum": [
+                    "auto",
+                    "openai-patches",
+                    "openai-tiles",
+                    "claude-standard",
+                    "claude-high",
+                    "unknown"
+                  ],
+                  "type": "string"
+                },
+                "strategy": {
+                  "description": "%config.tokenEstimation.image.strategy.description%",
+                  "enum": [
+                    "auto",
+                    "fixed",
+                    "area"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "maxSerializedPartChars": {
+              "description": "%config.tokenEstimation.maxSerializedPartChars.description%",
+              "maximum": 1000000,
+              "minimum": 64,
+              "type": "integer"
+            },
+            "nonAsciiTokensPerChar": {
+              "maximum": 100,
+              "minimum": 0.1,
+              "type": "number"
+            },
+            "perModel": {
+              "additionalProperties": {
+                "additionalProperties": false,
+                "properties": {
+                  "bridgeTokens": {
+                    "description": "%config.tokenEstimation.bridgeTokens.description%",
+                    "maximum": 1000000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "calibration": {
+                    "description": "%config.tokenEstimation.calibration.description%",
+                    "enum": [
+                      "observe",
+                      "adaptive"
+                    ],
+                    "type": "string"
+                  },
+                  "charsPerToken": {
+                    "description": "%config.tokenEstimation.charsPerToken.description%",
+                    "maximum": 100,
+                    "minimum": 0.1,
+                    "type": "number"
+                  },
+                  "image": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "areaDivisor": {
+                        "maximum": 1000000,
+                        "minimum": 0.01,
+                        "type": "number"
+                      },
+                      "fallbackTokens": {
+                        "maximum": 1000000,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "fixedTokens": {
+                        "maximum": 1000000,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "maxLongEdge": {
+                        "maximum": 1000000,
+                        "minimum": 1,
+                        "type": "number"
+                      },
+                      "maxTokensPerImage": {
+                        "maximum": 1000000,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "profile": {
+                        "enum": [
+                          "auto",
+                          "openai-patches",
+                          "openai-tiles",
+                          "claude-standard",
+                          "claude-high",
+                          "unknown"
+                        ],
+                        "type": "string"
+                      },
+                      "strategy": {
+                        "description": "%config.tokenEstimation.image.strategy.description%",
+                        "enum": [
+                          "auto",
+                          "fixed",
+                          "area"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "maxSerializedPartChars": {
+                    "description": "%config.tokenEstimation.maxSerializedPartChars.description%",
+                    "maximum": 1000000,
+                    "minimum": 64,
+                    "type": "integer"
+                  },
+                  "nonAsciiTokensPerChar": {
+                    "maximum": 100,
+                    "minimum": 0.1,
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "description": "%config.tokenEstimation.perModel.description%",
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
         "oaicopilot.retry": {
           "default": {
             "enabled": true,
