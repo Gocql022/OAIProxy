@@ -1,4 +1,5 @@
 import { RequestTiming } from "./requestTiming";
+import { TokenCountWork } from "./tokenCountWork";
 import { randomUUID } from "crypto";
 import { prepareMessagesForApi } from "./messageContent";
 import { resolveTokenEstimationConfig, type EstimationContext } from "./tokenEstimationConfig";
@@ -92,6 +93,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 	/** Track last outbound API attempt time for delay calculation. */
 	private _lastRequestTime: number | null = null;
 	private readonly _tokenCalibration: TokenCalibration;
+	private readonly _tokenCountContexts = new Map<string, EstimationContext>();
+	private readonly _tokenCountWork = new TokenCountWork();
+	private readonly _tokenCountConfigurationListener: vscode.Disposable;
 
 	private readonly _onDidChangeLanguageModelChatInformation = new vscode.EventEmitter<void>();
 	readonly onDidChangeLanguageModelChatInformation = this._onDidChangeLanguageModelChatInformation.event;
@@ -112,13 +116,23 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		private readonly statusBarItem: vscode.StatusBarItem
 	) {
 		this._tokenCalibration = new TokenCalibration(globalState);
+		this._tokenCountConfigurationListener = vscode.workspace.onDidChangeConfiguration((event) => {
+			if (event.affectsConfiguration("oaicopilot")) {
+				this._tokenCountContexts.clear();
+			}
+		});
 	}
 
 	refreshLanguageModelChatInformation(): void {
+		// Provider transport changes in globalState also use this refresh path.
+		this._tokenCountContexts.clear();
 		this._onDidChangeLanguageModelChatInformation.fire();
 	}
 
 	dispose(): void {
+		this._tokenCountConfigurationListener.dispose();
+		this._tokenCountContexts.clear();
+		this._tokenCountWork.dispose();
 		this._onDidChangeLanguageModelChatInformation.dispose();
 	}
 
@@ -148,24 +162,39 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		text: string | LanguageModelChatRequestMessage,
 		_token: CancellationToken
 	): Promise<number> {
-		const countId = randomUUID();
 		const startedAt = performance.now();
-		logger.debug("tokenCount.start", { countId, modelId: model.id, inputType: typeof text === "string" ? "string" : "message",
-			textLength: typeof text === "string" ? text.length : undefined,
-			partCount: typeof text === "string" ? undefined : text.content.length });
 		let tokens: number | undefined;
 		try {
-			const config = vscode.workspace.getConfiguration();
-			const models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
-			const parsed = parseModelId(model.id);
-			const configured = models.find((item) => item.id === parsed.baseId && item.configId === parsed.configId) ?? models.find((item) => item.id === parsed.baseId);
-			const resolved = resolveProviderBackedModel(configured, models, normalizeProviderConfigs(this.globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, [])));
-			tokens = await countMessageTokens(text, this.createEstimationContext(model, resolved, models));
+			if (_token.isCancellationRequested) { return 0; }
+			const yielding = this._tokenCountWork.yieldIfNeeded();
+			if (yielding) { await yielding; }
+			if (_token.isCancellationRequested) { return 0; }
+			tokens = await countMessageTokens(text, this.getTokenCountContext(model));
 			return tokens;
 		} finally {
-			logger.debug("tokenCount.end", { countId, modelId: model.id, tokens,
-				durationMs: performance.now() - startedAt, cancelled: _token.isCancellationRequested });
+			this._tokenCountWork.record(model.id, typeof text === "string" ? text.length : undefined,
+				typeof text === "string" ? 0 : text.content.length, tokens,
+				performance.now() - startedAt, _token.isCancellationRequested);
 		}
+	}
+
+	private getTokenCountContext(model: LanguageModelChatInformation): EstimationContext {
+		const key = JSON.stringify([model.id, model.capabilities?.imageInput === true]);
+		const cached = this._tokenCountContexts.get(key);
+		if (cached) { return cached; }
+		const config = vscode.workspace.getConfiguration();
+		const models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
+		const parsed = parseModelId(model.id);
+		const configured = models.find((item) => item.id === parsed.baseId && item.configId === parsed.configId) ?? models.find((item) => item.id === parsed.baseId);
+		const resolved = resolveProviderBackedModel(configured, models, normalizeProviderConfigs(this.globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, [])));
+		const context = this.createEstimationContext(model, resolved, models);
+		// Only request conversion needs this map. Never retain message images in a configuration cache.
+		context.imageSources = undefined;
+		if (this._tokenCountContexts.size >= 64) {
+			this._tokenCountContexts.delete(this._tokenCountContexts.keys().next().value!);
+		}
+		this._tokenCountContexts.set(key, context);
+		return context;
 	}
 
 	private createEstimationContext(model: LanguageModelChatInformation, configured: HFModelItem | undefined, models: HFModelItem[]): EstimationContext {
@@ -1010,6 +1039,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					try {
 						await timing.measure("usagePersistence", () => this._tokenCalibration.observe(calibrationKey(baseUrl, apiMode, model.id, modelConfig.settings!), rawEstimate, actual, calibrationEligible));
 					} catch { logger.warn("tokenCalibration.persistenceFailed", { requestId }); }
+					finally { this._tokenCountContexts.clear(); }
 				}
 			}
 		} catch (err) {

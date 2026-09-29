@@ -184,9 +184,11 @@ suite("prepared request preflight integration", () => {
 		const token = { isCancellationRequested: false } as vscode.CancellationToken;
 		const without = await provider.provideTokenCount(model(), input, token);
 		(configuration["oaicopilot.models"] as Array<Record<string, unknown>>)[0].include_reasoning_in_request = true;
+		provider.refreshLanguageModelChatInformation();
 		const withThinking = await provider.provideTokenCount(model(), input, token);
 		assert.ok(withThinking > without + 100);
 		(configuration["oaicopilot.models"] as Array<Record<string, unknown>>)[0].vision = false;
+		provider.refreshLanguageModelChatInformation();
 		const result = msg(1, [
 			new vscode.LanguageModelToolResultPart("image", [new vscode.LanguageModelDataPart(png(), "image/png")]),
 		]);
@@ -261,15 +263,26 @@ suite("prepared request preflight integration", () => {
 		assert.ok(!JSON.stringify(timings).includes("local-test-only"));
 	});
 
-	test("token callback diagnostics pair by ID and omit text", async () => {
+	test("token callback diagnostics aggregate and omit text", async () => {
 		const text = "private counter input";
 		const tokens = await provider.provideTokenCount(model(), text, { isCancellationRequested: false } as vscode.CancellationToken);
+		provider.dispose();
 		const events = logs.filter((entry) => entry.tag.startsWith("tokenCount."));
-		assert.deepStrictEqual(events.map((entry) => entry.tag), ["tokenCount.start", "tokenCount.end"]);
-		assert.strictEqual(events[0].data.countId, events[1].data.countId);
-		assert.strictEqual(events[0].data.textLength, text.length);
-		assert.strictEqual(events[1].data.tokens, tokens);
+		assert.deepStrictEqual(events.map((entry) => entry.tag), ["tokenCount.summary"]);
+		assert.strictEqual(events[0].data.calls, 1);
+		assert.strictEqual(events[0].data.textChars, text.length);
+		assert.strictEqual(events[0].data.tokens, tokens);
 		assert.ok(!JSON.stringify(events).includes(text));
+	});
+
+	test("new adaptive calibration invalidates cached callback weights", async () => {
+		configuration["oaicopilot.tokenEstimation"] = { calibration: "adaptive" };
+		const token = { isCancellationRequested: false } as vscode.CancellationToken;
+		const before = await provider.provideTokenCount(model(), "hello", token);
+		for (let i = 0; i < 20; i++) {
+			await run([msg(1, [new vscode.LanguageModelTextPart("hello")])]);
+		}
+		assert.strictEqual(await provider.provideTokenCount(model(), "hello", token), before * 2);
 	});
 
 	test("Responses delta still budgets full history and disables calibration", async () => {
