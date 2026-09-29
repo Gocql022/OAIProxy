@@ -21,6 +21,7 @@ suite("prepared request preflight integration", () => {
 	let state: Map<string, unknown>;
 	let contextBudget: number;
 	let incomplete: boolean;
+	let delayedStream: boolean;
 
 	setup(async () => {
 		TokenizerManager.setExtensionPath(path.resolve(__dirname, "../.."));
@@ -29,6 +30,7 @@ suite("prepared request preflight integration", () => {
 		state = new Map();
 		contextBudget = 872000;
 		incomplete = false;
+		delayedStream = false;
 		server = http.createServer((request, response) => {
 			let body = "";
 			request.on("data", (chunk) => {
@@ -37,6 +39,14 @@ suite("prepared request preflight integration", () => {
 			request.on("end", () => {
 				received.push(JSON.parse(body));
 				response.writeHead(200, { "Content-Type": "text/event-stream" });
+				if (delayedStream) {
+					response.flushHeaders();
+					setTimeout(() => {
+						response.write(": keepalive\n\n");
+						setTimeout(() => response.end(`data: ${JSON.stringify({ choices: [{ delta: { content: "OK" }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n`), 20);
+					}, 20);
+					return;
+				}
 				if (request.url?.endsWith("/responses")) {
 					response.end(
 						`data: ${JSON.stringify({ type: "response.output_text.delta", delta: "OK" })}\n\ndata: ${JSON.stringify({ type: "response.completed", response: { id: `resp_${received.length}`, usage: { input_tokens: 3000, output_tokens: 2, input_tokens_details: { cached_tokens: 1000 } } } })}\n\n`
@@ -160,6 +170,7 @@ suite("prepared request preflight integration", () => {
 			/Largest parts:.*large/s
 		);
 		assert.strictEqual(received.length, 0);
+		assert.ok(!logs.some((entry) => entry.tag === "request.timing" && entry.data.phase === "dispatch"));
 		assert.ok(
 			!JSON.stringify(logs.filter((entry) => entry.tag.startsWith("request.token"))).includes("private-large-result")
 		);
@@ -227,6 +238,38 @@ suite("prepared request preflight integration", () => {
 		} finally {
 			vscode.lm.selectChatModels = originalSelect;
 		}
+	});
+
+	test("timing separates headers, first stream data and visible text with concurrent request IDs", async () => {
+		delayedStream = true;
+		await Promise.all([run([msg(1, [new vscode.LanguageModelTextPart("private prompt one")])]),
+			run([msg(1, [new vscode.LanguageModelTextPart("private prompt two")])])]);
+		const timings = logs.filter((entry) => entry.tag === "request.timing").map((entry) => entry.data);
+		const ids = new Set(timings.map((entry) => entry.requestId));
+		assert.strictEqual(ids.size, 2);
+		for (const id of ids) {
+			const events = timings.filter((entry) => entry.requestId === id);
+			const phases = events.map((entry) => entry.phase);
+			const expected = ["entry", "preflight.start", "estimate.start", "estimate.end", "preflight.end", "dispatch", "headers", "stream.start", "firstChunk", "firstText", "stream.end", "complete"];
+			assert.deepStrictEqual(phases, expected);
+			const elapsed = (phase: string) => Number(events.find((entry) => entry.phase === phase)!.elapsedMs);
+			assert.ok(elapsed("firstChunk") > elapsed("headers"));
+			assert.ok(elapsed("firstText") > elapsed("firstChunk"));
+			assert.ok(events.every((entry) => Number.isFinite(entry.elapsedMs)));
+		}
+		assert.ok(!JSON.stringify(timings).includes("private prompt"));
+		assert.ok(!JSON.stringify(timings).includes("local-test-only"));
+	});
+
+	test("token callback diagnostics pair by ID and omit text", async () => {
+		const text = "private counter input";
+		const tokens = await provider.provideTokenCount(model(), text, { isCancellationRequested: false } as vscode.CancellationToken);
+		const events = logs.filter((entry) => entry.tag.startsWith("tokenCount."));
+		assert.deepStrictEqual(events.map((entry) => entry.tag), ["tokenCount.start", "tokenCount.end"]);
+		assert.strictEqual(events[0].data.countId, events[1].data.countId);
+		assert.strictEqual(events[0].data.textLength, text.length);
+		assert.strictEqual(events[1].data.tokens, tokens);
+		assert.ok(!JSON.stringify(events).includes(text));
 	});
 
 	test("Responses delta still budgets full history and disables calibration", async () => {

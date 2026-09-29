@@ -1,3 +1,4 @@
+import { RequestTiming } from "./requestTiming";
 import { randomUUID } from "crypto";
 import { prepareMessagesForApi } from "./messageContent";
 import { resolveTokenEstimationConfig, type EstimationContext } from "./tokenEstimationConfig";
@@ -147,12 +148,24 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		text: string | LanguageModelChatRequestMessage,
 		_token: CancellationToken
 	): Promise<number> {
-		const config = vscode.workspace.getConfiguration();
-		const models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
-		const parsed = parseModelId(model.id);
-		const configured = models.find((item) => item.id === parsed.baseId && item.configId === parsed.configId) ?? models.find((item) => item.id === parsed.baseId);
-		const resolved = resolveProviderBackedModel(configured, models, normalizeProviderConfigs(this.globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, [])));
-		return countMessageTokens(text, this.createEstimationContext(model, resolved, models));
+		const countId = randomUUID();
+		const startedAt = performance.now();
+		logger.debug("tokenCount.start", { countId, modelId: model.id, inputType: typeof text === "string" ? "string" : "message",
+			textLength: typeof text === "string" ? text.length : undefined,
+			partCount: typeof text === "string" ? undefined : text.content.length });
+		let tokens: number | undefined;
+		try {
+			const config = vscode.workspace.getConfiguration();
+			const models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
+			const parsed = parseModelId(model.id);
+			const configured = models.find((item) => item.id === parsed.baseId && item.configId === parsed.configId) ?? models.find((item) => item.id === parsed.baseId);
+			const resolved = resolveProviderBackedModel(configured, models, normalizeProviderConfigs(this.globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, [])));
+			tokens = await countMessageTokens(text, this.createEstimationContext(model, resolved, models));
+			return tokens;
+		} finally {
+			logger.debug("tokenCount.end", { countId, modelId: model.id, tokens,
+				durationMs: performance.now() - startedAt, cancelled: _token.isCancellationRequested });
+		}
 	}
 
 	private createEstimationContext(model: LanguageModelChatInformation, configured: HFModelItem | undefined, models: HFModelItem[]): EstimationContext {
@@ -287,9 +300,18 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		executionOptions: ChatExecutionOptions = {}
 	): Promise<void> {
 		const requestId = randomUUID();
+		const timing = new RequestTiming(requestId, model.id);
+		timing.mark("entry");
 		let observedUsage: CopilotResponseUsage | undefined;
 		const trackingProgress: Progress<LanguageModelResponsePart2> = {
 			report: (part) => {
+				if (part instanceof vscode.LanguageModelTextPart && part.value.trim().length > 0) {
+					timing.once("firstText");
+				} else if (isLanguageModelThinkingPart(part)) {
+					timing.once("firstThinking");
+				} else if (part instanceof vscode.LanguageModelToolCallPart) {
+					timing.once("firstToolCall");
+				}
 				if (isResponseUsagePart(part)) {
 					try { observedUsage = JSON.parse(new TextDecoder().decode((part as vscode.LanguageModelDataPart).data)); } catch { /* Invalid usage is unreported. */ }
 				}
@@ -302,6 +324,10 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					});
 				}
 			},
+		};
+		const processStream = async <TMessage, TBody>(api: CommonApi<TMessage, TBody>, body: ReadableStream<Uint8Array>) => {
+			api.setStreamObserver(() => timing.once("firstChunk"));
+			await timing.measure("stream", () => api.processStreamingResponse(body, trackingProgress, token));
 		};
 		const requestStartTime = Date.now();
 		const abortController = new AbortController();
@@ -348,6 +374,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			const baseUrl = um?.baseUrl || config.get<string>("oaicopilot.baseUrl", "");
 
 			logger.info("request.start", {
+				requestId,
 				modelId: model.id,
 				messageCount: messages.length,
 				apiMode,
@@ -461,7 +488,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			const usedVisionBridge = modelConfig.imageMode === "bridge" && inputContainsImages;
 			if (usedVisionBridge) {
 				try {
-					workingMessages = await processMessagesForVision(workingMessages, model.id, token);
+					workingMessages = await timing.measure("visionBridge", () => processMessagesForVision(workingMessages, model.id, token));
 					if (token.isCancellationRequested) {
 						return;
 					}
@@ -476,16 +503,20 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			}
 
 			// Bridge descriptions are now ordinary text. No later conversion may reintroduce omitted images.
-			const preflight = async (body: unknown, logicalBody: unknown = body, stateful = false): Promise<void> => {
+			const preflight = async (body: unknown, logicalBody: unknown = body, stateful = false): Promise<void> => timing.measure("preflight", async () => {
 				if (token.isCancellationRequested) { throw new Error("Request cancelled"); }
-				finalReport = executionOptions.diagnostic
-					? await createTokenUsageReport({ messages: workingMessages, tools: options.tools, model, modelConfig, preparedBody: logicalBody })
-					: await updateContextStatusBar(workingMessages, options.tools, model, this.statusBarItem, modelConfig, logicalBody);
+				finalReport = await timing.measure("estimate", () => executionOptions.diagnostic
+					? createTokenUsageReport({ messages: workingMessages, tools: options.tools, model, modelConfig, preparedBody: logicalBody })
+					: updateContextStatusBar(workingMessages, options.tools, model, this.statusBarItem, modelConfig, logicalBody));
 				calibrationEligible = calibrationEligible && !stateful && !inputContainsImages && !usedVisionBridge &&
 					!isVisionBridgeRequest && !finalReport.categories.some((category) => category.id === "media" && category.tokens > 0);
 				if (calibrationEligible) {
-					const raw = await estimatePreparedRequest(logicalBody, { ...modelConfig, textMultiplier: 1 });
-					rawEstimate = raw.details.totalTokens + raw.toolDefinitionTokens;
+					if ((modelConfig.textMultiplier ?? 1) === 1) {
+						rawEstimate = finalReport.inputTokens;
+					} else {
+						const raw = await timing.measure("calibrationEstimate", () => estimatePreparedRequest(logicalBody, { ...modelConfig, textMultiplier: 1 }));
+						rawEstimate = raw.details.totalTokens + raw.toolDefinitionTokens;
+					}
 				}
 				if (debugBreakdown) {
 					const wire = body === logicalBody ? undefined : await estimatePreparedRequest(body, modelConfig);
@@ -499,7 +530,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 						maxInputTokens: finalReport.maxInputTokens, largestParts: finalReport.largestParts });
 					throw new Error(error);
 				}
-			};
+			});
 
 			if (!executionOptions.diagnostic) {
 				this._lastRequestTime = Date.now();
@@ -521,7 +552,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				await preflight(ollamaRequestBody);
 				logRequestBody(url, ollamaRequestBody, isVisionBridgeRequest);
 				const response = await executeWithRetry(async () => {
-					const res = await fetch(url, {
+					const res = await timing.fetch(url, {
 						method: "POST",
 						headers: requestHeaders,
 						body: JSON.stringify(ollamaRequestBody),
@@ -542,7 +573,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				if (!response.body) {
 					throw new Error("No response body from Ollama API");
 				}
-				await ollamaApi.processStreamingResponse(response.body, trackingProgress, token);
+				await processStream(ollamaApi, response.body);
 				calibrationEligible = calibrationEligible && ollamaApi.responseCompleted;
 			} else if (apiMode === "anthropic") {
 				// Anthropic API mode
@@ -567,7 +598,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				await preflight(requestBody);
 				logRequestBody(url, requestBody, isVisionBridgeRequest);
 				const response = await executeWithRetry(async () => {
-					const res = await fetch(url, {
+					const res = await timing.fetch(url, {
 						method: "POST",
 						headers: requestHeaders,
 						body: JSON.stringify(requestBody),
@@ -588,7 +619,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				if (!response.body) {
 					throw new Error("No response body from Anthropic API");
 				}
-				await anthropicApi.processStreamingResponse(response.body, trackingProgress, token);
+				await processStream(anthropicApi, response.body);
 				calibrationEligible = calibrationEligible && anthropicApi.responseCompleted;
 			} else if (apiMode === "openai-responses") {
 				// OpenAI Responses API mode
@@ -749,7 +780,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				const sendRequest = async (body: Record<string, unknown>) => {
 					await preflight(body, body.previous_response_id !== undefined ? { ...body, input: preparedFullRequestBody.input } : body, body.previous_response_id !== undefined);
 					return await executeWithRetry(async () => {
-						const res = await fetch(url, {
+						const res = await timing.fetch(url, {
 							method: "POST",
 							headers: requestHeaders,
 							body: JSON.stringify(body),
@@ -825,7 +856,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				if (!response.body) {
 					throw new Error("No response body from Responses API");
 				}
-				await openaiResponsesApi.processStreamingResponse(response.body, trackingProgress, token);
+				await processStream(openaiResponsesApi, response.body);
 				calibrationEligible = calibrationEligible && openaiResponsesApi.responseCompleted;
 
 				// Append a stateful marker so future requests can reuse `previous_response_id` (Copilot Chat style).
@@ -895,7 +926,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				}
 
 				const response = await executeWithRetry(async () => {
-					const res = await fetch(url, {
+					const res = await timing.fetch(url, {
 						method: "POST",
 						headers: requestHeaders,
 						body: JSON.stringify(requestBody),
@@ -916,7 +947,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				if (!response.body) {
 					throw new Error("No response body from Gemini API");
 				}
-				await geminiApi.processStreamingResponse(response.body, trackingProgress, token);
+				await processStream(geminiApi, response.body);
 				calibrationEligible = calibrationEligible && geminiApi.responseCompleted;
 			} else {
 				// OpenAI compatible API mode (default)
@@ -944,7 +975,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				await preflight(requestBody);
 				logRequestBody(url, requestBody, isVisionBridgeRequest);
 				const response = await executeWithRetry(async () => {
-					const res = await fetch(url, {
+					const res = await timing.fetch(url, {
 						method: "POST",
 						headers: requestHeaders,
 						body: JSON.stringify(requestBody),
@@ -965,7 +996,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				if (!response.body) {
 					throw new Error("No response body from OAIProxy API");
 				}
-				await openaiApi.processStreamingResponse(response.body, trackingProgress, token);
+				await processStream(openaiApi, response.body);
 				calibrationEligible = calibrationEligible && openaiApi.responseCompleted;
 			}
 			if (finalReport && !token.isCancellationRequested) {
@@ -977,13 +1008,13 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				}
 				if (actual !== undefined) {
 					try {
-						await this._tokenCalibration.observe(calibrationKey(baseUrl, apiMode, model.id, modelConfig.settings!), rawEstimate, actual, calibrationEligible);
+						await timing.measure("usagePersistence", () => this._tokenCalibration.observe(calibrationKey(baseUrl, apiMode, model.id, modelConfig.settings!), rawEstimate, actual, calibrationEligible));
 					} catch { logger.warn("tokenCalibration.persistenceFailed", { requestId }); }
 				}
 			}
 		} catch (err) {
 			if (token.isCancellationRequested || isAbortError(err)) {
-				logger.info("request.cancelled", { modelId: model.id });
+				logger.info("request.cancelled", { requestId, modelId: model.id });
 				return;
 			}
 			console.error("[OAIProxy Model Provider] Chat request failed", {
@@ -992,6 +1023,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				error: err instanceof Error ? { name: err.name, message: err.message } : String(err),
 			});
 			logger.error("request.error", {
+				requestId,
 				modelId: model.id,
 				messageCount: messages.length,
 				errorName: err instanceof Error ? err.name : String(err),
@@ -1001,7 +1033,8 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		} finally {
 			cancellationListener.dispose();
 			const durationMs = Date.now() - requestStartTime;
-			logger.info("request.end", { modelId: model.id, durationMs });
+			timing.mark("complete", { cancelled: token.isCancellationRequested });
+			logger.info("request.end", { requestId, modelId: model.id, durationMs });
 		}
 	}
 

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { randomBytes } from "crypto";
+import { logger } from "../logger";
 import type { HFApiMode, HFModelItem, ProviderConfigItem } from "../types";
 import { normalizeUserModels, parseModelId } from "../utils";
 import { fetchModels } from "../provideModel";
@@ -380,6 +381,11 @@ export class ConfigViewPanel {
 	private readonly onConfigurationChanged?: () => void;
 	private activeModelTestRun?: { requestId: string; cancellationSource: vscode.CancellationTokenSource };
 	private disposables: vscode.Disposable[] = [];
+	private disposed = false;
+	private initPromise?: Promise<void>;
+	private initRevision = 0;
+	private readonly openedAt = performance.now();
+	private readonly panelId = randomBytes(8).toString("hex");
 
 	public static openPanel(
 		extensionUri: vscode.Uri,
@@ -431,13 +437,18 @@ export class ConfigViewPanel {
 		this.modelConnectionTester = modelConnectionTester;
 		this.onConfigurationChanged = onConfigurationChanged;
 
-		this.update();
+		logger.debug("config.open", { panelId: this.panelId });
 
 		this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
 
 		this.panel.webview.onDidReceiveMessage(
 			async (message) => {
 				this.handleMessage(message).catch((err) => {
+					if (this.disposed) { return; }
+					if (message.type === "requestInit") {
+						this.reportInitializationError(err);
+						return;
+					}
 					console.error("[oaiproxy] handleMessage failed", err);
 					vscode.window.showErrorMessage(
 						err instanceof Error
@@ -450,17 +461,25 @@ export class ConfigViewPanel {
 			this.disposables
 		);
 
-		// Send initialization data
-		this.sendInit();
+		// The webview requests data only after its message listener is ready.
+		void this.update().catch((error) => this.reportInitializationError(error));
 	}
 
 	private async update() {
 		const webview = this.panel.webview;
-		this.panel.webview.html = await this.getHtml(webview);
+		const html = await this.getHtml(webview);
+		if (!this.disposed) {
+			webview.html = html;
+			logger.debug("config.htmlReady", { panelId: this.panelId, elapsedMs: performance.now() - this.openedAt });
+		}
 	}
 
 	public dispose() {
-		ConfigViewPanel.currentPanel = undefined;
+		if (this.disposed) { return; }
+		this.disposed = true;
+		if (ConfigViewPanel.currentPanel === this) {
+			ConfigViewPanel.currentPanel = undefined;
+		}
 		this.activeModelTestRun?.cancellationSource.cancel();
 		this.activeModelTestRun?.cancellationSource.dispose();
 		this.activeModelTestRun = undefined;
@@ -476,9 +495,11 @@ export class ConfigViewPanel {
 	}
 
 	async handleMessage(message: IncomingMessage) {
+		if (this.disposed) { return; }
 			switch (message.type) {
 			case "requestInit":
-				await this.sendInit();
+				logger.debug("config.ready", { panelId: this.panelId, elapsedMs: performance.now() - this.openedAt });
+				await this.sendInit(false);
 				break;
 			case "loginXaiOAuth":
 				await vscode.commands.executeCommand("oaiproxy.loginXaiOAuth");
@@ -513,11 +534,11 @@ export class ConfigViewPanel {
 			case "fetchModels": {
 				try {
 					const { models } = await fetchModels(message.baseUrl, message.apiKey, message.apiMode, message.headers);
-					this.panel.webview.postMessage({ type: "modelsFetched", models });
+					this.postMessage({ type: "modelsFetched", models });
 				} catch (err) {
 					console.error("[oaiproxy] fetchModels failed", err);
 					const errorMessage = err instanceof Error ? err.message : String(err);
-					this.panel.webview.postMessage({ type: "modelsFetchError", error: errorMessage });
+					this.postMessage({ type: "modelsFetchError", error: errorMessage });
 				}
 				break;
 			}
@@ -604,7 +625,7 @@ export class ConfigViewPanel {
 		const cancellationSource = new vscode.CancellationTokenSource();
 		this.activeModelTestRun = { requestId, cancellationSource };
 		const startedAt = Date.now();
-		this.panel.webview.postMessage({
+		this.postMessage({
 			type: "modelTestsStarted",
 			requestId,
 			modelIds,
@@ -618,7 +639,7 @@ export class ConfigViewPanel {
 				4,
 				(result) => {
 					if (this.activeModelTestRun?.requestId === requestId && !cancellationSource.token.isCancellationRequested) {
-						this.panel.webview.postMessage({ type: "modelTestResult", requestId, result } as OutgoingMessage);
+						this.postMessage({ type: "modelTestResult", requestId, result } as OutgoingMessage);
 					}
 				}
 			);
@@ -627,7 +648,7 @@ export class ConfigViewPanel {
 			}
 
 			const passed = results.filter((result) => result.success).length;
-			this.panel.webview.postMessage({
+			this.postMessage({
 				type: "modelTestsCompleted",
 				requestId,
 				total: results.length,
@@ -658,14 +679,46 @@ export class ConfigViewPanel {
 		}
 
 		// Send response back to webview
-		this.panel.webview.postMessage({
+		this.postMessage({
 			type: "confirmResponse",
 			id: id,
 			confirmed: action === "showInfo" ? true : confirmed === vscode.l10n.t("Yes"),
 		} as OutgoingMessage);
 	}
 
-	private async sendInit() {
+	private postMessage(message: unknown): Thenable<boolean> {
+		if (this.disposed) { return Promise.resolve(false); }
+		return this.panel.webview.postMessage(message);
+	}
+
+	private reportInitializationError(error: unknown): void {
+		if (this.disposed) { return; }
+		logger.error("config.initFailed", { panelId: this.panelId, errorName: error instanceof Error ? error.name : "Error" });
+		void this.postMessage({ type: "initError" });
+	}
+
+	private sendInit(refresh = true): Promise<void> {
+		if (this.disposed) { return Promise.resolve(); }
+		if (refresh) { this.initRevision++; }
+		this.initPromise ??= this.loadInitialization().finally(() => { this.initPromise = undefined; });
+		return this.initPromise;
+	}
+
+	private async loadInitialization(): Promise<void> {
+		do {
+			const revision = this.initRevision;
+			const startedAt = performance.now();
+			const payload = await this.readInitialization();
+			if (this.disposed) { return; }
+			if (revision !== this.initRevision) { continue; }
+			const delivered = await this.postMessage({ type: "init", payload });
+			logger.debug("config.initialized", { panelId: this.panelId, delivered, durationMs: performance.now() - startedAt,
+				elapsedMs: performance.now() - this.openedAt });
+			if (revision === this.initRevision) { return; }
+		} while (!this.disposed);
+	}
+
+	private async readInitialization(): Promise<InitPayload> {
 		const config = vscode.workspace.getConfiguration();
 		const baseUrl = config.get<string>("oaicopilot.baseUrl", "https://api.openai.com/v1");
 		let models = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
@@ -678,11 +731,16 @@ export class ConfigViewPanel {
 			await this.updateProviderConfigs(providerConfigs);
 		}
 
-		const apiKey = (await this.secrets.get("oaicopilot.apiKey")) ?? "";
+		let apiKey = "";
 		const providerKeys: Record<string, string> = {};
 		const providerUsageKeys: Record<string, string> = {};
-		const xaiOAuthSignedIn = Boolean(await loadXaiOAuthCredential(this.secrets));
-		const openaiOAuthSignedIn = Boolean(await loadOpenAIOAuthCredential(this.secrets));
+		let xaiOAuthSignedIn = false;
+		let openaiOAuthSignedIn = false;
+		const tasks: Array<() => Promise<void>> = [
+			async () => { apiKey = (await this.secrets.get("oaicopilot.apiKey")) ?? ""; },
+			async () => { xaiOAuthSignedIn = Boolean(await loadXaiOAuthCredential(this.secrets)); },
+			async () => { openaiOAuthSignedIn = Boolean(await loadOpenAIOAuthCredential(this.secrets)); },
+		];
 		const providerIds = Array.from(
 			new Set([
 				...models.map((m) => m.owned_by).filter(Boolean),
@@ -691,26 +749,43 @@ export class ConfigViewPanel {
 				...MODEL_PRESETS.map((preset) => preset.model.owned_by).filter(Boolean),
 			])
 		);
+		const providerAliases = new Map<string, string[]>();
 		for (const provider of providerIds) {
 			const normalized = provider.toLowerCase();
-			let key = await this.secrets.get(`oaicopilot.apiKey.${normalized}`);
-			if (!key && normalized !== provider) {
-				// Backward compat: previous versions stored provider keys with original casing.
-				const legacy = await this.secrets.get(`oaicopilot.apiKey.${provider}`);
-				if (legacy) {
-					key = legacy;
-					await this.secrets.store(`oaicopilot.apiKey.${normalized}`, legacy);
-					await this.secrets.delete(`oaicopilot.apiKey.${provider}`);
-				}
-			}
-			if (key) {
-				providerKeys[provider] = key;
-			}
-			const usageKey = await this.secrets.get(getProviderUsageSecretKey(provider));
-			if (usageKey) {
-				providerUsageKeys[provider] = usageKey;
-			}
+			providerAliases.set(normalized, [...(providerAliases.get(normalized) ?? []), provider]);
 		}
+		for (const [normalized, aliases] of providerAliases) {
+			tasks.push(async () => {
+				let key = await this.secrets.get(`oaicopilot.apiKey.${normalized}`);
+				for (const provider of aliases) {
+					if (key || normalized === provider || this.disposed) { continue; }
+					// Migrate a legacy key before any alias reuses the normalized key.
+					const legacy = await this.secrets.get(`oaicopilot.apiKey.${provider}`);
+					if (legacy && !this.disposed) {
+						key = legacy;
+						await this.secrets.store(`oaicopilot.apiKey.${normalized}`, legacy);
+						await this.secrets.delete(`oaicopilot.apiKey.${provider}`);
+					}
+				}
+				if (this.disposed) { return; }
+				const usageKey = await this.secrets.get(getProviderUsageSecretKey(normalized));
+				for (const provider of aliases) {
+					if (key) { providerKeys[provider] = key; }
+					if (usageKey) { providerUsageKeys[provider] = usageKey; }
+				}
+			});
+		}
+		const credentialsStartedAt = performance.now();
+		let nextTask = 0;
+		const outcomes = await Promise.allSettled(Array.from({ length: Math.min(8, tasks.length) }, async () => {
+			while (!this.disposed && nextTask < tasks.length) {
+				await tasks[nextTask++]();
+			}
+		}));
+		const failure = outcomes.find((outcome) => outcome.status === "rejected");
+		if (failure?.status === "rejected") { throw failure.reason; }
+		logger.debug("config.credentialsReady", { panelId: this.panelId, taskCount: nextTask,
+			durationMs: performance.now() - credentialsStartedAt, disposed: this.disposed });
 
 		const delay = config.get<number>("oaicopilot.delay", 0);
 		const retry = config.get<{
@@ -751,7 +826,7 @@ export class ConfigViewPanel {
 			providerPresets: PROVIDER_PRESETS,
 			modelPresets: MODEL_PRESETS,
 		};
-		this.panel.webview.postMessage({ type: "init", payload });
+		return payload;
 	}
 
 	private async saveGlobalConfig(
@@ -1079,13 +1154,13 @@ export class ConfigViewPanel {
 				targetApiKey: adapter === "litellm" ? providerApiKey : undefined,
 				accountId: openAIOAuthCredential?.accountId,
 			});
-			this.panel.webview.postMessage({
+			this.postMessage({
 				type: "providerUsageResult",
 				provider: trimmedProvider,
 				result,
 			} as OutgoingMessage);
 		} catch (error) {
-			this.panel.webview.postMessage({
+			this.postMessage({
 				type: "providerUsageError",
 				provider: trimmedProvider,
 				error: error instanceof Error ? error.message : String(error),
