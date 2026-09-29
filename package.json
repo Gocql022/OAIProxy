@@ -607,6 +607,209 @@
 					"minimum": 0,
 					"maximum": 10000,
 					"description": "Number of lines to read when using `read_file` tool. Large lines may cost more tokens. Default is 0, let model decide lines."
+				},
+				"oaicopilot.tokenEstimation": {
+					"type": "object",
+					"default": {
+						"charsPerToken": 4,
+						"nonAsciiTokensPerChar": 1,
+						"maxSerializedPartChars": 200000,
+						"bridgeTokens": 8192,
+						"calibration": "observe",
+						"image": {
+							"strategy": "auto",
+							"profile": "auto",
+							"fixedTokens": 8192,
+							"fallbackTokens": 8192,
+							"areaDivisor": 750,
+							"maxLongEdge": 2576,
+							"maxTokensPerImage": 8192
+						},
+						"perModel": {}
+					},
+					"additionalProperties": false,
+					"properties": {
+						"charsPerToken": {
+							"type": "number",
+							"minimum": 0.1,
+							"maximum": 100,
+							"description": "ASCII fallback only when the bundled tokenizer fails."
+						},
+						"nonAsciiTokensPerChar": {
+							"type": "number",
+							"minimum": 0.1,
+							"maximum": 100
+						},
+						"maxSerializedPartChars": {
+							"type": "integer",
+							"minimum": 64,
+							"maximum": 1000000,
+							"description": "Limit for unknown object fallback serialization; ordinary text is preserved."
+						},
+						"bridgeTokens": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 1000000,
+							"description": "Provisional allowance for an image awaiting a Vision Bridge description."
+						},
+						"calibration": {
+							"type": "string",
+							"enum": [
+								"observe",
+								"adaptive"
+							],
+							"description": "Observe usage by default; adaptive applies a bounded multiplier after 20 eligible completed stateless text requests."
+						},
+						"image": {
+							"type": "object",
+							"additionalProperties": false,
+							"properties": {
+								"strategy": {
+									"type": "string",
+									"enum": [
+										"auto",
+										"fixed",
+										"area"
+									],
+									"description": "Use documented model profiles, a fixed allowance, or a custom area heuristic."
+								},
+								"profile": {
+									"type": "string",
+									"enum": [
+										"auto",
+										"openai-patches",
+										"openai-tiles",
+										"claude-standard",
+										"claude-high",
+										"unknown"
+									]
+								},
+								"fixedTokens": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 1000000
+								},
+								"fallbackTokens": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 1000000
+								},
+								"areaDivisor": {
+									"type": "number",
+									"minimum": 0.01,
+									"maximum": 1000000
+								},
+								"maxLongEdge": {
+									"type": "number",
+									"minimum": 1,
+									"maximum": 1000000
+								},
+								"maxTokensPerImage": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 1000000
+								}
+							}
+						},
+						"perModel": {
+							"type": "object",
+							"description": "Overrides keyed by base model ID or full modelId::configId; the full ID takes precedence.",
+							"additionalProperties": {
+								"type": "object",
+								"additionalProperties": false,
+								"properties": {
+									"charsPerToken": {
+										"type": "number",
+										"minimum": 0.1,
+										"maximum": 100,
+										"description": "ASCII fallback only when the bundled tokenizer fails."
+									},
+									"nonAsciiTokensPerChar": {
+										"type": "number",
+										"minimum": 0.1,
+										"maximum": 100
+									},
+									"maxSerializedPartChars": {
+										"type": "integer",
+										"minimum": 64,
+										"maximum": 1000000,
+										"description": "Limit for unknown object fallback serialization; ordinary text is preserved."
+									},
+									"bridgeTokens": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 1000000,
+										"description": "Provisional allowance for an image awaiting a Vision Bridge description."
+									},
+									"calibration": {
+										"type": "string",
+										"enum": [
+											"observe",
+											"adaptive"
+										],
+										"description": "Observe usage by default; adaptive applies a bounded multiplier after 20 eligible completed stateless text requests."
+									},
+									"image": {
+										"type": "object",
+										"additionalProperties": false,
+										"properties": {
+											"strategy": {
+												"type": "string",
+												"enum": [
+													"auto",
+													"fixed",
+													"area"
+												],
+												"description": "Use documented model profiles, a fixed allowance, or a custom area heuristic."
+											},
+											"profile": {
+												"type": "string",
+												"enum": [
+													"auto",
+													"openai-patches",
+													"openai-tiles",
+													"claude-standard",
+													"claude-high",
+													"unknown"
+												]
+											},
+											"fixedTokens": {
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000000
+											},
+											"fallbackTokens": {
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000000
+											},
+											"areaDivisor": {
+												"type": "number",
+												"minimum": 0.01,
+												"maximum": 1000000
+											},
+											"maxLongEdge": {
+												"type": "number",
+												"minimum": 1,
+												"maximum": 1000000
+											},
+											"maxTokensPerImage": {
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000000
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"description": "Shared token estimation. Text uses the bundled tokenizer; image costs remain estimates. See the Token Estimation guide."
+				},
+				"oaicopilot.debug.tokenBreakdown": {
+					"type": "boolean",
+					"default": false,
+					"description": "With logLevel debug, log token categories, largest parts and provider usage comparisons. Logs contain types, IDs and sizes only."
 				}
 			}
 		}

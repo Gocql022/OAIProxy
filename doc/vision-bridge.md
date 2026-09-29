@@ -38,3 +38,9 @@ With this setup, images sent to the text-only `Qwen3-Coder` model are automatica
 
 - At least one model with `"vision": true` must be configured and available.
 - The vision model must be registered under the OAIProxy provider.
+
+## Images in tool results
+
+Vision Bridge also processes images nested in tool results. Native vision models receive these images as multimodal content. Text-only models use a configured vision model; without one, OAIProxy sends a short image-omitted placeholder. A configured bridge that is unavailable or fails still reports an error. Cached descriptions are isolated by vision model ID.
+
+Token counting never starts a bridge request. It uses a cached description or a provisional image allowance, then checks the actual converted description before sending to the target model. See the [Token Estimation Guide](token-estimation.md) for settings, diagnostics, and verification limits.
