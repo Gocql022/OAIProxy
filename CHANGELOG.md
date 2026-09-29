@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.1.44 (2026-09-29)
+
+- Prevent binary tool results from expanding into numeric JSON text; decode UTF-8 text parts, preserve supported images across provider adapters and Vision Bridge, and use bounded placeholders for unsupported binary content.
+- Share semantic token accounting between Copilot callbacks and the prepared-request guard, with model-aware image estimates, configurable fallbacks, and largest-part diagnostics while retaining the existing input budget.
+- Keep chat and the Language Models panel responsive during token-count bursts by caching resolved estimation settings, yielding to queued extension-host work, and replacing per-callback debug logging with summaries.
+- Streamline panel initialization, fix narrow-panel layout and disposal races, and add a recoverable loading state.
+- Add metadata-only request/panel timing, optional estimate-versus-usage diagnostics and opt-in calibration, regression coverage, and token-estimation documentation.
+
 ## 0.1.43 (2026-09-27)
 
 - Fix DeepSeek LiteLLM thinking requests through Nube by omitting named or required tool choices that the vLLM backend rejects, while preserving automatic tool selection and tool definitions.
