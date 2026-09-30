@@ -7,11 +7,19 @@ import { PROVIDER_PRESETS } from "../providerPresets";
 
 suite("modelPresets", () => {
 	test("contains the verified OpenAI Codex OAuth cards", () => {
-		const expectedModels = ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"];
+		const expectedModels = [
+			"gpt-6.1-sol",
+			"gpt-6-astra",
+			"gpt-6-sol",
+			"gpt-6-luna",
+			"gpt-5.6-sol",
+			"gpt-5.6-terra",
+			"gpt-5.6-luna",
+		];
 		assert.deepStrictEqual(
-			MODEL_PRESETS.filter((preset) => preset.model.authMode === "oauth" && preset.model.owned_by === "openai-oauth").map(
-				(preset) => preset.model.id
-			),
+			MODEL_PRESETS.filter(
+				(preset) => preset.model.authMode === "oauth" && preset.model.owned_by === "openai-oauth"
+			).map((preset) => preset.model.id),
 			expectedModels
 		);
 		for (const modelId of expectedModels) {
@@ -26,7 +34,55 @@ suite("modelPresets", () => {
 			assert.strictEqual(preset.model.max_completion_tokens, undefined);
 			assert.strictEqual(preset.model.vision, true);
 			assert.strictEqual(preset.model.toolCalling, true);
+			const expectedEffort = modelId === "gpt-6.1-sol" ? "xhigh" : "max";
+			assert.strictEqual(preset.model.reasoning_effort, expectedEffort);
+			assert.strictEqual(preset.model.default_reasoning_effort, expectedEffort);
 			assert.ok(preset.model._comment?.includes("https://developers.openai.com/api/docs/models"));
+		}
+	});
+
+	test("contains separate GPT-6.1 Sol API-key and OAuth Responses cards with documented defaults", () => {
+		const presets = MODEL_PRESETS.filter((preset) => preset.model.id === "gpt-6.1-sol");
+		assert.strictEqual(presets.length, 2);
+		for (const expected of [
+			{
+				id: "openai-gpt-6-1-sol-responses",
+				provider: "openai",
+				displayName: "GPT-6.1 Sol",
+				baseUrl: "https://api.openai.com/v1",
+				configId: undefined,
+				authMode: undefined,
+			},
+			{
+				id: "openai-gpt-6-1-sol-codex-oauth",
+				provider: "openai-oauth",
+				displayName: "GPT-6.1 Sol (OAuth)",
+				baseUrl: "https://chatgpt.com/backend-api/codex",
+				configId: "openai-oauth",
+				authMode: "oauth",
+			},
+		]) {
+			const preset = presets.find((item) => item.id === expected.id);
+			assert.ok(preset);
+			assert.strictEqual(preset.label, "GPT-6.1 Sol");
+			assert.strictEqual(preset.category, "latest");
+			assert.strictEqual(preset.providerPresetId, expected.provider);
+			assert.strictEqual(preset.model.owned_by, expected.provider);
+			assert.strictEqual(preset.model.displayName, expected.displayName);
+			assert.strictEqual(preset.model.baseUrl, expected.baseUrl);
+			assert.strictEqual(preset.model.configId, expected.configId);
+			assert.strictEqual(preset.model.authMode, expected.authMode);
+			assert.strictEqual(preset.model.apiMode, "openai-responses");
+			assert.strictEqual(preset.model.family, "gpt-6.1-sol");
+			assert.strictEqual(preset.model.context_length, 1050000);
+			assert.strictEqual(preset.model.max_tokens, 128000);
+			assert.strictEqual(preset.model.max_completion_tokens, undefined);
+			assert.strictEqual(preset.model.vision, true);
+			assert.strictEqual(preset.model.toolCalling, true);
+			assert.deepStrictEqual(preset.model.supported_reasoning_efforts, ["low", "medium", "high", "xhigh", "max"]);
+			assert.strictEqual(preset.model.reasoning_effort, "xhigh");
+			assert.strictEqual(preset.model.default_reasoning_effort, "xhigh");
+			assert.ok(preset.model._comment?.includes("https://developers.openai.com/api/docs/models/gpt-6.1-sol"));
 		}
 	});
 

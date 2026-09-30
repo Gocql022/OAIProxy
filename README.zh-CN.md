@@ -83,6 +83,10 @@
 
 供应商管理表单将 Azure Foundry 排在首位，随后是现有供应商预设。请将占位 URL 替换为直连的 `https://<resource>.services.ai.azure.com/openai/v1`，并保存推理密钥；密钥保存为 `oaicopilot.apiKey.azure-foundry`，请求通过 `api-key` 验证。Quick Setup 提供 `Kimi-K2.6` 和 `DeepSeek-V4-Pro` 两张 Azure Foundry 卡片。
 
+Quick Setup 提供使用 OpenAI API key 的 **GPT-6.1 Sol** 和使用 ChatGPT/Codex 登录的 **GPT-6.1 Sol (OAuth)** 两张卡片。两者使用模型 ID `gpt-6.1-sol` 和 `apiMode: "openai-responses"`，启用视觉和工具调用，并默认使用 `xhigh` 推理。Thinking Effort 可选 `low`、`medium`、`high`、`xhigh`、`max`，不支持 `none` 或 `minimal`。预设配置 1,050,000 token 上下文窗口和 128,000 token 输出额度；OpenAI 上游默认值为 `medium`，`xhigh` 是 OAIProxy 的预设选择。详见[官方模型规格](https://developers.openai.com/api/docs/models/gpt-6.1-sol)和 [Codex 可用性说明](https://learn.chatgpt.com/docs/models#gpt-6.1-sol)，OAuth 访问取决于账户、推出进度和工作区设置。
+
+OAuth 卡片使用独立供应商 `openai-oauth` 和 `https://chatgpt.com/backend-api/codex`。在 **OpenAI OAuth (Codex)** 供应商行的 **Actions** 中选择 **Sign in**，完成设备码登录后添加卡片；凭据保存在 VS Code SecretStorage 中，并在请求前刷新。
+
 Model Management 提供每个模型的 `Test` 操作和并行的 `Test all` 操作。每次测试都会通过模型保存的供应商、API 模式、自定义请求头和高级参数发送一条小型真实推理请求，因此可能产生少量供应商用量。
 
 独立的 Provider Usage Check 表格会动态列出已配置且支持用量检查的供应商，并按余额、token、token 套餐或费用用量展示结果。Fireworks 账户发现和当月无服务器 token 检查复用普通 Fireworks API key。OpenAI 和 Anthropic 的用量/admin key 会与聊天 API key 分开保存。TokenRouter 使用单独的 Management Key，并通过 Management API self-wallet 端点显示账户余额。Z.AI 和小米 MiMo 条目会显示不可用原因，因为当前公开文档未提供 API key 用量或余额端点。

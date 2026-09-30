@@ -13,6 +13,8 @@ export interface ModelPreset {
 const OPENAI_CODEX_OAUTH_BASE_URL = "https://chatgpt.com/backend-api/codex";
 const OPENAI_CODEX_OAUTH_COMMENT =
 	"Quick Setup defaults based on the official OpenAI model catalog and Responses API documentation: https://developers.openai.com/api/docs/models and https://developers.openai.com/api/docs, plus the OpenClaw Codex OAuth catalog: https://github.com/openclaw/openclaw/blob/main/extensions/openai/openclaw.plugin.json";
+const OPENAI_GPT_6_1_SOL_COMMENT =
+	"Quick Setup defaults based on official OpenAI GPT-6.1 Sol model docs: https://developers.openai.com/api/docs/models/gpt-6.1-sol. OAIProxy defaults to xhigh reasoning effort instead of the upstream medium default; tool calling requires the Responses API.";
 
 function createOpenAICodexOAuthPreset(options: {
 	id: string;
@@ -22,7 +24,10 @@ function createOpenAICodexOAuthPreset(options: {
 	tags: string[];
 	description: string;
 	supportedReasoningEfforts: string[];
+	defaultReasoningEffort?: string;
+	sourceComment?: string;
 }): ModelPreset {
+	const defaultReasoningEffort = options.defaultReasoningEffort ?? options.supportedReasoningEfforts.at(-1);
 	return {
 		id: options.id,
 		label: options.label,
@@ -34,7 +39,7 @@ function createOpenAICodexOAuthPreset(options: {
 			id: options.modelId,
 			configId: "openai-oauth",
 			displayName: `${options.label} (OAuth)`,
-			_comment: OPENAI_CODEX_OAUTH_COMMENT,
+			_comment: options.sourceComment ?? OPENAI_CODEX_OAUTH_COMMENT,
 			owned_by: "openai-oauth",
 			authMode: "oauth",
 			baseUrl: OPENAI_CODEX_OAUTH_BASE_URL,
@@ -43,15 +48,26 @@ function createOpenAICodexOAuthPreset(options: {
 			vision: true,
 			context_length: 1050000,
 			max_tokens: 128000,
-			reasoning_effort: options.supportedReasoningEfforts.at(-1),
+			reasoning_effort: defaultReasoningEffort,
 			supported_reasoning_efforts: options.supportedReasoningEfforts,
-			default_reasoning_effort: options.supportedReasoningEfforts.at(-1),
+			default_reasoning_effort: defaultReasoningEffort,
 			toolCalling: true,
 		},
 	};
 }
 
 const OPENAI_CODEX_OAUTH_PRESETS: readonly ModelPreset[] = [
+	createOpenAICodexOAuthPreset({
+		id: "openai-gpt-6-1-sol-codex-oauth",
+		modelId: "gpt-6.1-sol",
+		label: "GPT-6.1 Sol",
+		category: "latest",
+		tags: ["OpenAI", "Codex", "OAuth", "Vision", "Reasoning", "Tools"],
+		description: "GPT-6.1 Sol through the ChatGPT/Codex OAuth Responses route with xhigh reasoning.",
+		supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+		defaultReasoningEffort: "xhigh",
+		sourceComment: `${OPENAI_GPT_6_1_SOL_COMMENT} Codex account availability: https://learn.chatgpt.com/docs/models#gpt-6.1-sol`,
+	}),
 	createOpenAICodexOAuthPreset({
 		id: "openai-gpt-6-astra-codex-oauth",
 		modelId: "gpt-6-astra",
@@ -216,6 +232,35 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
 			default_reasoning_effort: "max",
 			toolCalling: true,
 			include_reasoning_in_request: true,
+		},
+	},
+	{
+		id: "openai-gpt-6-1-sol-responses",
+		label: "GPT-6.1 Sol",
+		providerPresetId: "openai",
+		category: "latest",
+		tags: ["OpenAI", "Responses", "Vision", "Reasoning", "Tools"],
+		description: "OpenAI GPT-6.1 Sol for complex coding and professional work with xhigh reasoning.",
+		model: {
+			id: "gpt-6.1-sol",
+			_comment: OPENAI_GPT_6_1_SOL_COMMENT,
+			displayName: "GPT-6.1 Sol",
+			owned_by: "openai",
+			baseUrl: "https://api.openai.com/v1",
+			apiMode: "openai-responses",
+			family: "gpt-6.1-sol",
+			vision: true,
+			context_length: 1050000,
+			max_tokens: 128000,
+			reasoning_effort: "xhigh",
+			supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
+			default_reasoning_effort: "xhigh",
+			toolCalling: true,
+			extra: {
+				reasoning: {
+					summary: "detailed",
+				},
+			},
 		},
 	},
 	{

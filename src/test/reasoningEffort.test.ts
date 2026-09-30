@@ -11,6 +11,22 @@ import {
 } from "../reasoningEffort";
 
 suite("reasoningEffort", () => {
+	for (const presetId of ["openai-gpt-6-1-sol-responses", "openai-gpt-6-1-sol-codex-oauth"]) {
+		test(`exposes GPT-6.1 Sol efforts with xhigh selected for ${presetId}`, () => {
+			const preset = MODEL_PRESETS.find((item) => item.id === presetId);
+			assert.ok(preset);
+			const efforts = getReasoningEfforts(preset.model);
+			assert.strictEqual(shouldExposeReasoningEffort(preset.model), true);
+			assert.deepStrictEqual(efforts, ["low", "medium", "high", "xhigh", "max"]);
+			assert.strictEqual(getDefaultReasoningEffort(preset.model, efforts), "xhigh");
+			for (const effort of efforts) {
+				assert.strictEqual(normalizeReasoningEffortForModel(preset.model, effort), effort);
+			}
+			assert.strictEqual(normalizeReasoningEffortForModel(preset.model, "none"), undefined);
+			assert.strictEqual(normalizeReasoningEffortForModel(preset.model, "minimal"), undefined);
+		});
+	}
+
 	test("exposes Anthropic Claude Sonnet 4.6 effort values", () => {
 		const claude = model({
 			id: "claude-sonnet-4-6",
