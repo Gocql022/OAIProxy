@@ -175,6 +175,14 @@ VS Code Copilot 针对特定模型优化了系统提示词。[详细介绍](http
 
 配置示例见 `examples/openai-responses.jsonc`、`examples/openai-chat-completions.jsonc`、`examples/tokenrouter.jsonc`、`examples/anthropic.jsonc`、`examples/fireworks.jsonc`、`examples/zai-glm.jsonc`、`examples/mimo.jsonc`、`examples/minimax-openai.jsonc` 和 `examples/minimax-anthropic.jsonc`。TokenRouter 使用 `https://api.tokenrouter.com/v1`，供应商 key 保存为 `oaicopilot.apiKey.tokenrouter`，Quick Setup 提供四个精确的网关模型 ID。Fireworks 用量检查复用普通供应商 key，并报告可访问账户的当月无服务器 token。OpenAI 和 Anthropic 的用量/费用检查需要单独的 admin key，请在配置界面的 `Usage Key` 字段中填写，不要写入 `settings.json`。TokenRouter 的余额检查需要在 `Usage Key` 字段填写单独的 Management Key，并通过 Management API self-wallet 端点报告账户余额。Z.AI 和小米 MiMo 用量检查会显示为不可用，因为当前公开文档未提供 API key 用量或余额端点。
 
+### OpenAI GPT-6.1 Sol
+
+Quick Setup 提供独立的 **GPT-6.1 Sol** API key 卡片和 **GPT-6.1 Sol (OAuth)** 卡片。两者使用 `gpt-6.1-sol` 和 `openai-responses` 模式，启用视觉与工具调用，并将 `reasoning_effort` 和 `default_reasoning_effort` 设为 `xhigh`。可选推理值为 `low`、`medium`、`high`、`xhigh`、`max`，不支持 `none` 或 `minimal`。预设按照[官方模型规格](https://developers.openai.com/api/docs/models/gpt-6.1-sol)保存 `context_length: 1050000` 和 `max_tokens: 128000`。OpenAI 上游默认为 `medium`，OAIProxy 为这两张卡片明确选择 `xhigh`。
+
+API key 卡片使用供应商 `openai` 和 `https://api.openai.com/v1`，并请求详细推理摘要。OAuth 卡片使用供应商及 `configId` `openai-oauth`、`authMode: "oauth"` 和 `https://chatgpt.com/backend-api/codex`，因此两份配置可以同时保留。[OAuth 访问](https://learn.chatgpt.com/docs/models#gpt-6.1-sol)取决于账户、推出进度和工作区设置。在供应商管理中，使用 **OpenAI OAuth (Codex)** 行的 **Sign in** 或命令 **OAIProxy: Sign in to OpenAI / Codex with OAuth** 完成设备码登录；凭据保存在 VS Code SecretStorage 中，并在请求前刷新。
+
+公共 API 将输出额度发送为 `max_output_tokens`；OAuth 路由省略该字段，并遵循现有的 [Codex 请求要求](openai-oauth-cache.md)。
+
 ### Fireworks AI
 
 使用完整 Fireworks 模型 ID 和 `https://api.fireworks.ai/inference/v1` Base URL。内置 Quick Setup 卡片当前包括 `accounts/fireworks/models/deepseek-v4-pro`、`accounts/fireworks/models/kimi-k2p7-code` 和 `accounts/fireworks/models/glm-5p2`。

@@ -1,10 +1,36 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import { OpenaiResponsesApi } from "../openai/openaiResponsesApi";
+import { MODEL_PRESETS } from "../modelPresets";
 import { COPILOT_USAGE_MIME } from "../responseUsage";
 import type { HFModelItem } from "../types";
 
 suite("openaiResponsesApi", () => {
+	test("sends GPT-6.1 Sol API-key xhigh effort with detailed summaries and the output cap", () => {
+		const preset = MODEL_PRESETS.find((item) => item.id === "openai-gpt-6-1-sol-responses");
+		assert.ok(preset);
+		const api = new OpenaiResponsesApi(preset.model.id);
+		const body = api.prepareRequestBody({ model: preset.model.id, input: [], stream: true }, preset.model);
+
+		assert.strictEqual(body.model, "gpt-6.1-sol");
+		assert.deepStrictEqual(body.reasoning, { effort: "xhigh", summary: "detailed" });
+		assert.strictEqual(body.max_output_tokens, 128000);
+		assert.strictEqual(body.store, undefined);
+	});
+
+	test("sends GPT-6.1 Sol OAuth xhigh effort while retaining the Codex body restrictions", () => {
+		const preset = MODEL_PRESETS.find((item) => item.id === "openai-gpt-6-1-sol-codex-oauth");
+		assert.ok(preset);
+		const api = new OpenaiResponsesApi(preset.model.id);
+		const body = api.prepareRequestBody({ model: preset.model.id, input: [], stream: true }, preset.model);
+
+		assert.strictEqual(body.model, "gpt-6.1-sol");
+		assert.deepStrictEqual(body.reasoning, { effort: "xhigh" });
+		assert.strictEqual(body.store, false);
+		assert.deepStrictEqual(body.include, ["reasoning.encrypted_content"]);
+		assert.strictEqual(body.max_output_tokens, undefined);
+	});
+
 	test("passes preserved thinking configuration through request body", () => {
 		const api = new OpenaiResponsesApi("glm-5.2");
 		const body = api.prepareRequestBody(
