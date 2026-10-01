@@ -62,8 +62,15 @@ suite("providerUsage", () => {
 			});
 			assert.strictEqual(result.adapter, "openai-codex");
 			assert.strictEqual(request?.url, OPENAI_CODEX_USAGE_ENDPOINT);
-			assert.strictEqual(request?.headers.Authorization, "Bearer oauth-token");
-			assert.strictEqual(request?.headers["ChatGPT-Account-Id"], "acct-test");
+			assert.deepStrictEqual(request?.headers, {
+				Accept: "application/json",
+				Authorization: "Bearer oauth-token",
+				"Content-Type": "application/json",
+				originator: "codex_cli_rs",
+				version: "oaiproxy",
+				"User-Agent": "oaiproxy",
+				"ChatGPT-Account-Id": "acct-test",
+			});
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

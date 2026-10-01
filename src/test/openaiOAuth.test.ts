@@ -20,12 +20,13 @@ suite("openaiOAuth", () => {
 		assert.strictEqual(OPENAI_CODEX_RESPONSES_BASE_URL, "https://chatgpt.com/backend-api/codex");
 		assert.strictEqual(isOpenAICodexOAuthBaseUrl("https://chatgpt.com/backend-api/codex"), true);
 		assert.strictEqual(isOpenAICodexOAuthBaseUrl("https://api.openai.com/v1"), false);
-		const headers: Record<string, string> = {};
+		const headers: Record<string, string> = { Authorization: "Bearer oauth-token" };
 		applyOpenAICodexOAuthHeaders(headers, { accountId: "acct-test" });
 		assert.deepStrictEqual(headers, {
+			Authorization: "Bearer oauth-token",
 			"OpenAI-Beta": "responses=experimental",
 			Accept: "text/event-stream",
-			originator: "oaiproxy",
+			originator: "codex_cli_rs",
 			version: "oaiproxy",
 			"User-Agent": "oaiproxy",
 			"ChatGPT-Account-Id": "acct-test",
@@ -36,12 +37,12 @@ suite("openaiOAuth", () => {
 	});
 
 	test("completes the OpenAI device-code flow", async () => {
-		const calls: { url: string; body: string }[] = [];
+		const calls: { url: string; body: string; headers: Headers }[] = [];
 		let polls = 0;
 		const fetchImpl: typeof fetch = async (input, init) => {
 			const url = String(input);
 			const body = typeof init?.body === "string" ? init.body : "";
-			calls.push({ url, body });
+			calls.push({ url, body, headers: new Headers(init?.headers) });
 			if (url === OPENAI_OAUTH_DEVICE_CODE_URL) {
 				return jsonResponse({ device_auth_id: "device-auth-id", user_code: "ABCD-1234", interval: 0.001 });
 			}
@@ -72,6 +73,22 @@ suite("openaiOAuth", () => {
 		assert.strictEqual(credential.email, "user@example.com");
 		assert.strictEqual(credential.accountId, "acct-test");
 		assert.strictEqual(calls.length, 4);
+		assert.deepStrictEqual(calls.map((call) => call.url), [
+			OPENAI_OAUTH_DEVICE_CODE_URL,
+			OPENAI_OAUTH_DEVICE_TOKEN_URL,
+			OPENAI_OAUTH_DEVICE_TOKEN_URL,
+			OPENAI_OAUTH_TOKEN_URL,
+		]);
+		for (const call of calls) {
+			assert.strictEqual(call.headers.get("originator"), "codex_cli_rs");
+			assert.strictEqual(call.headers.get("version"), "oaiproxy");
+			assert.strictEqual(call.headers.get("User-Agent"), "oaiproxy");
+			assert.strictEqual(call.headers.get("Accept"), "application/json");
+			assert.strictEqual(
+				call.headers.get("Content-Type"),
+				call.url === OPENAI_OAUTH_TOKEN_URL ? "application/x-www-form-urlencoded" : "application/json"
+			);
+		}
 		assert.deepStrictEqual(JSON.parse(calls[0].body), { client_id: OPENAI_OAUTH_CLIENT_ID });
 		assert.strictEqual(calls[3].body, "grant_type=authorization_code&code=authorization-code&redirect_uri=https%3A%2F%2Fauth.openai.com%2Fdeviceauth%2Fcallback&client_id=app_EMoamEEZ73f0CkXaXp7hrann&code_verifier=code-verifier");
 	});
@@ -91,8 +108,16 @@ suite("openaiOAuth", () => {
 			delete: async () => undefined,
 		};
 		let refreshCount = 0;
-		const fetchImpl: typeof fetch = async () => {
+		const fetchImpl: typeof fetch = async (input, init) => {
 			refreshCount += 1;
+			assert.strictEqual(String(input), OPENAI_OAUTH_TOKEN_URL);
+			const headers = new Headers(init?.headers);
+			assert.strictEqual(headers.get("originator"), "codex_cli_rs");
+			assert.strictEqual(headers.get("version"), "oaiproxy");
+			assert.strictEqual(headers.get("User-Agent"), "oaiproxy");
+			assert.strictEqual(headers.get("Accept"), "application/json");
+			assert.strictEqual(headers.get("Content-Type"), "application/x-www-form-urlencoded");
+			assert.strictEqual(init?.body, "grant_type=refresh_token&refresh_token=refresh-token&client_id=app_EMoamEEZ73f0CkXaXp7hrann");
 			return jsonResponse({ access_token: "fresh-token", expires_in: 3600 });
 		};
 
