@@ -2,6 +2,20 @@
 
 OpenAI OAuth uses the ChatGPT/Codex Responses route, which has different request requirements from the public OpenAI API-key Responses route. These rules apply only to models using `owned_by: "openai-oauth"`, `authMode: "oauth"`, `apiMode: "openai-responses"`, and the Codex base URL. Do not copy them to OpenAI API-key models or other providers.
 
+## CLI usage attribution trial
+
+OpenAI OAuth inference, device sign-in, token refresh, and quota requests send `originator: codex_cli_rs`, matching the default originator in the [official Codex CLI HTTP client](https://github.com/openai/codex/blob/main/codex-rs/login/src/auth/default_client.rs), inspected on October 1, 2026. The shared constant in `src/openaiOAuth.ts` also supplies the quota request in `src/providerUsage.ts`.
+
+This trial changes only the originator. The `User-Agent` and `version` headers remain `oaiproxy`; credentials, endpoints, account attribution, and conversation/cache behavior stay the same. Inference requests retain `Accept: text/event-stream`; authentication and quota requests retain `Accept: application/json`.
+
+The goal is to see whether new usage appears under CLI instead of Uncategorized. OpenAI's dashboard classification rules are not documented, and request-header tests cannot prove the displayed category. No historical reclassification is expected.
+
+To verify after running the updated extension:
+
+1. Send a short request with an OpenAI OAuth model and note its time. With debug logging enabled, confirm `originator: codex_cli_rs` in the sanitized `request.headers` entry in the VS Code Server OAIProxy output log.
+2. After the dashboard records the new activity, check its usage category. A successful request alone does not confirm CLI attribution.
+3. If new usage remains Uncategorized, record the trial as unsuccessful and reassess before changing additional CLI identity fields.
+
 ## Request requirements
 
 Use the Codex endpoint:

@@ -1,3 +1,5 @@
+import { OPENAI_OAUTH_ORIGINATOR } from "./openaiOAuth";
+
 export type ProviderUsageAdapter =
 	| "anthropic"
 	| "deepseek"
@@ -882,7 +884,7 @@ function xaiGrokUsageHeaders(apiKey: string): Record<string, string> {
 function openAICodexUsageHeaders(apiKey: string, accountId?: string): Record<string, string> {
 	return {
 		...bearerHeaders(apiKey),
-		originator: "oaiproxy",
+		originator: OPENAI_OAUTH_ORIGINATOR,
 		version: "oaiproxy",
 		"User-Agent": "oaiproxy",
 		...(accountId ? { "ChatGPT-Account-Id": accountId } : {}),

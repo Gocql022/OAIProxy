@@ -17,7 +17,8 @@ export const OPENAI_OAUTH_DEVICE_TOKEN_URL = `${OPENAI_OAUTH_ISSUER}/api/account
 export const OPENAI_OAUTH_TOKEN_URL = `${OPENAI_OAUTH_ISSUER}/oauth/token`;
 export const OPENAI_OAUTH_DEVICE_CALLBACK_URL = `${OPENAI_OAUTH_ISSUER}/deviceauth/callback`;
 export const OPENAI_CODEX_RESPONSES_BASE_URL = "https://chatgpt.com/backend-api/codex";
-export const OPENAI_OAUTH_ORIGINATOR = "oaiproxy";
+// Trial CLI usage attribution; dashboard categorization still needs live verification.
+export const OPENAI_OAUTH_ORIGINATOR = "codex_cli_rs";
 export const OPENAI_OAUTH_CLIENT_VERSION = "oaiproxy";
 
 const DEVICE_CODE_TIMEOUT_MS = 15 * 60_000;
