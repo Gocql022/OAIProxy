@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.1.45 (2026-10-01)
+
+- Add GPT-6.1 Sol Quick Setup presets for OpenAI API keys and Codex OAuth using the Responses API, with vision, tool calling, a 1,050,000-token context window, and a 128,000-token output allowance.
+- Default both new presets to `xhigh` reasoning and offer `low`, `medium`, `high`, `xhigh`, and `max` while preserving existing preset defaults.
+- Document API-key and OAuth setup in English and Chinese, and add regression coverage for preset metadata, reasoning selection, and Responses request shaping.
+
 ## 0.1.44 (2026-09-29)
 
 - Prevent binary tool results from expanding into numeric JSON text; decode UTF-8 text parts, preserve supported images across provider adapters and Vision Bridge, and use bounded placeholders for unsupported binary content.
