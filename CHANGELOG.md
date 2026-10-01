@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.1.46 (2026-10-02)
+
+- Use the Codex CLI originator for OpenAI OAuth inference, device sign-in, token refresh, and quota requests while retaining OAIProxy's existing user agent and session/cache behavior.
+- Add request-header regression coverage and document how to verify usage attribution. Live requests and cache reuse are verified; the dashboard's CLI versus Uncategorized classification still requires a separate check.
+
 ## 0.1.45 (2026-10-01)
 
 - Add GPT-6.1 Sol Quick Setup presets for OpenAI API keys and Codex OAuth using the Responses API, with vision, tool calling, a 1,050,000-token context window, and a 128,000-token output allowance.
