@@ -1,864 +1,845 @@
 {
-  "activationEvents": [
-    "onStartupFinished",
-    "onLanguageModelChatProvider:oaiproxy",
-    "onCommand:oaiproxy.setApikey",
-    "onCommand:oaiproxy.setProviderApikey",
-    "onCommand:oaiproxy.loginXaiOAuth",
-    "onCommand:oaiproxy.logoutXaiOAuth",
-    "onCommand:oaiproxy.loginOpenAIOAuth",
-    "onCommand:oaiproxy.logoutOpenAIOAuth",
-    "onCommand:oaiproxy.openConfig",
-    "onCommand:oaiproxy.generateGitCommitMessage",
-    "onCommand:oaiproxy.abortGitCommitMessage"
-  ],
-  "badges": [
-    {
-      "description": "Star OAIProxy on Github",
-      "href": "https://github.com/lqdflying/OAIProxy",
-      "url": "https://img.shields.io/github/stars/lqdflying/OAIProxy?style=social"
-    }
-  ],
-  "bugs": {
-    "url": "https://github.com/lqdflying/OAIProxy/issues"
-  },
-  "categories": [
-    "AI",
-    "Chat"
-  ],
-  "contributes": {
-    "commands": [
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.setApikey",
-        "title": "%command.setApikey.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.setProviderApikey",
-        "title": "%command.setProviderApikey.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.loginXaiOAuth",
-        "title": "%command.loginXaiOAuth.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.logoutXaiOAuth",
-        "title": "%command.logoutXaiOAuth.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.loginOpenAIOAuth",
-        "title": "%command.loginOpenAIOAuth.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.logoutOpenAIOAuth",
-        "title": "%command.logoutOpenAIOAuth.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.openConfig",
-        "title": "%command.openConfig.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.checkProviderUsage",
-        "title": "%command.checkProviderUsage.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.generateGitCommitMessage",
-        "icon": "$(wand)",
-        "title": "%command.generateGitCommitMessage.title%"
-      },
-      {
-        "category": "OAIProxy",
-        "command": "oaiproxy.abortGitCommitMessage",
-        "icon": "$(debug-stop)",
-        "title": "%command.abortGitCommitMessage.title%"
-      }
-    ],
-    "configuration": {
-      "properties": {
-        "oaicopilot.baseUrl": {
-          "default": "https://router.huggingface.co/v1",
-          "description": "%config.baseUrl.description%",
-          "type": "string"
-        },
-        "oaicopilot.commitLanguage": {
-          "default": "English",
-          "description": "%config.commitLanguage.description%",
-          "enum": [
-            "English",
-            "French",
-            "Italian",
-            "German",
-            "Spanish",
-            "Russian",
-            "Chinese (Simplified)",
-            "Chinese (Traditional)",
-            "Japanese",
-            "Korean",
-            "Czech",
-            "Portuguese (Brazil)",
-            "Turkish",
-            "Polish"
-          ],
-          "type": "string"
-        },
-        "oaicopilot.commitMessagePrompt": {
-          "default": "",
-          "description": "%config.commitMessagePrompt.description%",
-          "type": "string"
-        },
-        "oaicopilot.delay": {
-          "default": 0,
-          "description": "%config.delay.description%",
-          "minimum": 0,
-          "type": "number"
-        },
-        "oaicopilot.logLevel": {
-          "default": "off",
-          "description": "%config.logLevel.description%",
-          "enum": [
-            "off",
-            "debug",
-            "info",
-            "warn",
-            "error"
-          ],
-          "type": "string"
-        },
-        "oaicopilot.models": {
-          "default": [],
-          "description": "%config.models.description%",
-          "items": {
-            "anyOf": [
-              {
-                "required": [
-                  "owned_by"
-                ]
-              },
-              {
-                "required": [
-                  "provider"
-                ]
-              },
-              {
-                "required": [
-                  "provide"
-                ]
-              }
-            ],
-            "properties": {
-              "_comment": {
-                "description": "%config.models._comment.description%",
-                "type": "string"
-              },
-              "apiMode": {
-                "default": "openai",
-                "description": "%config.models.apiMode.description%",
-                "enum": [
-                  "openai",
-                  "azure-foundry",
-                  "litellm",
-                  "openai-responses",
-                  "ollama",
-                  "anthropic",
-                  "gemini"
-                ],
-                "type": "string"
-              },
-              "authMode": {
-                "description": "%config.models.authMode.description%",
-                "enum": [
-                  "api-key",
-                  "oauth"
-                ],
-                "type": "string"
-              },
-              "baseUrl": {
-                "description": "%config.models.baseUrl.description%",
-                "type": "string"
-              },
-              "configId": {
-                "description": "%config.models.configId.description%",
-                "type": "string"
-              },
-              "context_length": {
-                "default": 128000,
-                "description": "%config.models.context_length.description%",
-                "maximum": 10000000,
-                "minimum": 1000,
-                "type": "number"
-              },
-              "default_reasoning_effort": {
-                "description": "%config.models.default_reasoning_effort.description%",
-                "type": "string"
-              },
-              "delay": {
-                "default": 0,
-                "description": "%config.models.delay.description%",
-                "minimum": 0,
-                "type": "number"
-              },
-              "displayName": {
-                "description": "%config.models.displayName.description%",
-                "type": "string"
-              },
-              "enable_thinking": {
-                "default": false,
-                "description": "%config.models.enable_thinking.description%",
-                "type": "boolean"
-              },
-              "extra": {
-                "description": "%config.models.extra.description%",
-                "type": "object"
-              },
-              "extra_body": {
-                "description": "%config.models.extra_body.description%",
-                "type": "object"
-              },
-              "family": {
-                "description": "%config.models.family.description%",
-                "type": "string"
-              },
-              "frequency_penalty": {
-                "default": 0,
-                "description": "%config.models.frequency_penalty.description%",
-                "maximum": 2,
-                "minimum": -2,
-                "type": "number"
-              },
-              "headers": {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "description": "%config.models.headers.description%",
-                "type": "object"
-              },
-              "id": {
-                "description": "%config.models.id.description%",
-                "type": "string"
-              },
-              "include_reasoning_in_request": {
-                "default": false,
-                "description": "%config.models.include_reasoning_in_request.description%",
-                "type": "boolean"
-              },
-              "max_completion_tokens": {
-                "default": 4096,
-                "description": "%config.models.max_completion_tokens.description%",
-                "maximum": 10000000,
-                "minimum": 1,
-                "type": "number"
-              },
-              "max_input_tokens": {
-                "description": "%config.models.max_input_tokens.description%",
-                "maximum": 10000000,
-                "minimum": 1,
-                "type": "number"
-              },
-              "max_tokens": {
-                "default": 4096,
-                "description": "%config.models.max_tokens.description%",
-                "maximum": 10000000,
-                "minimum": 1,
-                "type": "number"
-              },
-              "min_p": {
-                "default": 0,
-                "description": "%config.models.min_p.description%",
-                "maximum": 1,
-                "minimum": 0,
-                "type": "number"
-              },
-              "owned_by": {
-                "description": "%config.models.owned_by.description%",
-                "type": "string"
-              },
-              "presence_penalty": {
-                "default": 0,
-                "description": "%config.models.presence_penalty.description%",
-                "maximum": 2,
-                "minimum": -2,
-                "type": "number"
-              },
-              "prompt_cache": {
-                "description": "%config.models.prompt_cache.description%",
-                "properties": {
-                  "anthropic": {
-                    "description": "%config.models.prompt_cache.anthropic.description%",
-                    "properties": {
-                      "cache_system": {
-                        "default": true,
-                        "description": "%config.models.prompt_cache.anthropic.cache_system.description%",
-                        "type": "boolean"
-                      },
-                      "cache_tools": {
-                        "default": true,
-                        "description": "%config.models.prompt_cache.anthropic.cache_tools.description%",
-                        "type": "boolean"
-                      },
-                      "enabled": {
-                        "default": false,
-                        "description": "%config.models.prompt_cache.anthropic.enabled.description%",
-                        "type": "boolean"
-                      },
-                      "ttl": {
-                        "default": "5m",
-                        "description": "%config.models.prompt_cache.anthropic.ttl.description%",
-                        "enum": [
-                          "5m",
-                          "1h"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "enabled": {
-                    "default": true,
-                    "description": "%config.models.prompt_cache.enabled.description%",
-                    "type": "boolean"
-                  },
-                  "key": {
-                    "description": "%config.models.prompt_cache.key.description%",
-                    "type": "string"
-                  },
-                  "retention": {
-                    "description": "%config.models.prompt_cache.retention.description%",
-                    "enum": [
-                      "in_memory",
-                      "24h"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
-              "provide": {
-                "description": "%config.models.provide.description%",
-                "type": "string"
-              },
-              "provider": {
-                "description": "%config.models.provider.description%",
-                "type": "string"
-              },
-              "reasoning": {
-                "default": {
-                  "effort": "medium"
-                },
-                "description": "%config.models.reasoning.description%",
-                "properties": {
-                  "effort": {
-                    "default": "medium",
-                    "description": "%config.models.reasoning.effort.description%",
-                    "enum": [
-                      "max",
-                      "xhigh",
-                      "high",
-                      "medium",
-                      "low",
-                      "minimal",
-                      "auto"
-                    ],
-                    "type": "string"
-                  },
-                  "enabled": {
-                    "default": true,
-                    "description": "%config.models.reasoning.enabled.description%",
-                    "type": "boolean"
-                  },
-                  "exclude": {
-                    "default": false,
-                    "description": "%config.models.reasoning.exclude.description%",
-                    "type": "boolean"
-                  },
-                  "max_tokens": {
-                    "default": 2000,
-                    "description": "%config.models.reasoning.max_tokens.description%",
-                    "minimum": 1,
-                    "type": "number"
-                  }
-                },
-                "type": "object"
-              },
-              "reasoning_effort": {
-                "default": "medium",
-                "description": "%config.models.reasoning_effort.description%",
-                "enum": [
-                  "max",
-                  "xhigh",
-                  "high",
-                  "medium",
-                  "low",
-                  "minimal",
-                  "none"
-                ],
-                "type": "string"
-              },
-              "repetition_penalty": {
-                "default": 0,
-                "description": "%config.models.repetition_penalty.description%",
-                "maximum": 2,
-                "minimum": 0,
-                "type": "number"
-              },
-              "supported_reasoning_efforts": {
-                "description": "%config.models.supported_reasoning_efforts.description%",
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              "supports_reasoning_effort": {
-                "default": false,
-                "description": "%config.models.supports_reasoning_effort.description%",
-                "type": "boolean"
-              },
-              "temperature": {
-                "default": 0,
-                "description": "%config.models.temperature.description%",
-                "maximum": 2,
-                "minimum": 0,
-                "type": "number"
-              },
-              "thinking": {
-                "description": "%config.models.thinking.description%",
-                "properties": {
-                  "clear_thinking": {
-                    "description": "%config.models.thinking.clear_thinking.description%",
-                    "type": "boolean"
-                  },
-                  "type": {
-                    "description": "%config.models.thinking.type.description%",
-                    "enum": [
-                      "enabled",
-                      "disabled",
-                      "adaptive"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
-              "thinking_budget": {
-                "default": 128,
-                "description": "%config.models.thinking_budget.description%",
-                "maximum": 10000000,
-                "minimum": 128,
-                "type": "number"
-              },
-              "toolCalling": {
-                "default": true,
-                "description": "%config.models.toolCalling.description%",
-                "type": "boolean"
-              },
-              "top_k": {
-                "default": 50,
-                "description": "%config.models.top_k.description%",
-                "minimum": 1,
-                "type": "number"
-              },
-              "top_p": {
-                "default": 1,
-                "description": "%config.models.top_p.description%",
-                "maximum": 1,
-                "minimum": 0,
-                "type": "number"
-              },
-              "useForCommitGeneration": {
-                "default": false,
-                "description": "%config.models.useForCommitGeneration.description%",
-                "type": "boolean"
-              },
-              "vision": {
-                "default": false,
-                "description": "%config.models.vision.description%",
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "id"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "oaicopilot.readFileLines": {
-          "default": 0,
-          "description": "%config.readFileLines.description%",
-          "maximum": 10000,
-          "minimum": 0,
-          "type": "number"
-        },
-        "oaicopilot.debug.tokenBreakdown": {
-          "default": false,
-          "description": "%config.debug.tokenBreakdown.description%",
-          "type": "boolean"
-        },
-        "oaicopilot.tokenEstimation": {
-          "additionalProperties": false,
-          "default": {
-            "bridgeTokens": 8192,
-            "calibration": "observe",
-            "charsPerToken": 4,
-            "image": {
-              "areaDivisor": 750,
-              "fallbackTokens": 8192,
-              "fixedTokens": 8192,
-              "maxLongEdge": 2576,
-              "maxTokensPerImage": 8192,
-              "profile": "auto",
-              "strategy": "auto"
-            },
-            "maxSerializedPartChars": 200000,
-            "nonAsciiTokensPerChar": 1,
-            "perModel": {}
-          },
-          "description": "%config.tokenEstimation.description%",
-          "properties": {
-            "bridgeTokens": {
-              "description": "%config.tokenEstimation.bridgeTokens.description%",
-              "maximum": 1000000,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "calibration": {
-              "description": "%config.tokenEstimation.calibration.description%",
-              "enum": [
-                "observe",
-                "adaptive"
-              ],
-              "type": "string"
-            },
-            "charsPerToken": {
-              "description": "%config.tokenEstimation.charsPerToken.description%",
-              "maximum": 100,
-              "minimum": 0.1,
-              "type": "number"
-            },
-            "image": {
-              "additionalProperties": false,
-              "properties": {
-                "areaDivisor": {
-                  "maximum": 1000000,
-                  "minimum": 0.01,
-                  "type": "number"
-                },
-                "fallbackTokens": {
-                  "maximum": 1000000,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "fixedTokens": {
-                  "maximum": 1000000,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "maxLongEdge": {
-                  "maximum": 1000000,
-                  "minimum": 1,
-                  "type": "number"
-                },
-                "maxTokensPerImage": {
-                  "maximum": 1000000,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "profile": {
-                  "enum": [
-                    "auto",
-                    "openai-patches",
-                    "openai-tiles",
-                    "claude-standard",
-                    "claude-high",
-                    "unknown"
-                  ],
-                  "type": "string"
-                },
-                "strategy": {
-                  "description": "%config.tokenEstimation.image.strategy.description%",
-                  "enum": [
-                    "auto",
-                    "fixed",
-                    "area"
-                  ],
-                  "type": "string"
-                }
-              },
-              "type": "object"
-            },
-            "maxSerializedPartChars": {
-              "description": "%config.tokenEstimation.maxSerializedPartChars.description%",
-              "maximum": 1000000,
-              "minimum": 64,
-              "type": "integer"
-            },
-            "nonAsciiTokensPerChar": {
-              "maximum": 100,
-              "minimum": 0.1,
-              "type": "number"
-            },
-            "perModel": {
-              "additionalProperties": {
-                "additionalProperties": false,
-                "properties": {
-                  "bridgeTokens": {
-                    "description": "%config.tokenEstimation.bridgeTokens.description%",
-                    "maximum": 1000000,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "calibration": {
-                    "description": "%config.tokenEstimation.calibration.description%",
-                    "enum": [
-                      "observe",
-                      "adaptive"
-                    ],
-                    "type": "string"
-                  },
-                  "charsPerToken": {
-                    "description": "%config.tokenEstimation.charsPerToken.description%",
-                    "maximum": 100,
-                    "minimum": 0.1,
-                    "type": "number"
-                  },
-                  "image": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "areaDivisor": {
-                        "maximum": 1000000,
-                        "minimum": 0.01,
-                        "type": "number"
-                      },
-                      "fallbackTokens": {
-                        "maximum": 1000000,
-                        "minimum": 1,
-                        "type": "integer"
-                      },
-                      "fixedTokens": {
-                        "maximum": 1000000,
-                        "minimum": 1,
-                        "type": "integer"
-                      },
-                      "maxLongEdge": {
-                        "maximum": 1000000,
-                        "minimum": 1,
-                        "type": "number"
-                      },
-                      "maxTokensPerImage": {
-                        "maximum": 1000000,
-                        "minimum": 1,
-                        "type": "integer"
-                      },
-                      "profile": {
-                        "enum": [
-                          "auto",
-                          "openai-patches",
-                          "openai-tiles",
-                          "claude-standard",
-                          "claude-high",
-                          "unknown"
-                        ],
-                        "type": "string"
-                      },
-                      "strategy": {
-                        "description": "%config.tokenEstimation.image.strategy.description%",
-                        "enum": [
-                          "auto",
-                          "fixed",
-                          "area"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "maxSerializedPartChars": {
-                    "description": "%config.tokenEstimation.maxSerializedPartChars.description%",
-                    "maximum": 1000000,
-                    "minimum": 64,
-                    "type": "integer"
-                  },
-                  "nonAsciiTokensPerChar": {
-                    "maximum": 100,
-                    "minimum": 0.1,
-                    "type": "number"
-                  }
-                },
-                "type": "object"
-              },
-              "description": "%config.tokenEstimation.perModel.description%",
-              "type": "object"
-            }
-          },
-          "type": "object"
-        },
-        "oaicopilot.retry": {
-          "default": {
-            "enabled": true,
-            "interval_ms": 1000,
-            "max_attempts": 3,
-            "status_codes": []
-          },
-          "description": "%config.retry.description%",
-          "properties": {
-            "enabled": {
-              "default": true,
-              "description": "%config.retry.enabled.description%",
-              "type": "boolean"
-            },
-            "interval_ms": {
-              "default": 1000,
-              "description": "%config.retry.interval_ms.description%",
-              "minimum": 1,
-              "type": "number"
-            },
-            "max_attempts": {
-              "default": 3,
-              "description": "%config.retry.max_attempts.description%",
-              "minimum": 1,
-              "type": "number"
-            },
-            "status_codes": {
-              "description": "%config.retry.status_codes.description%",
-              "items": {
-                "type": "number"
-              },
-              "type": "array"
-            }
-          },
-          "type": "object"
-        },
-        "oaicopilot.visionBridgeEnabled": {
-          "default": true,
-          "description": "%config.visionBridgeEnabled.description%",
-          "type": "boolean"
-        },
-        "oaicopilot.visionBridgeModel": {
-          "default": "",
-          "description": "%config.visionBridgeModel.description%",
-          "type": "string"
-        },
-        "oaicopilot.visionBridgePrompt": {
-          "default": "",
-          "description": "%config.visionBridgePrompt.description%",
-          "type": "string"
-        }
-      },
-      "title": "%configuration.title%"
-    },
-    "languageModelChatProviders": [
-      {
-        "displayName": "OAIProxy",
-        "managementCommand": "oaiproxy.setApikey",
-        "vendor": "oaiproxy"
-      }
-    ],
-    "menus": {
-      "commandPalette": [
-        {
-          "command": "oaiproxy.generateGitCommitMessage",
-          "when": "config.git.enabled && !oaiproxy.isGeneratingCommit"
-        },
-        {
-          "command": "oaiproxy.abortGitCommitMessage",
-          "when": "config.git.enabled && oaiproxy.isGeneratingCommit"
-        }
-      ],
-      "scm/title": [
-        {
-          "command": "oaiproxy.generateGitCommitMessage",
-          "group": "navigation",
-          "when": "config.git.enabled && scmProvider == git && !oaiproxy.isGeneratingCommit"
-        },
-        {
-          "command": "oaiproxy.abortGitCommitMessage",
-          "group": "navigation",
-          "when": "config.git.enabled && scmProvider == git && oaiproxy.isGeneratingCommit"
-        }
-      ]
-    }
-  },
-  "dependencies": {
-    "@microsoft/tiktokenizer": "^1.0.10"
-  },
-  "description": "Azure Foundry/OpenAI/LiteLLM/Ollama/Anthropic/Gemini/xAI provider for Copilot Chat, with Azure Foundry, OpenAI, OpenAI Codex OAuth, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, MiniMax, and Grok OAuth/API-key presets",
-  "devDependencies": {
-    "@eslint/js": "^9.13.0",
-    "@stylistic/eslint-plugin": "^2.9.0",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "^22",
-    "@types/vscode": "^1.118.0",
-    "@vscode/dts": "^0.4.1",
-    "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2",
-    "eslint": "^9.13.0",
-    "prettier": "^3.1.0",
-    "typescript": "^5.9.2",
-    "typescript-eslint": "^8.39.0"
-  },
-  "displayName": "OAIProxy",
-  "engines": {
-    "vscode": "^1.120.0"
-  },
-  "icon": "assets/icon.png",
-  "keywords": [
-    "ai",
-    "chat",
-    "copilot",
-    "github-copilot",
-    "language-model",
-    "llm",
-    "openai",
-    "tokenrouter",
-    "kimi",
-    "moonshot",
-    "deepseek",
-    "fireworks",
-    "zai",
-    "zhipu",
-    "glm",
-    "mimo",
-    "xiaomi",
-    "minimax",
-    "ollama",
-    "anthropic",
-    "claude",
-    "gemini",
-    "xai",
-    "grok",
-    "codex",
-    "openai-oauth",
-    "litellm",
-    "openai-compatible",
-    "openai-responses",
-    "git-commit",
-    "thinking"
-  ],
-  "l10n": "./l10n",
-  "license": "MIT",
-  "main": "./out/extension.js",
-  "name": "oaiproxy",
-  "publisher": "lqdflying",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/lqdflying/OAIProxy"
-  },
-  "scripts": {
-    "build": "npm exec --yes --package @vscode/vsce -- vsce package",
-    "compile": "tsc -p ./",
-    "download-api": "dts dev && mv vscode.proposed.*.ts src",
-    "format": "prettier --write .",
-    "lint": "eslint",
-    "test": "npm run compile && vscode-test",
-    "vscode:prepublish": "npm run compile",
-    "watch": "tsc -watch -p ./"
-  },
-  "version": "0.1.45"
+	"name": "oaiproxy",
+	"publisher": "lqdflying",
+	"displayName": "OAIProxy",
+	"description": "Azure Foundry/OpenAI/LiteLLM/Ollama/Anthropic/Gemini/xAI provider for Copilot Chat, with Azure Foundry, OpenAI, OpenAI Codex OAuth, TokenRouter, Anthropic, Fireworks, Kimi, DeepSeek, Z.AI GLM, Xiaomi MiMo, MiniMax, and Grok OAuth/API-key presets",
+	"icon": "assets/icon.png",
+	"keywords": [
+		"ai",
+		"chat",
+		"copilot",
+		"github-copilot",
+		"language-model",
+		"llm",
+		"openai",
+		"tokenrouter",
+		"kimi",
+		"moonshot",
+		"deepseek",
+		"fireworks",
+		"zai",
+		"zhipu",
+		"glm",
+		"mimo",
+		"xiaomi",
+		"minimax",
+		"ollama",
+		"anthropic",
+		"claude",
+		"gemini",
+		"xai",
+		"grok",
+		"codex",
+		"openai-oauth",
+		"litellm",
+		"openai-compatible",
+		"openai-responses",
+		"git-commit",
+		"thinking"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/lqdflying/OAIProxy"
+	},
+	"version": "0.1.45",
+	"engines": {
+		"vscode": "^1.120.0"
+	},
+	"categories": [
+		"AI",
+		"Chat"
+	],
+	"activationEvents": [
+		"onStartupFinished",
+		"onLanguageModelChatProvider:oaiproxy",
+		"onCommand:oaiproxy.setApikey",
+		"onCommand:oaiproxy.setProviderApikey",
+		"onCommand:oaiproxy.loginXaiOAuth",
+		"onCommand:oaiproxy.logoutXaiOAuth",
+		"onCommand:oaiproxy.loginOpenAIOAuth",
+		"onCommand:oaiproxy.logoutOpenAIOAuth",
+		"onCommand:oaiproxy.openConfig",
+		"onCommand:oaiproxy.generateGitCommitMessage",
+		"onCommand:oaiproxy.abortGitCommitMessage"
+	],
+	"badges": [
+		{
+			"url": "https://img.shields.io/github/stars/lqdflying/OAIProxy?style=social",
+			"description": "Star OAIProxy on Github",
+			"href": "https://github.com/lqdflying/OAIProxy"
+		}
+	],
+	"bugs": {
+		"url": "https://github.com/lqdflying/OAIProxy/issues"
+	},
+	"license": "MIT",
+	"contributes": {
+		"languageModelChatProviders": [
+			{
+				"vendor": "oaiproxy",
+				"displayName": "OAIProxy",
+				"managementCommand": "oaiproxy.setApikey"
+			}
+		],
+		"commands": [
+			{
+				"command": "oaiproxy.setApikey",
+				"category": "OAIProxy",
+				"title": "Set OAIProxy API Key"
+			},
+			{
+				"command": "oaiproxy.setProviderApikey",
+				"category": "OAIProxy",
+				"title": "Set OAIProxy Multi-Provider API Key"
+			},
+			{
+				"command": "oaiproxy.loginXaiOAuth",
+				"category": "OAIProxy",
+				"title": "Sign in to xAI / Grok with OAuth"
+			},
+			{
+				"command": "oaiproxy.logoutXaiOAuth",
+				"category": "OAIProxy",
+				"title": "Sign out of xAI / Grok OAuth"
+			},
+			{
+				"command": "oaiproxy.loginOpenAIOAuth",
+				"category": "OAIProxy",
+				"title": "Sign in to OpenAI / Codex with OAuth"
+			},
+			{
+				"command": "oaiproxy.logoutOpenAIOAuth",
+				"category": "OAIProxy",
+				"title": "Sign out of OpenAI / Codex OAuth"
+			},
+			{
+				"command": "oaiproxy.openConfig",
+				"category": "OAIProxy",
+				"title": "Open Configuration UI"
+			},
+			{
+				"command": "oaiproxy.checkProviderUsage",
+				"category": "OAIProxy",
+				"title": "Check Provider Balance / Usage"
+			},
+			{
+				"command": "oaiproxy.generateGitCommitMessage",
+				"title": "Generate Commit Message with OAIProxy",
+				"category": "OAIProxy",
+				"icon": "$(wand)"
+			},
+			{
+				"command": "oaiproxy.abortGitCommitMessage",
+				"title": "Generate Commit Message with OAIProxy - Stop",
+				"category": "OAIProxy",
+				"icon": "$(debug-stop)"
+			}
+		],
+		"menus": {
+			"scm/title": [
+				{
+					"command": "oaiproxy.generateGitCommitMessage",
+					"group": "navigation",
+					"when": "config.git.enabled && scmProvider == git && !oaiproxy.isGeneratingCommit"
+				},
+				{
+					"command": "oaiproxy.abortGitCommitMessage",
+					"group": "navigation",
+					"when": "config.git.enabled && scmProvider == git && oaiproxy.isGeneratingCommit"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "oaiproxy.generateGitCommitMessage",
+					"when": "config.git.enabled && !oaiproxy.isGeneratingCommit"
+				},
+				{
+					"command": "oaiproxy.abortGitCommitMessage",
+					"when": "config.git.enabled && oaiproxy.isGeneratingCommit"
+				}
+			]
+		},
+		"configuration": {
+			"title": "OAIProxy",
+			"properties": {
+				"oaicopilot.logLevel": {
+					"type": "string",
+					"default": "off",
+					"enum": [
+						"off",
+						"debug",
+						"info",
+						"warn",
+						"error"
+					],
+					"description": "Debug log level. Logs are written to ~/.copilot/oaiproxy/logs/ as JSON lines. Default is 'off' (no logging)."
+				},
+				"oaicopilot.baseUrl": {
+					"type": "string",
+					"default": "https://router.huggingface.co/v1",
+					"description": "The base URL for the Openai Compatible Inference API. Default value is Hugging Face."
+				},
+				"oaicopilot.models": {
+					"type": "array",
+					"default": [],
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"description": "Model ID (e.g., 'glm-4.6')."
+							},
+							"_comment": {
+								"type": "string",
+								"description": "Human-readable note for generated model presets. This is configuration metadata only and is not sent to model providers."
+							},
+							"displayName": {
+								"type": "string",
+								"description": "(Optional) Display name for the model that will be shown in the Copilot interface. If not provided, will be generated automatically."
+							},
+							"configId": {
+								"type": "string",
+								"description": "(Optional) Configuration ID for this model. Allows defining the same model with different settings (e.g. 'glm-4.6::thinking', 'glm-4.6::no-thinking')."
+							},
+							"owned_by": {
+								"type": "string",
+								"description": "Model provider (e.g., 'tokenrouter', 'zai', 'openai', 'litellm', 'fireworks', 'kimi', 'deepseek', 'mimo', 'minimax')."
+							},
+							"authMode": {
+								"type": "string",
+								"enum": ["api-key", "oauth"],
+								"description": "Credential flow for this model. OAuth uses OAIProxy's refreshable xAI/Grok or OpenAI/Codex credential; api-key uses the provider API key."
+							},
+							"provider": {
+								"type": "string",
+								"description": "(Alias of owned_by) Model provider (e.g., 'tokenrouter', 'zai', 'openai', 'litellm', 'fireworks', 'kimi', 'deepseek', 'mimo', 'minimax')."
+							},
+							"provide": {
+								"type": "string",
+								"description": "(Alias of owned_by) Model provider (e.g., 'tokenrouter', 'zai', 'openai', 'litellm', 'fireworks', 'kimi', 'deepseek', 'mimo', 'minimax')."
+							},
+							"family": {
+								"type": "string",
+								"description": "Model family (e.g., 'gpt-4', 'claude-3', 'gemini'). Enables model-specific optimizations and behaviors. Defaults to 'OAIProxy' if not specified."
+							},
+							"baseUrl": {
+								"type": "string",
+								"description": "Base URL for the model provider. If not provided, the global oaicopilot.baseUrl will be used."
+							},
+							"context_length": {
+								"type": "number",
+								"default": 128000,
+								"minimum": 1000,
+								"maximum": 10000000,
+								"description": "Model support context length. Default is 128000."
+							},
+							"max_input_tokens": {
+								"type": "number",
+								"minimum": 1,
+								"maximum": 10000000,
+								"description": "Optional advertised input token budget for VS Code/OAIProxy preflight checks. Use this to leave provider-specific safety margin without changing context_length or output token parameters."
+							},
+							"vision": {
+								"type": "boolean",
+								"default": false,
+								"description": "Model support vision. Default is false."
+							},
+							"toolCalling": {
+								"type": "boolean",
+								"default": true,
+								"description": "Advertise tool calling support to VS Code. Set false to avoid Agent optimized tool selection latency for this model."
+							},
+							"max_tokens": {
+								"type": "number",
+								"default": 4096,
+								"minimum": 1,
+								"maximum": 10000000,
+								"description": "Maximum number of tokens to generate (range: [1, context_length)). Default is 4096."
+							},
+							"max_completion_tokens": {
+								"type": "number",
+								"default": 4096,
+								"minimum": 1,
+								"maximum": 10000000,
+								"description": "Maximum number of tokens to generate (OpenAI new standard parameter)."
+							},
+							"reasoning_effort": {
+								"type": "string",
+								"default": "medium",
+								"enum": [
+									"max",
+									"xhigh",
+									"high",
+									"medium",
+									"low",
+									"minimal",
+									"none"
+								],
+								"description": "Reasoning effort level (OpenAI reasoning configuration)"
+							},
+							"supports_reasoning_effort": {
+								"type": "boolean",
+								"default": false,
+								"description": "Expose VS Code's per-model Thinking Effort control for this model."
+							},
+							"supported_reasoning_efforts": {
+								"type": "array",
+								"description": "Supported values for VS Code's per-model Thinking Effort control. DeepSeek defaults to high, max. Other models default to minimal, low, medium, high, xhigh, max.",
+								"items": {
+									"type": "string"
+								}
+							},
+							"default_reasoning_effort": {
+								"type": "string",
+								"description": "Default value for VS Code's per-model Thinking Effort control. If not set, reasoning_effort is used."
+							},
+							"thinking": {
+								"type": "object",
+								"description": "Thinking configuration for providers that expose an explicit thinking mode, such as Zai, Anthropic, and MiniMax M3.",
+								"properties": {
+									"type": {
+										"type": "string",
+										"enum": [
+											"enabled",
+											"disabled",
+											"adaptive"
+										],
+										"description": "Set to 'enabled' to enable thinking, 'disabled' to disable thinking, or 'adaptive' for Anthropic adaptive thinking."
+									},
+									"clear_thinking": {
+										"type": "boolean",
+										"description": "For Z.AI/GLM-compatible endpoints, set false to preserve historical reasoning_content across turns."
+									}
+								}
+							},
+							"enable_thinking": {
+								"type": "boolean",
+								"default": false,
+								"description": "Switches between thinking and non-thinking modes. Not required."
+							},
+							"thinking_budget": {
+								"type": "number",
+								"default": 128,
+								"minimum": 128,
+								"maximum": 10000000,
+								"description": "Maximum number of tokens for chain-of-thought output. Not required."
+							},
+							"temperature": {
+								"type": "number",
+								"default": 0,
+								"minimum": 0,
+								"maximum": 2,
+								"description": "Sampling temperature (range: [0, 2]). Lower values make output more deterministic, higher values make it more creative. Default is 0."
+							},
+							"top_p": {
+								"type": "number",
+								"default": 1,
+								"minimum": 0,
+								"maximum": 1,
+								"description": "Top-p sampling value (range: (0, 1]). Not required."
+							},
+							"top_k": {
+								"type": "number",
+								"default": 50,
+								"minimum": 1,
+								"description": "Top-k sampling value (range: [1, Infinity)). Not required."
+							},
+							"min_p": {
+								"type": "number",
+								"default": 0,
+								"minimum": 0,
+								"maximum": 1,
+								"description": "Minimum probability threshold (range: [0, 1]). Not required."
+							},
+							"frequency_penalty": {
+								"type": "number",
+								"default": 0,
+								"minimum": -2,
+								"maximum": 2,
+								"description": "Frequency penalty (range: [-2, 2]). Not required."
+							},
+							"presence_penalty": {
+								"type": "number",
+								"default": 0,
+								"minimum": -2,
+								"maximum": 2,
+								"description": "Presence penalty (range: [-2, 2]). Not required."
+							},
+							"repetition_penalty": {
+								"type": "number",
+								"default": 0,
+								"minimum": 0,
+								"maximum": 2,
+								"description": "Repetition penalty (range: (0, 2]). Not required."
+							},
+							"reasoning": {
+								"type": "object",
+								"default": {
+									"effort": "medium"
+								},
+								"properties": {
+									"effort": {
+										"type": "string",
+										"default": "medium",
+										"enum": [
+											"max",
+											"xhigh",
+											"high",
+											"medium",
+											"low",
+											"minimal",
+											"auto"
+										],
+										"description": "Reasoning effort level for OpenRouter/xAI (high, medium, low, minimal, auto)"
+									},
+									"exclude": {
+										"type": "boolean",
+										"default": false,
+										"description": "Exclude reasoning tokens from the final response"
+									},
+									"max_tokens": {
+										"type": "number",
+										"default": 2000,
+										"minimum": 1,
+										"description": "Specific token limit for reasoning (Anthropic-style, alternative to effort)"
+									},
+									"enabled": {
+										"type": "boolean",
+										"default": true,
+										"description": "Enable reasoning (inferred from effort or max_tokens if not specified)"
+									}
+								},
+								"description": "Reasoning configuration for OpenRouter-compatible providers"
+							},
+							"prompt_cache": {
+								"type": "object",
+								"description": "Prompt/KV cache configuration. OpenAI prompt-cache keys are auto-applied only for official OpenAI endpoints unless explicitly configured. Known Anthropic-compatible endpoints add stable-prefix cache_control unless disabled. Providers such as DeepSeek, MiMo, MiniMax OpenAI mode, and Gemini use provider-managed cache hits.",
+								"properties": {
+									"enabled": {
+										"type": "boolean",
+										"default": true,
+										"description": "Enable provider-safe prompt cache request shaping. Set false to disable automatic cache parameters."
+									},
+									"key": {
+										"type": "string",
+										"description": "Optional OpenAI prompt_cache_key override for requests with shared prompt prefixes."
+									},
+									"retention": {
+										"type": "string",
+										"enum": [
+											"in_memory",
+											"24h"
+										],
+										"description": "Optional OpenAI prompt_cache_retention. Leave unset for provider default."
+									},
+									"anthropic": {
+										"type": "object",
+										"description": "Anthropic-compatible prompt cache-control settings.",
+										"properties": {
+											"enabled": {
+												"type": "boolean",
+												"default": false,
+												"description": "Enable Anthropic cache_control on stable system/tool prefixes. Known first-party Anthropic-compatible endpoints enable this by default unless prompt_cache.enabled is false."
+											},
+											"ttl": {
+												"type": "string",
+												"enum": [
+													"5m",
+													"1h"
+												],
+												"default": "5m",
+												"description": "Anthropic cache lifetime. Default 5m uses provider default wire shape; 1h sends ttl."
+											},
+											"cache_system": {
+												"type": "boolean",
+												"default": true,
+												"description": "Add cache_control to system prompts when Anthropic prompt cache is enabled."
+											},
+											"cache_tools": {
+												"type": "boolean",
+												"default": true,
+												"description": "Add cache_control to tool definitions when Anthropic prompt cache is enabled."
+											}
+										}
+									}
+								}
+							},
+							"extra": {
+								"type": "object",
+								"description": "Extra request body parameters."
+							},
+							"extra_body": {
+								"type": "object",
+								"description": "LiteLLM/OpenAI-SDK-style provider-specific request body parameters. In apiMode 'litellm', these are sent as the literal extra_body field."
+							},
+							"headers": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string"
+								},
+								"description": "Custom HTTP headers to be sent with every request to this model's provider. These headers will be merged with the default headers (Authorization, Content-Type, User-Agent)."
+							},
+							"include_reasoning_in_request": {
+								"type": "boolean",
+								"default": false,
+								"description": "Whether to include reasoning_content in assistant messages sent to the API. Supports DeepSeek, MiMo thinking mode, and other compatible providers."
+							},
+							"apiMode": {
+								"type": "string",
+								"enum": [
+									"openai",
+									"azure-foundry",
+									"litellm",
+									"openai-responses",
+									"ollama",
+									"anthropic",
+									"gemini"
+								],
+								"default": "openai",
+								"description": "API mode: 'openai' (Default) for OpenAI Chat Completions (/chat/completions; Kimi, DeepSeek, MiMo, MiniMax, etc.), 'azure-foundry' for Azure Foundry Chat Completions (/chat/completions with api-key authentication), 'litellm' for LiteLLM Proxy Chat Completions (/chat/completions with extra_body support), 'openai-responses' for OpenAI Responses (/responses), 'ollama' for Ollama (/api/chat), 'anthropic' for Anthropic (/v1/messages), 'gemini' for Gemini (*/v1beta/models/{model}:streamGenerateContent?alt=sse)."
+							},
+							"useForCommitGeneration": {
+								"type": "boolean",
+								"default": false,
+								"description": "Whether to be used for Git commit message generation. Not supports gemini apiMode."
+							},
+							"delay": {
+								"type": "number",
+								"default": 0,
+								"minimum": 0,
+								"description": "Model-specific delay in milliseconds between consecutive requests. If not specified, falls back to global oaicopilot.delay configuration."
+							}
+						},
+						"required": [
+							"id"
+						],
+						"anyOf": [
+							{
+								"required": [
+									"owned_by"
+								]
+							},
+							{
+								"required": [
+									"provider"
+								]
+							},
+							{
+								"required": [
+									"provide"
+								]
+							}
+						]
+					},
+					"description": "A list of preferred models to use. If provided, these models will be used directly instead of fetching from the API."
+				},
+				"oaicopilot.retry": {
+					"type": "object",
+					"default": {
+						"enabled": true,
+						"max_attempts": 3,
+						"interval_ms": 1000,
+						"status_codes": []
+					},
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Enable retry mechanism for api errors. Default is true."
+						},
+						"max_attempts": {
+							"type": "number",
+							"default": 3,
+							"minimum": 1,
+							"description": "Maximum number of retry attempts. Default is 3."
+						},
+						"interval_ms": {
+							"type": "number",
+							"default": 1000,
+							"minimum": 1,
+							"description": "Interval between retry attempts in milliseconds. Default is 1000 (1 seconds)."
+						},
+						"status_codes": {
+							"type": "array",
+							"items": {
+								"type": "number"
+							},
+							"description": "Additional HTTP status codes that will be merged. Default is [429, 500, 502, 503, 504]."
+						}
+					},
+					"description": "Retry configuration for handling api errors like [429, 500, 502, 503, 504]."
+				},
+				"oaicopilot.delay": {
+					"type": "number",
+					"default": 0,
+					"minimum": 0,
+					"description": "Fixed delay in milliseconds between consecutive requests. Default is 0 (no delay)."
+				},
+				"oaicopilot.commitLanguage": {
+					"type": "string",
+					"default": "English",
+					"enum": [
+						"English",
+						"French",
+						"Italian",
+						"German",
+						"Spanish",
+						"Russian",
+						"Chinese (Simplified)",
+						"Chinese (Traditional)",
+						"Japanese",
+						"Korean",
+						"Czech",
+						"Portuguese (Brazil)",
+						"Turkish",
+						"Polish"
+					],
+					"description": "Language for generated Git commit messages. Default is English."
+				},
+				"oaicopilot.commitMessagePrompt": {
+					"type": "string",
+					"default": "",
+					"description": "Custom system prompt for commit message generation. If not provided, uses the default prompt."
+				},
+				"oaicopilot.readFileLines": {
+					"type": "number",
+					"default": 0,
+					"minimum": 0,
+					"maximum": 10000,
+					"description": "Number of lines to read when using `read_file` tool. Large lines may cost more tokens. Default is 0, let model decide lines."
+				},
+				"oaicopilot.tokenEstimation": {
+					"type": "object",
+					"default": {
+						"charsPerToken": 4,
+						"nonAsciiTokensPerChar": 1,
+						"maxSerializedPartChars": 200000,
+						"bridgeTokens": 8192,
+						"calibration": "observe",
+						"image": {
+							"strategy": "auto",
+							"profile": "auto",
+							"fixedTokens": 8192,
+							"fallbackTokens": 8192,
+							"areaDivisor": 750,
+							"maxLongEdge": 2576,
+							"maxTokensPerImage": 8192
+						},
+						"perModel": {}
+					},
+					"additionalProperties": false,
+					"properties": {
+						"charsPerToken": {
+							"type": "number",
+							"minimum": 0.1,
+							"maximum": 100,
+							"description": "ASCII fallback only when the bundled tokenizer fails."
+						},
+						"nonAsciiTokensPerChar": {
+							"type": "number",
+							"minimum": 0.1,
+							"maximum": 100
+						},
+						"maxSerializedPartChars": {
+							"type": "integer",
+							"minimum": 64,
+							"maximum": 1000000,
+							"description": "Limit for unknown object fallback serialization; ordinary text is preserved."
+						},
+						"bridgeTokens": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 1000000,
+							"description": "Provisional allowance for an image awaiting a Vision Bridge description."
+						},
+						"calibration": {
+							"type": "string",
+							"enum": [
+								"observe",
+								"adaptive"
+							],
+							"description": "Observe usage by default; adaptive applies a bounded multiplier after 20 eligible completed stateless text requests."
+						},
+						"image": {
+							"type": "object",
+							"additionalProperties": false,
+							"properties": {
+								"strategy": {
+									"type": "string",
+									"enum": [
+										"auto",
+										"fixed",
+										"area"
+									],
+									"description": "Use documented model profiles, a fixed allowance, or a custom area heuristic."
+								},
+								"profile": {
+									"type": "string",
+									"enum": [
+										"auto",
+										"openai-patches",
+										"openai-tiles",
+										"claude-standard",
+										"claude-high",
+										"unknown"
+									]
+								},
+								"fixedTokens": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 1000000
+								},
+								"fallbackTokens": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 1000000
+								},
+								"areaDivisor": {
+									"type": "number",
+									"minimum": 0.01,
+									"maximum": 1000000
+								},
+								"maxLongEdge": {
+									"type": "number",
+									"minimum": 1,
+									"maximum": 1000000
+								},
+								"maxTokensPerImage": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 1000000
+								}
+							}
+						},
+						"perModel": {
+							"type": "object",
+							"description": "Overrides keyed by base model ID or full modelId::configId; the full ID takes precedence.",
+							"additionalProperties": {
+								"type": "object",
+								"additionalProperties": false,
+								"properties": {
+									"charsPerToken": {
+										"type": "number",
+										"minimum": 0.1,
+										"maximum": 100,
+										"description": "ASCII fallback only when the bundled tokenizer fails."
+									},
+									"nonAsciiTokensPerChar": {
+										"type": "number",
+										"minimum": 0.1,
+										"maximum": 100
+									},
+									"maxSerializedPartChars": {
+										"type": "integer",
+										"minimum": 64,
+										"maximum": 1000000,
+										"description": "Limit for unknown object fallback serialization; ordinary text is preserved."
+									},
+									"bridgeTokens": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 1000000,
+										"description": "Provisional allowance for an image awaiting a Vision Bridge description."
+									},
+									"calibration": {
+										"type": "string",
+										"enum": [
+											"observe",
+											"adaptive"
+										],
+										"description": "Observe usage by default; adaptive applies a bounded multiplier after 20 eligible completed stateless text requests."
+									},
+									"image": {
+										"type": "object",
+										"additionalProperties": false,
+										"properties": {
+											"strategy": {
+												"type": "string",
+												"enum": [
+													"auto",
+													"fixed",
+													"area"
+												],
+												"description": "Use documented model profiles, a fixed allowance, or a custom area heuristic."
+											},
+											"profile": {
+												"type": "string",
+												"enum": [
+													"auto",
+													"openai-patches",
+													"openai-tiles",
+													"claude-standard",
+													"claude-high",
+													"unknown"
+												]
+											},
+											"fixedTokens": {
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000000
+											},
+											"fallbackTokens": {
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000000
+											},
+											"areaDivisor": {
+												"type": "number",
+												"minimum": 0.01,
+												"maximum": 1000000
+											},
+											"maxLongEdge": {
+												"type": "number",
+												"minimum": 1,
+												"maximum": 1000000
+											},
+											"maxTokensPerImage": {
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 1000000
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"description": "Shared token estimation. Text uses the bundled tokenizer; image costs remain estimates. See the Token Estimation guide."
+				},
+				"oaicopilot.debug.tokenBreakdown": {
+					"type": "boolean",
+					"default": false,
+					"description": "With logLevel debug, log token categories, largest parts and provider usage comparisons. Logs contain types, IDs and sizes only."
+				}
+			}
+		}
+	},
+	"main": "./out/extension.js",
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"download-api": "dts dev && mv vscode.proposed.*.ts src",
+		"compile": "tsc -p ./",
+		"lint": "eslint",
+		"format": "prettier --write .",
+		"watch": "tsc -watch -p ./",
+		"test": "npm run compile && vscode-test",
+		"build": "/usr/bin/env PATH=/usr/bin:/bin:/usr/sbin:/sbin:/home/opc/.local/bin:/home/opc/.bun/bin /usr/bin/npx --yes @vscode/vsce package -o oaiproxy-${npm_package_version}.vsix"
+	},
+	"dependencies": {
+		"@microsoft/tiktokenizer": "^1.0.10"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.13.0",
+		"@stylistic/eslint-plugin": "^2.9.0",
+		"@types/node": "^22",
+		"@types/mocha": "^10.0.6",
+		"@vscode/dts": "^0.4.1",
+		"@types/vscode": "^1.118.0",
+		"@vscode/test-cli": "^0.0.11",
+		"@vscode/test-electron": "^2.5.2",
+		"eslint": "^9.13.0",
+		"prettier": "^3.1.0",
+		"typescript": "^5.9.2",
+		"typescript-eslint": "^8.39.0"
+	}
 }
