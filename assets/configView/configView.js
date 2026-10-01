@@ -158,7 +158,7 @@ const handleRefresh = () => {
 	configurationContent.inert = true;
 	configurationContent.setAttribute("aria-busy", "true");
 	configurationLoading.hidden = false;
-	configurationLoadingText.textContent = "Loading configuration...";
+	configurationLoadingText.textContent = t("Loading configuration...");
 	retryInitialization.hidden = true;
 	// Hide the model form if it's visible
 	if (modelFormSection.style.display !== "none") {
@@ -1746,7 +1746,7 @@ window.addEventListener("message", (event) => {
 			break;
 		case "initError":
 			configurationLoading.hidden = false;
-			configurationLoadingText.textContent = "Unable to load configuration. Retry to continue.";
+			configurationLoadingText.textContent = t("Unable to load configuration. Retry to continue.");
 			retryInitialization.hidden = false;
 			break;
 		case "modelsFetched":

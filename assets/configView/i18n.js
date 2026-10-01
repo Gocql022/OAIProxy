@@ -20,6 +20,9 @@
 		// Page
 		"OAIProxy Configuration": "OAIProxy 配置",
 		"Configuration": "配置",
+		"Loading configuration...": "正在加载配置…",
+		"Unable to load configuration. Retry to continue.": "无法加载配置。请重试以继续。",
+		"Retry": "重试",
 
 		// Global configuration
 		"Global Configuration": "全局配置",
