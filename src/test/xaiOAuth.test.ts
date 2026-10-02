@@ -4,7 +4,6 @@ import {
 	XAI_OAUTH_CLIENT_ID,
 	XAI_OAUTH_SCOPE,
 	XAI_GROK_OAUTH_BASE_URL,
-	XAI_GROK_OAUTH_CLIENT_VERSION,
 	applyXaiGrokOAuthHeaders,
 	getXaiOAuthAccessToken,
 	loginXaiOAuth,
@@ -18,7 +17,7 @@ suite("xaiOAuth", () => {
 
 		assert.deepStrictEqual(headers, {
 			"X-XAI-Token-Auth": "xai-grok-cli",
-			"x-grok-client-version": XAI_GROK_OAUTH_CLIENT_VERSION,
+			"x-grok-client-version": "1.0.13",
 			"x-grok-model-override": "grok-4-fast",
 		});
 	});

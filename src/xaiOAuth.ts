@@ -11,9 +11,10 @@ export const XAI_OAUTH_DISCOVERY_URL = `${XAI_OAUTH_ISSUER}/.well-known/openid-c
 export const XAI_OAUTH_CLIENT_ID = "b1a00492-073a-47ea-816f-4c329264a828";
 export const XAI_OAUTH_SCOPE = "openid profile email offline_access grok-cli:access api:access";
 export const XAI_GROK_OAUTH_BASE_URL = "https://cli-chat-proxy.grok.com/v1";
-// The Grok subscription proxy requires a client version at or above 0.1.202.
+// The subscription proxy's HTTP 426 response requires at least 1.0.13 (2026-10-02).
+// Released CLI version: https://x.ai/build/changelog
 // Keep this independent from the OAIProxy extension version, which is not a Grok CLI version.
-export const XAI_GROK_OAUTH_CLIENT_VERSION = "0.2.103";
+export const XAI_GROK_OAUTH_CLIENT_VERSION = "1.0.13";
 
 const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
