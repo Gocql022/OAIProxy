@@ -354,7 +354,7 @@ suite("providerUsage", () => {
 					Authorization: "Bearer oauth-access-token",
 					"Content-Type": "application/json",
 					"x-grok-client-mode": "cli",
-					"x-grok-client-version": "1.0.4",
+					"x-grok-client-version": "1.0.13",
 				},
 			});
 		} finally {

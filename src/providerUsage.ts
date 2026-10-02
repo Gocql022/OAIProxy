@@ -1,4 +1,5 @@
 import { OPENAI_OAUTH_ORIGINATOR } from "./openaiOAuth";
+import { XAI_GROK_OAUTH_CLIENT_VERSION } from "./xaiOAuth";
 import * as vscode from "vscode";
 
 export type ProviderUsageAdapter =
@@ -16,7 +17,7 @@ export type ProviderUsageAdapter =
 export const XAI_GROK_BILLING_ENDPOINT = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
 export const OPENAI_CODEX_USAGE_ENDPOINT = "https://chatgpt.com/backend-api/wham/usage";
 export const XAI_GROK_USAGE_CLIENT_MODE = "cli";
-export const XAI_GROK_USAGE_CLIENT_VERSION = "1.0.4";
+export const XAI_GROK_USAGE_CLIENT_VERSION = XAI_GROK_OAUTH_CLIENT_VERSION;
 const XAI_GROK_OAUTH_BASE_HOST = "cli-chat-proxy.grok.com";
 
 function isXaiGrokOAuthBaseUrl(baseUrl: string | undefined): boolean {
