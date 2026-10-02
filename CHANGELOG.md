@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.1.47 (2026-10-02)
+
+- Fix Grok OAuth requests rejected with HTTP 426 Upgrade Required by updating the Grok CLI compatibility version to `1.0.13`.
+- Share the compatibility version between Grok chat and weekly usage requests so the two paths stay in sync.
+- Strengthen request-header regression coverage and document how to resolve outdated Grok CLI version errors in OAIProxy.
+
 ## 0.1.46 (2026-10-02)
 
 - Use the Codex CLI originator for OpenAI OAuth inference, device sign-in, token refresh, and quota requests while retaining OAIProxy's existing user agent and session/cache behavior.
