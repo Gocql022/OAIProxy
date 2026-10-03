@@ -72,6 +72,7 @@
 	"bugs": {
 		"url": "https://github.com/lqdflying/OAIProxy/issues"
 	},
+	"l10n": "./l10n",
 	"license": "MIT",
 	"contributes": {
 		"languageModelChatProviders": [

@@ -1,6 +1,6 @@
 const vscode = acquireVsCodeApi();
-const { t, applyI18n } = window.__oaiproxyI18n;
-applyI18n();
+const { configView_l10n_t, html_i18n } = window.__oaiproxyI18n;
+html_i18n();
 
 const state = {
 	baseUrl: "",
@@ -158,7 +158,7 @@ const handleRefresh = () => {
 	configurationContent.inert = true;
 	configurationContent.setAttribute("aria-busy", "true");
 	configurationLoading.hidden = false;
-	configurationLoadingText.textContent = t("Loading configuration...");
+	configurationLoadingText.textContent = configView_l10n_t("Loading configuration...");
 	retryInitialization.hidden = true;
 	// Hide the model form if it's visible
 	if (modelFormSection.style.display !== "none") {
@@ -211,7 +211,7 @@ document.addEventListener("keydown", (event) => {
 
 // Export and Import buttons event listeners
 document.getElementById("exportConfig").addEventListener("click", () => {
-	openAskDialog(t("Include API keys in the exported configuration?"), {
+	openAskDialog(configView_l10n_t("Include API keys in the exported configuration?"), {
 		yes: () => vscode.postMessage({ type: "exportConfig", includeApiKey: true }),
 		no: () => vscode.postMessage({ type: "exportConfig", includeApiKey: false }),
 	});
@@ -241,7 +241,7 @@ checkAllProviderUsageBtn.addEventListener("click", () => {
 	for (const target of usageTargets) {
 		state.providerUsage[target.provider] = {
 			status: "loading",
-			summary: t("Checking usage..."),
+			summary: configView_l10n_t("Checking usage..."),
 		};
 	}
 	renderProviderUsageChecks();
@@ -258,7 +258,7 @@ function renderProviderPresetOptions() {
 	const options = state.providerPresets
 		.map((preset) => `<option value="${preset.id}">${preset.label}</option>`)
 		.join("");
-	return `<option value="">${t("Custom provider")}</option>${options}`;
+	return `<option value="">${configView_l10n_t("Custom provider")}</option>${options}`;
 }
 
 function applyProviderPreset(row, presetId) {
@@ -381,7 +381,7 @@ function getProviderUsageUnsupportedReason(provider, baseUrl) {
 		return "Azure Foundry usage checks are unavailable with an inference API key; use Azure Monitor or Cost Management with Azure RBAC.";
 	}
 	if (isMimoProvider(provider, baseUrl)) {
-		return t(
+		return configView_l10n_t(
 			"Xiaomi MiMo usage checks are unavailable because Xiaomi only exposes balance/usage through web Console endpoints; no public API-key usage endpoint is documented."
 		);
 	}
@@ -401,16 +401,16 @@ function getProviderUsagePlan(usageKind) {
 		return "Weekly credit";
 	}
 	if (usageKind === "deepseek" || usageKind === "kimi") {
-		return t("Credit");
+		return configView_l10n_t("Credit");
 	}
 	if (usageKind === "minimax") {
-		return t("Token");
+		return configView_l10n_t("Token");
 	}
 	if (usageKind === "fireworks") {
-		return t("Token usage");
+		return configView_l10n_t("Token usage");
 	}
 	if (usageKind === "openai" || usageKind === "anthropic") {
-		return t("Cost usage");
+		return configView_l10n_t("Cost usage");
 	}
 	if (usageKind === "openai-codex") {
 		return "Codex quota";
@@ -419,7 +419,7 @@ function getProviderUsagePlan(usageKind) {
 		return "Credit balance";
 	}
 	if (usageKind === "litellm") {
-		return t("Proxy key spend");
+		return configView_l10n_t("Proxy key spend");
 	}
 	return "";
 }
@@ -429,27 +429,27 @@ function getProviderUsageTargetDescription(usageKind) {
 		return "Weekly credit remaining";
 	}
 	if (usageKind === "deepseek" || usageKind === "kimi") {
-		return t("Remaining credit balance");
+		return configView_l10n_t("Remaining credit balance");
 	}
 	if (usageKind === "minimax") {
-		return t("Tokens left and reset time");
+		return configView_l10n_t("Tokens left and reset time");
 	}
 	if (usageKind === "fireworks") {
-		return t("Month-to-date serverless tokens");
+		return configView_l10n_t("Month-to-date serverless tokens");
 	}
 	if (usageKind === "openai-codex") {
 		return "Plan quota windows and credits";
 	}
 	if (usageKind === "openai" || usageKind === "anthropic") {
-		return t("Month-to-date spend");
+		return configView_l10n_t("Month-to-date spend");
 	}
 	if (usageKind === "tokenrouter") {
 		return "Remaining account credits";
 	}
 	if (usageKind === "litellm") {
-		return t("Virtual key spend and budget");
+		return configView_l10n_t("Virtual key spend and budget");
 	}
-	return t("Not supported");
+	return configView_l10n_t("Not supported");
 }
 
 function escapeHtml(value) {
@@ -509,7 +509,7 @@ function startModelTestRequest(type, modelIds, modelId) {
 	};
 	state.modelTestSummary = {
 		status: "loading",
-		text: t("Testing {0} of {1} model(s)...", 0, modelIds.length),
+		text: configView_l10n_t("Testing {0} of {1} model(s)...", 0, modelIds.length),
 	};
 
 	if (type === "testAllModels") {
@@ -538,7 +538,7 @@ function formatModelTestDuration(durationMs) {
 }
 
 function truncateModelTestError(error, maxLength = 220) {
-	const normalized = String(error || t("Connection test failed.")).replace(/\s+/g, " ").trim();
+	const normalized = String(error || configView_l10n_t("Connection test failed.")).replace(/\s+/g, " ").trim();
 	return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized;
 }
 
@@ -550,7 +550,7 @@ function renderModelTestFeedback(modelId) {
 	if (test.status === "loading") {
 		return `
 			<div class="model-test-feedback">
-				<span class="status-pill loading">${t("Testing")}</span>
+				<span class="status-pill loading">${configView_l10n_t("Testing")}</span>
 			</div>`;
 	}
 
@@ -558,15 +558,15 @@ function renderModelTestFeedback(modelId) {
 	if (test.status === "success") {
 		return `
 			<div class="model-test-feedback">
-				<span class="status-pill success">${t("Passed")}</span>
-				<div class="model-test-detail muted">${t("Connected in {0}", escapeHtml(duration))}</div>
+				<span class="status-pill success">${configView_l10n_t("Passed")}</span>
+				<div class="model-test-detail muted">${configView_l10n_t("Connected in {0}", escapeHtml(duration))}</div>
 			</div>`;
 	}
 
-	const fullError = String(test.error || t("Connection test failed."));
+	const fullError = String(test.error || configView_l10n_t("Connection test failed."));
 	return `
 		<div class="model-test-feedback" title="${escapeHtml(fullError)}">
-			<span class="status-pill error">${t("Failed")}</span>
+			<span class="status-pill error">${configView_l10n_t("Failed")}</span>
 			<div class="model-test-detail error-text">${escapeHtml(truncateModelTestError(fullError))}${
 				duration ? ` (${escapeHtml(duration)})` : ""
 			}</div>
@@ -627,7 +627,7 @@ function getPresetProviderState(model) {
 		return {
 			className: "error",
 			filterValue: "provider-needed",
-			label: t("Provider Needed"),
+			label: configView_l10n_t("Provider Needed"),
 		};
 	}
 	if (model?.authMode === "oauth") {
@@ -650,13 +650,13 @@ function getPresetProviderState(model) {
 		return {
 			className: "warning",
 			filterValue: "key-needed",
-			label: t("Key Needed"),
+			label: configView_l10n_t("Key Needed"),
 		};
 	}
 	return {
 		className: "success",
 		filterValue: "provider-ready",
-		label: t("Provider Ready"),
+		label: configView_l10n_t("Provider Ready"),
 	};
 }
 
@@ -695,12 +695,12 @@ function showQuickSetupProviderBlocker(batch) {
 	const details = [];
 	if (batch.missingSetupProviders.length) {
 		details.push(
-			t("provider setup is missing for {0}", batch.missingSetupProviders.map((provider) => getProviderLabel(provider)).join(", "))
+			configView_l10n_t("provider setup is missing for {0}", batch.missingSetupProviders.map((provider) => getProviderLabel(provider)).join(", "))
 		);
 	}
 	if (batch.missingProviders.length) {
 		details.push(
-			t("API key is not saved for {0}", batch.missingProviders.map((provider) => getProviderLabel(provider)).join(", "))
+			configView_l10n_t("API key is not saved for {0}", batch.missingProviders.map((provider) => getProviderLabel(provider)).join(", "))
 		);
 	}
 
@@ -709,7 +709,7 @@ function showQuickSetupProviderBlocker(batch) {
 	vscode.postMessage({
 		type: "requestConfirm",
 		id: confirmId,
-		message: t(
+		message: configView_l10n_t(
 			"Cannot add selected model(s): {0}. Open OAIProxy Configuration > Provider Management and add the provider base URL/API mode/API key, or use the provider API key command, then try Add Selected again.",
 			details.join("; ")
 		),
@@ -733,7 +733,7 @@ function requestDeleteModel(modelId) {
 	vscode.postMessage({
 		type: "requestConfirm",
 		id: confirmId,
-		message: t("Are you sure you want to delete model {0}?", modelId),
+		message: configView_l10n_t("Are you sure you want to delete model {0}?", modelId),
 		action: "deleteModel",
 	});
 }
@@ -752,7 +752,7 @@ function requestDeleteModels(modelIds) {
 	vscode.postMessage({
 		type: "requestConfirm",
 		id: confirmId,
-		message: t("Remove {0} selected configured model(s)?", modelIds.length),
+		message: configView_l10n_t("Remove {0} selected configured model(s)?", modelIds.length),
 		action: "deleteModels",
 	});
 }
@@ -859,21 +859,21 @@ function syncModelProviderOptions(configuredProviders) {
 			return `<option value="${escapeHtml(entry.provider)}">${escapeHtml(entry.label)}</option>`;
 		})
 		.join("");
-	modelProviderInput.innerHTML = '<option value="">' + t("Select Provider") + "</option>" + providerOptions;
+	modelProviderInput.innerHTML = '<option value="">' + configView_l10n_t("Select Provider") + "</option>" + providerOptions;
 }
 
 function updateModelProviderKeyPlaceholder() {
 	const provider = modelProviderInput.value;
 	const hasProviderKey = Boolean(state.providerKeys[provider]);
 	if (hasProviderKey) {
-		modelProviderApiKeyInput.placeholder = t("Saved - leave blank to keep");
+		modelProviderApiKeyInput.placeholder = configView_l10n_t("Saved - leave blank to keep");
 		return;
 	}
 	if (modelApiModeInput.value === "ollama") {
-		modelProviderApiKeyInput.placeholder = t("Optional; defaults to ollama");
+		modelProviderApiKeyInput.placeholder = configView_l10n_t("Optional; defaults to ollama");
 		return;
 	}
-	modelProviderApiKeyInput.placeholder = t("Enter provider API key");
+	modelProviderApiKeyInput.placeholder = configView_l10n_t("Enter provider API key");
 }
 
 function getConfiguredProviders() {
@@ -926,11 +926,11 @@ function getConfiguredProviders() {
 
 function formatModelList(entry) {
 	if (!entry.modelIds.length) {
-		return t("provider only");
+		return configView_l10n_t("provider only");
 	}
 	const visible = entry.modelIds.slice(0, 2).join(", ");
 	const remaining = entry.modelIds.length - 2;
-	return remaining > 0 ? `${visible}, ${t("+{0} more", remaining)}` : visible;
+	return remaining > 0 ? `${visible}, ${configView_l10n_t("+{0} more", remaining)}` : visible;
 }
 
 function getProviderUsageTargets() {
@@ -972,18 +972,18 @@ function rememberProviderUsageKeyInputs() {
 
 function renderProviderUsageStatus(usageState, unsupportedReason) {
 	if (unsupportedReason) {
-		return `<span class="status-pill idle">${t("Unavailable")}</span>`;
+		return `<span class="status-pill idle">${configView_l10n_t("Unavailable")}</span>`;
 	}
 	if (!usageState || !usageState.status) {
-		return `<span class="status-pill idle">${t("Not checked")}</span>`;
+		return `<span class="status-pill idle">${configView_l10n_t("Not checked")}</span>`;
 	}
 	if (usageState.status === "loading") {
-		return `<span class="status-pill loading">${t("Checking")}</span>`;
+		return `<span class="status-pill loading">${configView_l10n_t("Checking")}</span>`;
 	}
 	if (usageState.status === "error") {
-		return `<span class="status-pill error">${t("Error")}</span>`;
+		return `<span class="status-pill error">${configView_l10n_t("Error")}</span>`;
 	}
-	return `<span class="status-pill success">${t("Checked")}</span>`;
+	return `<span class="status-pill success">${configView_l10n_t("Checked")}</span>`;
 }
 
 function renderProviderUsageValue(usageState, usageKind, unsupportedReason, unsupportedLink) {
@@ -994,17 +994,17 @@ function renderProviderUsageValue(usageState, usageKind, unsupportedReason, unsu
 		return `<div class="usage-value muted">${escapeHtml(unsupportedReason)}${link}</div>`;
 	}
 	if (usageState?.status === "success") {
-		return `<div class="usage-value">${escapeHtml(usageState.summary || t("Usage check completed."))}</div>`;
+		return `<div class="usage-value">${escapeHtml(usageState.summary || configView_l10n_t("Usage check completed."))}</div>`;
 	}
 	if (usageState?.status === "error") {
-		return `<div class="usage-value error-text">${escapeHtml(usageState.error || t("Usage check failed."))}</div>`;
+		return `<div class="usage-value error-text">${escapeHtml(usageState.error || configView_l10n_t("Usage check failed."))}</div>`;
 	}
 	return `<div class="usage-value muted">${escapeHtml(getProviderUsageTargetDescription(usageKind))}</div>`;
 }
 
 function renderProviderUsageKeyCell(provider, usageKind, unsupportedReason) {
 	if (unsupportedReason) {
-		return `<div class="usage-key-note">${t("Not used")}</div>`;
+		return `<div class="usage-key-note">${configView_l10n_t("Not used")}</div>`;
 	}
 	if (usageKind === "xai" || usageKind === "openai-codex") {
 		return '<div class="usage-key-note">OAuth sign-in</div>';
@@ -1018,9 +1018,9 @@ function renderProviderUsageKeyCell(provider, usageKind, unsupportedReason) {
 					: "Admin usage key";
 		return `<input type="password" class="provider-input provider-usage-key-input" data-provider="${escapeHtml(
 			provider
-		)}" value="${escapeHtml(state.providerUsageKeys[provider] || "")}" placeholder="${escapeHtml(t(placeholder))}" />`;
+		)}" value="${escapeHtml(state.providerUsageKeys[provider] || "")}" placeholder="${escapeHtml(configView_l10n_t(placeholder))}" />`;
 	}
-	return `<div class="usage-key-note">${t("Provider API key")}</div>`;
+	return `<div class="usage-key-note">${configView_l10n_t("Provider API key")}</div>`;
 }
 
 function renderProviderUsageChecks() {
@@ -1031,7 +1031,7 @@ function renderProviderUsageChecks() {
 		supportedTargets.some((target) => state.providerUsage[target.provider]?.status === "loading");
 	if (!rows.length) {
 		providerUsageTableBody.innerHTML =
-			'<tr><td colspan="6" class="no-data">' + t("No configured providers have known usage-check behavior yet") + "</td></tr>";
+			'<tr><td colspan="6" class="no-data">' + configView_l10n_t("No configured providers have known usage-check behavior yet") + "</td></tr>";
 		return;
 	}
 
@@ -1050,7 +1050,7 @@ function renderProviderUsageChecks() {
 						</div>
 					</td>
 					<td>
-						<div class="usage-plan">${escapeHtml(isUnsupported ? t("Unavailable") : getProviderUsagePlan(target.usageKind))}</div>
+						<div class="usage-plan">${escapeHtml(isUnsupported ? configView_l10n_t("Unavailable") : getProviderUsagePlan(target.usageKind))}</div>
 						<div class="provider-meta">${escapeHtml(target.usageKind || "mimo")}</div>
 					</td>
 					<td>${renderProviderUsageValue(usageState, target.usageKind, target.unsupportedReason, target.unsupportedLink)}</td>
@@ -1060,9 +1060,9 @@ function renderProviderUsageChecks() {
 						<div class="action-buttons">
 							${
 								isUnsupported
-									? `<span class="usage-key-note">${t("No API endpoint")}</span>`
+									? `<span class="usage-key-note">${configView_l10n_t("No API endpoint")}</span>`
 									: `<button class="check-provider-usage-btn compact" data-provider="${providerAttr}" ${isLoading ? "disabled" : ""}>${
-											isLoading ? t("Checking...") : t("Check")
+											isLoading ? configView_l10n_t("Checking...") : configView_l10n_t("Check")
 										}</button>`
 							}
 						</div>
@@ -1080,7 +1080,7 @@ function renderProviderUsageChecks() {
 			rememberProviderUsageKeyInputs();
 			state.providerUsage[provider] = {
 				status: "loading",
-				summary: t("Checking usage..."),
+				summary: configView_l10n_t("Checking usage..."),
 			};
 			renderProviderUsageChecks();
 			vscode.postMessage({
@@ -1122,7 +1122,7 @@ function renderSelectedPresetSummary() {
 	const batch = getSelectedPresetBatch();
 	if (!batch.selectedPresets.length) {
 		selectedPresetSummary.classList.add("muted");
-		selectedPresetSummary.innerHTML = t("Select one or more presets to add or remove configured models.");
+		selectedPresetSummary.innerHTML = configView_l10n_t("Select one or more presets to add or remove configured models.");
 		addSelectedPresetsBtn.disabled = true;
 		removeSelectedPresetsBtn.disabled = true;
 		clearPresetSelectionBtn.disabled = true;
@@ -1144,22 +1144,22 @@ function renderSelectedPresetSummary() {
 				return `
 					<div class="selected-preset-title">${escapeHtml(singlePreset.label)}</div>
 					<div class="selected-preset-grid">
-						<span>${t("Provider: {0}", escapeHtml(getProviderLabel(model.owned_by)))}</span>
-						<span>${t("API: {0} inherited", escapeHtml(apiMode))}</span>
-						<span>${t("Context: {0}", escapeHtml(model.context_length || ""))}</span>
+						<span>${configView_l10n_t("Provider: {0}", escapeHtml(getProviderLabel(model.owned_by)))}</span>
+						<span>${configView_l10n_t("API: {0} inherited", escapeHtml(apiMode))}</span>
+						<span>${configView_l10n_t("Context: {0}", escapeHtml(model.context_length || ""))}</span>
 						<span>${escapeHtml(outputField)}: ${escapeHtml(getModelOutputLimit(model))}</span>
-						<span>${t("Key: {0}", hasKey ? t("Saved/optional") : t("Not saved"))}</span>
+						<span>${configView_l10n_t("Key: {0}", hasKey ? configView_l10n_t("Saved/optional") : configView_l10n_t("Not saved"))}</span>
 					</div>
 				`;
 			})()
 		: "";
 	selectedPresetSummary.innerHTML = `
-		<div class="selected-preset-title">${t("{0} preset(s) selected", batch.selectedPresets.length)}</div>
+		<div class="selected-preset-title">${configView_l10n_t("{0} preset(s) selected", batch.selectedPresets.length)}</div>
 		<div class="selected-preset-grid">
-			<span>${t("Add ready: {0}", batch.addPresets.length)}</span>
-			<span>${t("Remove ready: {0}", batch.removePresets.length)}</span>
-			<span>${t("Providers needed: {0}", batch.missingSetupProviders.length ? escapeHtml(missingSetupProviderText) : t("None"))}</span>
-			<span>${t("Keys not saved: {0}", batch.missingProviders.length ? escapeHtml(missingProviderText) : t("None"))}</span>
+			<span>${configView_l10n_t("Add ready: {0}", batch.addPresets.length)}</span>
+			<span>${configView_l10n_t("Remove ready: {0}", batch.removePresets.length)}</span>
+			<span>${configView_l10n_t("Providers needed: {0}", batch.missingSetupProviders.length ? escapeHtml(missingSetupProviderText) : configView_l10n_t("None"))}</span>
+			<span>${configView_l10n_t("Keys not saved: {0}", batch.missingProviders.length ? escapeHtml(missingProviderText) : configView_l10n_t("None"))}</span>
 		</div>
 		${detailHtml}
 	`;
@@ -1210,7 +1210,7 @@ function renderModelPresets() {
 		});
 
 	if (!presets.length) {
-		modelPresetList.innerHTML = `<div class="no-data">${t("No matching model presets")}</div>`;
+		modelPresetList.innerHTML = `<div class="no-data">${configView_l10n_t("No matching model presets")}</div>`;
 		renderSelectedPresetSummary();
 		return;
 	}
@@ -1234,11 +1234,11 @@ function renderModelPresets() {
 						</label>
 						<div class="preset-card-state">
 							<span class="status-pill ${configured ? "success" : providerState.className}">${
-								configured ? t("Configured") : providerState.label
+								configured ? configView_l10n_t("Configured") : providerState.label
 							}</span>
 							${
 								configured
-									? `<button type="button" class="remove-preset-model-btn danger compact" data-model-id="${escapeHtml(fullModelId)}">${t("Remove")}</button>`
+									? `<button type="button" class="remove-preset-model-btn danger compact" data-model-id="${escapeHtml(fullModelId)}">${configView_l10n_t("Remove")}</button>`
 									: ""
 							}
 						</div>
@@ -1249,7 +1249,7 @@ function renderModelPresets() {
 						<span>${escapeHtml(getProviderLabel(model.owned_by))}</span>
 						<span>${escapeHtml(apiMode)}</span>
 						<span>${escapeHtml(model.context_length || "")} ctx</span>
-						<span>${t("{0} out", escapeHtml(getModelOutputLimit(model)))}</span>
+						<span>${configView_l10n_t("{0} out", escapeHtml(getModelOutputLimit(model)))}</span>
 					</div>
 					<div class="preset-tags">
 						${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
@@ -1397,7 +1397,7 @@ function setModelFormMode(mode) {
 	quickSetupPanel.style.display = isQuick || isCustomize ? "block" : "none";
 	modelDetailsFields.style.display = isQuick ? "none" : "block";
 	saveModelBtn.style.display = isQuick ? "none" : "";
-	cancelModelBtn.textContent = isQuick ? t("Close") : t("Cancel");
+	cancelModelBtn.textContent = isQuick ? configView_l10n_t("Close") : configView_l10n_t("Cancel");
 	quickSetupModeBtn.classList.toggle("active", isQuick || isCustomize);
 	manualSetupModeBtn.classList.toggle("active", mode === "manual");
 
@@ -1457,13 +1457,13 @@ document.getElementById("addProvider").addEventListener("click", () => {
 	const newRow = document.createElement("tr");
 	newRow.innerHTML = `
 		<td>
-			<select class="provider-preset-select" aria-label="${t("Provider preset")}">
+			<select class="provider-preset-select" aria-label="${configView_l10n_t("Provider preset")}">
 				${renderProviderPresetOptions()}
 			</select>
-			<input type="text" class="provider-input" data-field="provider" placeholder="${t("Provider ID")}" />
+			<input type="text" class="provider-input" data-field="provider" placeholder="${configView_l10n_t("Provider ID")}" />
 		</td>
-		<td><input type="text" class="provider-input" data-field="baseUrl" placeholder="${t("Base URL")}" /></td>
-		<td class="provider-key-cell"><input type="password" class="provider-input" data-field="apiKey" placeholder="${t("API Key")}" /></td>
+		<td><input type="text" class="provider-input" data-field="baseUrl" placeholder="${configView_l10n_t("Base URL")}" /></td>
+		<td class="provider-key-cell"><input type="password" class="provider-input" data-field="apiKey" placeholder="${configView_l10n_t("API Key")}" /></td>
 		<td>
 			<select class="provider-input" data-field="apiMode">
 				<option value="openai">OpenAI</option>
@@ -1478,8 +1478,8 @@ document.getElementById("addProvider").addEventListener("click", () => {
 		<td><textarea class="provider-input" data-field="headers" rows="2" placeholder='{"X-API-Version": "v1"}' style="width: 100%; font-family: monospace; font-size: 12px;"></textarea></td>
 		<td class="action-cell">
 			<div class="action-buttons">
-				<button class="save-provider-btn secondary">${t("Save")}</button>
-				<button class="cancel-provider-btn secondary">${t("Cancel")}</button>
+				<button class="save-provider-btn secondary">${configView_l10n_t("Save")}</button>
+				<button class="cancel-provider-btn secondary">${configView_l10n_t("Cancel")}</button>
 			</div>
 		</td>
 	`;
@@ -1519,7 +1519,7 @@ document.getElementById("addProvider").addEventListener("click", () => {
 document.getElementById("addModel").addEventListener("click", () => {
 	// Show the model form
 	modelFormSection.style.display = "block";
-	modelFormTitle.textContent = t("Add Model");
+	modelFormTitle.textContent = configView_l10n_t("Add Model");
 	// Reset form
 	resetModelForm();
 	setModelFormMode("quick");
@@ -1541,7 +1541,7 @@ manualSetupModeBtn.addEventListener("click", () => {
 addSelectedPresetsBtn.addEventListener("click", () => {
 	const batch = getSelectedPresetBatch();
 	if (!batch.addPresets.length) {
-		showModelError(t("No selected unconfigured presets to add."));
+		showModelError(configView_l10n_t("No selected unconfigured presets to add."));
 		return;
 	}
 	if (showQuickSetupProviderBlocker(batch)) {
@@ -1559,7 +1559,7 @@ addSelectedPresetsBtn.addEventListener("click", () => {
 removeSelectedPresetsBtn.addEventListener("click", () => {
 	const batch = getSelectedPresetBatch();
 	if (!batch.removePresets.length) {
-		showModelError(t("No selected configured presets to remove."));
+		showModelError(configView_l10n_t("No selected configured presets to remove."));
 		return;
 	}
 
@@ -1578,7 +1578,7 @@ customizePresetBtn.addEventListener("click", () => {
 	applyModelToForm(cloneModel(preset.model));
 	setModelFormMode("customize");
 	advancedSettingsContent.style.display = "block";
-	toggleAdvancedSettingsBtn.textContent = t("Hide Advanced Settings");
+	toggleAdvancedSettingsBtn.textContent = configView_l10n_t("Hide Advanced Settings");
 });
 
 modelPresetSearchInput.addEventListener("input", renderModelPresets);
@@ -1617,8 +1617,8 @@ toggleAdvancedSettingsBtn.addEventListener("click", () => {
 	const isCurrentlyVisible = advancedSettingsContent.style.display !== "none";
 	advancedSettingsContent.style.display = isCurrentlyVisible ? "none" : "block";
 	toggleAdvancedSettingsBtn.textContent = isCurrentlyVisible
-		? t("Show Advanced Settings")
-		: t("Hide Advanced Settings");
+		? configView_l10n_t("Show Advanced Settings")
+		: configView_l10n_t("Hide Advanced Settings");
 });
 
 // Save Model button event listener
@@ -1746,7 +1746,7 @@ window.addEventListener("message", (event) => {
 			break;
 		case "initError":
 			configurationLoading.hidden = false;
-			configurationLoadingText.textContent = t("Unable to load configuration. Retry to continue.");
+			configurationLoadingText.textContent = configView_l10n_t("Unable to load configuration. Retry to continue.");
 			retryInitialization.hidden = false;
 			break;
 		case "modelsFetched":
@@ -1755,8 +1755,8 @@ window.addEventListener("message", (event) => {
 			break;
 		case "modelsFetchError":
 			// Handle error from fetchModels
-			dropdownHeader.textContent = t("Error fetching models");
-			dropdownContent.innerHTML = `<div class="dropdown-option error">${t(
+			dropdownHeader.textContent = configView_l10n_t("Error fetching models");
+			dropdownContent.innerHTML = `<div class="dropdown-option error">${configView_l10n_t(
 				"Failed to fetch models. Check the Developer Console for details."
 			)}</div>`;
 			console.error("[oaiproxy] Failed to fetch models:", message.error);
@@ -1790,7 +1790,7 @@ window.addEventListener("message", (event) => {
 			}
 			state.modelTestSummary = {
 				status: "loading",
-				text: t("Testing {0} of {1} model(s)...", 0, message.modelIds.length),
+				text: configView_l10n_t("Testing {0} of {1} model(s)...", 0, message.modelIds.length),
 			};
 			renderModels();
 			break;
@@ -1812,7 +1812,7 @@ window.addEventListener("message", (event) => {
 				}
 				state.modelTestSummary = {
 					status: "loading",
-					text: t(
+					text: configView_l10n_t(
 						"Testing {0} of {1} model(s)...",
 						state.modelTestProgress.completed,
 						state.modelTestProgress.total
@@ -1831,8 +1831,8 @@ window.addEventListener("message", (event) => {
 				status: message.failed > 0 ? "error" : "success",
 				text:
 					message.total === 0
-						? t("No configured models to test.")
-						: t(
+						? configView_l10n_t("No configured models to test.")
+						: configView_l10n_t(
 								"{0} passed, {1} failed in {2}.",
 								message.passed,
 								message.failed,
@@ -1863,7 +1863,7 @@ function renderProviders() {
 	syncModelProviderOptions(providers);
 
 	if (!providers.length) {
-		providerTableBody.innerHTML = `<tr><td colspan="6" class="no-data">${t("No providers")}</td></tr>`;
+		providerTableBody.innerHTML = `<tr><td colspan="6" class="no-data">${configView_l10n_t("No providers")}</td></tr>`;
 		return;
 	}
 
@@ -1878,36 +1878,36 @@ function renderProviders() {
 			const isXaiProvider = provider.trim().toLowerCase() === "xai";
 			const isOpenAIOAuth = isOpenAIOAuthProvider(provider, baseUrl, providerConfig.authMode || providerEntry.authMode);
 			const hasProviderKey = Boolean(state.providerKeys[provider]);
-			const keyPlaceholder = hasProviderKey ? t("Saved - leave blank to keep") : t("API Key");
+			const keyPlaceholder = hasProviderKey ? configView_l10n_t("Saved - leave blank to keep") : configView_l10n_t("API Key");
 			const modelCount = providerEntry.modelCount;
 			const oauthActions = isXaiProvider
 				? `<button class="login-xai-oauth-btn compact" data-provider="${providerAttr}" title="Sign in to xAI / Grok with OAuth" ${
 						state.xaiOAuthSignedIn ? "disabled" : ""
-					}>${t("Sign in")}</button>
+					}>${configView_l10n_t("Sign in")}</button>
 						<button class="logout-xai-oauth-btn secondary compact" data-provider="${providerAttr}" title="Remove the saved xAI / Grok OAuth credential" ${
 							state.xaiOAuthSignedIn ? "" : "disabled"
-						}>${t("Sign out")}</button>`
+						}>${configView_l10n_t("Sign out")}</button>`
 				: isOpenAIOAuth
 					? `<button class="login-openai-oauth-btn compact" data-provider="${providerAttr}" title="Sign in to OpenAI / Codex with OAuth" ${
 							state.openaiOAuthSignedIn ? "disabled" : ""
-						}>${t("Sign in")}</button>
+						}>${configView_l10n_t("Sign in")}</button>
 						<button class="logout-openai-oauth-btn secondary compact" data-provider="${providerAttr}" title="Remove the saved OpenAI / Codex OAuth credential" ${
 							state.openaiOAuthSignedIn ? "" : "disabled"
-						}>${t("Sign out")}</button>`
+						}>${configView_l10n_t("Sign out")}</button>`
 					: "";
 			const authMethodCell = isXaiProvider
 				? `<span class="status-pill ${state.xaiOAuthSignedIn ? "success" : "idle"}">${
-						state.xaiOAuthSignedIn ? t("OAuth · Signed in") : t("OAuth · Sign in required")
+						state.xaiOAuthSignedIn ? configView_l10n_t("OAuth · Signed in") : configView_l10n_t("OAuth · Sign in required")
 					}</span>`
 				: isOpenAIOAuth
 					? `<span class="status-pill ${state.openaiOAuthSignedIn ? "success" : "idle"}">${
-							state.openaiOAuthSignedIn ? t("OAuth · Signed in") : t("OAuth · Sign in required")
+							state.openaiOAuthSignedIn ? configView_l10n_t("OAuth · Signed in") : configView_l10n_t("OAuth · Sign in required")
 						}</span>`
 					: `<input type="password" class="provider-input" data-field="apiKey" value="" placeholder="${escapeHtml(keyPlaceholder)}" />`;
 			const providerLabel = escapeHtml(isXaiProvider ? "xAI OAuth" : isOpenAIOAuth ? "OpenAI OAuth (Codex)" : provider);
-			const modelCountText = `${modelCount} ${modelCount === 1 ? t("model") : t("models")}`;
+			const modelCountText = `${modelCount} ${modelCount === 1 ? configView_l10n_t("model") : configView_l10n_t("models")}`;
 			const providerMeta = isXaiProvider || isOpenAIOAuth
-				? `${t("Provider ID: {0}", escapeHtml(provider))} · ${modelCountText}`
+				? `${configView_l10n_t("Provider ID: {0}", escapeHtml(provider))} · ${modelCountText}`
 				: modelCountText;
 
 			return `
@@ -1918,7 +1918,7 @@ function renderProviders() {
 							<div class="provider-meta">${providerMeta}</div>
 						</div>
 					</td>
-					<td class="provider-url-cell"><input type="text" class="provider-input" data-field="baseUrl" value="${escapeHtml(baseUrl)}" placeholder="${t("Base URL")}" /></td>
+					<td class="provider-url-cell"><input type="text" class="provider-input" data-field="baseUrl" value="${escapeHtml(baseUrl)}" placeholder="${configView_l10n_t("Base URL")}" /></td>
 					<td class="provider-key-cell">${authMethodCell}</td>
 					<td class="provider-mode-cell">
 						<select class="provider-input" data-field="apiMode">
@@ -1935,9 +1935,9 @@ function renderProviders() {
 					<td class="action-cell">
 						<div class="action-buttons">
 							${oauthActions}
-							<button class="update-provider-btn compact" data-provider="${providerAttr}">${t("Save")}</button>
-							${isXaiProvider || isOpenAIOAuth ? "" : `<button class="clear-provider-key-btn secondary compact" data-provider="${providerAttr}" ${hasProviderKey ? "" : "disabled"}>${t("Clear Key")}</button>`}
-							<button class="delete-provider-btn danger compact" data-provider="${providerAttr}">${t("Delete")}</button>
+							<button class="update-provider-btn compact" data-provider="${providerAttr}">${configView_l10n_t("Save")}</button>
+							${isXaiProvider || isOpenAIOAuth ? "" : `<button class="clear-provider-key-btn secondary compact" data-provider="${providerAttr}" ${hasProviderKey ? "" : "disabled"}>${configView_l10n_t("Clear Key")}</button>`}
+							<button class="delete-provider-btn danger compact" data-provider="${providerAttr}">${configView_l10n_t("Delete")}</button>
 						</div>
 					</td>
 				</tr>`;
@@ -2031,7 +2031,7 @@ function renderProviders() {
 			vscode.postMessage({
 				type: "requestConfirm",
 				id: confirmId,
-				message: t("Are you sure you want to delete provider {0} and all its models?", provider),
+				message: configView_l10n_t("Are you sure you want to delete provider {0} and all its models?", provider),
 				action: "deleteProvider",
 			});
 		});
@@ -2042,10 +2042,10 @@ function renderModels() {
 	const models = state.models.filter((m) => !isProviderPlaceholderModel(m)).sort((a, b) => a.id.localeCompare(b.id));
 	const testRunActive = Boolean(state.activeModelTestRequestId);
 	testAllModelsBtn.disabled = models.length === 0 || testRunActive;
-	testAllModelsBtn.textContent = testRunActive ? t("Testing...") : t("Test all");
+	testAllModelsBtn.textContent = testRunActive ? configView_l10n_t("Testing...") : configView_l10n_t("Test all");
 	renderModelTestSummary();
 	if (!models.length) {
-		modelTableBody.innerHTML = `<tr><td colspan="7" class="no-data">${t("No models")}</td></tr>`;
+		modelTableBody.innerHTML = `<tr><td colspan="7" class="no-data">${configView_l10n_t("No models")}</td></tr>`;
 		return;
 	}
 
@@ -2064,9 +2064,9 @@ function renderModels() {
 				<td>${model.vision ? "True" : ""}</td>
 				<td class="model-action-cell">
 					<div class="action-buttons">
-						<button class="test-model-btn compact" data-model-id="${modelIdAttr}" ${testRunActive ? "disabled" : ""}>${isTesting ? t("Testing...") : t("Test")}</button>
-						<button class="update-model-btn compact" data-model-id="${modelIdAttr}">${t("Edit")}</button>
-						<button class="delete-model-btn danger compact" data-model-id="${modelIdAttr}">${t("Delete")}</button>
+						<button class="test-model-btn compact" data-model-id="${modelIdAttr}" ${testRunActive ? "disabled" : ""}>${isTesting ? configView_l10n_t("Testing...") : configView_l10n_t("Test")}</button>
+						<button class="update-model-btn compact" data-model-id="${modelIdAttr}">${configView_l10n_t("Edit")}</button>
+						<button class="delete-model-btn danger compact" data-model-id="${modelIdAttr}">${configView_l10n_t("Delete")}</button>
 					</div>
 					${renderModelTestFeedback(modelId)}
 				</td>
@@ -2094,7 +2094,7 @@ function renderModels() {
 			if (model) {
 				// Show the model form in edit mode
 				modelFormSection.style.display = "block";
-				modelFormTitle.textContent = t("Edit Model: {0}", modelId);
+				modelFormTitle.textContent = configView_l10n_t("Edit Model: {0}", modelId);
 				populateModelForm(model);
 			}
 		});
@@ -2151,7 +2151,7 @@ function resetModelForm() {
 	modelExtraBodyInput.value = "";
 	modelPromptCacheInput.value = "";
 	advancedSettingsContent.style.display = "none";
-	toggleAdvancedSettingsBtn.textContent = t("Show Advanced Settings");
+	toggleAdvancedSettingsBtn.textContent = configView_l10n_t("Show Advanced Settings");
 	state.selectedModelPresetIds.clear();
 	// Remove editing attribute
 	modelIdInput.removeAttribute("data-editing");
@@ -2311,12 +2311,12 @@ function validateJsonObjectInput(input, label) {
 	try {
 		const parsed = JSON.parse(value);
 		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-			showModelError(t("{0} must be a valid JSON object.", label));
+			showModelError(configView_l10n_t("{0} must be a valid JSON object.", label));
 			return false;
 		}
 		return true;
 	} catch (_error) {
-		showModelError(t("{0} must be a valid JSON object.", label));
+		showModelError(configView_l10n_t("{0} must be a valid JSON object.", label));
 		return false;
 	}
 }
@@ -2340,11 +2340,11 @@ function validateModelData(modelData) {
 	showModelError("");
 
 	if (!modelData.id) {
-		showModelError(t("Model ID is required."));
+		showModelError(configView_l10n_t("Model ID is required."));
 		return false;
 	}
 	if (!modelData.owned_by) {
-		showModelError(t("Provider ID is required."));
+		showModelError(configView_l10n_t("Provider ID is required."));
 		return false;
 	}
 	if (
@@ -2353,7 +2353,7 @@ function validateModelData(modelData) {
 		!state.providerKeys[modelData.owned_by] &&
 		!modelProviderApiKeyInput.value.trim()
 	) {
-		showModelError(t("Provider API Key is required for models with a provider Base URL."));
+		showModelError(configView_l10n_t("Provider API Key is required for models with a provider Base URL."));
 		return false;
 	}
 
@@ -2378,9 +2378,9 @@ function validateModelData(modelData) {
 		});
 
 	if (hasDuplicate) {
-		const configIdSuffix = modelData.configId ? t(' and Config ID="{0}"', modelData.configId) : "";
+		const configIdSuffix = modelData.configId ? configView_l10n_t(' and Config ID="{0}"', modelData.configId) : "";
 		showModelError(
-			t(
+			configView_l10n_t(
 				'A model with ID="{0}"{1} already exists. Model ID and Config ID combination must be unique.',
 				modelData.id,
 				configIdSuffix
@@ -2391,52 +2391,52 @@ function validateModelData(modelData) {
 
 	// Validate numeric fields if provided
 	if (modelData.context_length !== undefined && (isNaN(modelData.context_length) || modelData.context_length <= 0)) {
-		showModelError(t("Context Length must be a positive number."));
+		showModelError(configView_l10n_t("Context Length must be a positive number."));
 		return false;
 	}
 	if (modelData.max_tokens !== undefined && (isNaN(modelData.max_tokens) || modelData.max_tokens <= 0)) {
-		showModelError(t("Max Tokens must be a positive number."));
+		showModelError(configView_l10n_t("Max Tokens must be a positive number."));
 		return false;
 	}
 	if (
 		modelData.max_completion_tokens !== undefined &&
 		(isNaN(modelData.max_completion_tokens) || modelData.max_completion_tokens <= 0)
 	) {
-		showModelError(t("Max Completion Tokens must be a positive number."));
+		showModelError(configView_l10n_t("Max Completion Tokens must be a positive number."));
 		return false;
 	}
 	// Prevent both max_tokens and max_completion_tokens from being set simultaneously
 	if (modelData.max_tokens !== undefined && modelData.max_completion_tokens !== undefined) {
-		showModelError(t("Cannot set both 'max_tokens' and 'max_completion_tokens'. Use 'max_completion_tokens' only."));
+		showModelError(configView_l10n_t("Cannot set both 'max_tokens' and 'max_completion_tokens'. Use 'max_completion_tokens' only."));
 		return false;
 	}
 	if (
 		modelData.temperature !== undefined &&
 		(isNaN(modelData.temperature) || modelData.temperature < 0 || modelData.temperature > 2)
 	) {
-		showModelError(t("Temperature must be between 0 and 2."));
+		showModelError(configView_l10n_t("Temperature must be between 0 and 2."));
 		return false;
 	}
 	if (modelData.top_p !== undefined && (isNaN(modelData.top_p) || modelData.top_p < 0 || modelData.top_p > 1)) {
-		showModelError(t("Top P must be between 0 and 1."));
+		showModelError(configView_l10n_t("Top P must be between 0 and 1."));
 		return false;
 	}
 	if (modelData.delay !== undefined && (isNaN(modelData.delay) || modelData.delay < 0)) {
-		showModelError(t("Delay must be a non-negative number."));
+		showModelError(configView_l10n_t("Delay must be a non-negative number."));
 		return false;
 	}
 
 	// Validate JSON fields
-	if (!validateJsonObjectInput(modelHeadersInput, t("Custom Headers (JSON)"))) {
+	if (!validateJsonObjectInput(modelHeadersInput, configView_l10n_t("Custom Headers (JSON)"))) {
 		return false;
 	}
-	if (!validateJsonObjectInput(modelExtraInput, t("Extra Parameters (JSON)"))) {
+	if (!validateJsonObjectInput(modelExtraInput, configView_l10n_t("Extra Parameters (JSON)"))) {
 		return false;
 	}
-	if (!validateJsonObjectInput(modelExtraBodyInput, t("Extra Body (JSON)"))) {
+	if (!validateJsonObjectInput(modelExtraBodyInput, configView_l10n_t("Extra Body (JSON)"))) {
 		return false;
 	}
-	if (!validateJsonObjectInput(modelPromptCacheInput, t("Prompt Cache (JSON)"))) {
+	if (!validateJsonObjectInput(modelPromptCacheInput, configView_l10n_t("Prompt Cache (JSON)"))) {
 		return false;
 	}
 
@@ -2451,11 +2451,11 @@ function populateModelIdDropdown(models) {
 	dropdownContent.innerHTML = "";
 
 	if (!modelsArray.length) {
-		dropdownHeader.textContent = t("No models available");
+		dropdownHeader.textContent = configView_l10n_t("No models available");
 		return;
 	}
 
-	dropdownHeader.textContent = t("Select Model ({0} available)", modelsArray.length);
+	dropdownHeader.textContent = configView_l10n_t("Select Model ({0} available)", modelsArray.length);
 
 	// Create option elements
 	modelsArray.forEach((model) => {
@@ -2516,7 +2516,7 @@ function populateVisionBridgeModelOptions() {
 
 	const autoOption = document.createElement("option");
 	autoOption.value = "";
-	autoOption.textContent = t("Auto (first configured vision model)");
+	autoOption.textContent = configView_l10n_t("Auto (first configured vision model)");
 	visionBridgeModelInput.appendChild(autoOption);
 
 	const visionModels = state.models
@@ -2718,7 +2718,7 @@ function initDropdownEvents() {
 
 		// Update header with filtered count
 		const visibleCount = Array.from(options).filter((opt) => opt.style.display !== "none").length;
-		dropdownHeader.textContent = t("Select Model ({0} matching)", visibleCount);
+		dropdownHeader.textContent = configView_l10n_t("Select Model ({0} matching)", visibleCount);
 	});
 }
 

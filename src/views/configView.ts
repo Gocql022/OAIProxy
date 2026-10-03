@@ -1331,7 +1331,7 @@ export class ConfigViewPanel {
 				const confirmLabel = vscode.l10n.t("Export with API Keys");
 				const proceed = await vscode.window.showWarningMessage(
 					vscode.l10n.t(
-						"The exported configuration will contain your API keys in plain text. Anyone with this file can use your accounts. Only export with API keys if you need to move them to another machine, and keep the file secure."
+						"The exported configuration will contain your API keys in plain text, anyone with this file can use your accounts. Only export with API keys if you need to move them to another machine, and keep the file secure."
 					),
 					{ modal: true },
 					confirmLabel

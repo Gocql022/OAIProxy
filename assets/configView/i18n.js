@@ -7,7 +7,7 @@
 //
 // Usage:
 //   - HTML: add data-i18n="English text" or data-i18n-placeholder="English text".
-//   - JS:   const label = t("English text", arg0, arg1); // {0}, {1}... placeholders
+//   - JS:   const label = configView_l10n_t("English text", arg0, arg1); // {0}, {1}... placeholders
 (function () {
 	"use strict";
 
@@ -30,27 +30,27 @@
 		"Import": "导入",
 		"Refresh": "刷新",
 		"Global Base URL": "全局 Base URL",
-		"The base URL for the Openai Compatible Inference API.": "OpenAI 兼容推理 API 的基础 URL。",
-		"Global API Key": "全局 API Key",
-		"The API Key for Authentication.": "用于身份验证的 API Key。",
+		"The base URL for the Openai Compatible Inference API.": "OpenAI 兼容 API 的 Base URL。",
+		"Global API Key": "全局 API 密钥",
+		"The API Key for Authentication.": "用于验证的 API 密钥。",
 		"Delay (ms)": "延迟（毫秒）",
 		"Fixed delay in milliseconds between consecutive requests.": "连续请求之间的固定延迟（毫秒）。",
-		"Read File Lines": "读取文件行数",
+		"Read File Lines": "文件读取行数",
 		"Number of lines to read when using `read_file` tool. Large lines may cost more tokens. Default is 0, let model decide lines.":
-			"使用 `read_file` 工具时读取的行数。行数过多可能消耗更多 token。默认 0，由模型决定行数。",
+			"使用 `read_file` 工具时读取的行数。行数过多可能会消耗更多的 token。默认 0，由模型决定读取的行数。",
 		"Retry Configuration": "重试配置",
 		"Enable Retry": "启用重试",
 		"Enable retry mechanism for api errors.": "为 API 错误启用重试机制。",
-		"Max Attempts": "最大尝试次数",
-		"Maximum number of retry attempts.": "最大重试次数。",
+		"Max Attempts": "最大重试次数",
+		"Maximum number of retry attempts.": "重试请求的最大重试次数。",
 		"Retry Interval (ms)": "重试间隔（毫秒）",
-		"Interval between retry attempts in milliseconds.": "重试尝试之间的间隔（毫秒）。",
-		"Retry Status Codes (comma separated)": "重试状态码（逗号分隔）",
-		"Additional HTTP status codes that will be merged.": "将被合并的额外 HTTP 状态码。",
+		"Interval between retry attempts in milliseconds.": "重试请求之间的间隔（毫秒）。",
+		"Retry Status Codes (comma separated)": "重试状态码（以英文逗号分隔）",
+		"Additional HTTP status codes that will be merged.": "需要发出重试请求的 HTTP 状态码。",
 		"Git Commit Message": "Git 提交消息",
 		"Git Commit Model": "Git 提交模型",
 		"Select the model to be used for Git commit message generation.": "选择用于生成 Git 提交消息的模型。",
-		"Commit Language": "提交语言",
+		"Commit Language": "提交信息语言",
 		"Language for generated Git commit messages.": "生成的 Git 提交消息使用的语言。",
 		"Vision Bridge": "视觉桥接",
 		"Enable Vision Bridge": "启用视觉桥接",
@@ -58,7 +58,7 @@
 			"使用具备视觉能力的模型为纯文本模型描述图像，关闭后将不再为纯文本模型提供图像支持。",
 		"Vision Bridge Model": "视觉桥接模型",
 		"Model used to describe images for text-only models. Pick one from the configured vision-capable models. Leave empty for automatic selection.":
-			"用于为纯文本模型描述图像的模型。从已配置的视觉能力模型中选择。留空则自动选择。",
+			"用于为纯文本模型描述图像的模型。从启用视觉能力的模型中选择。留空则自动选择。",
 		"Auto (first configured vision model)": "自动（第一个已配置的视觉模型）",
 		"Vision Bridge Prompt": "视觉桥接提示词",
 		"Custom prompt used to describe images. Leave empty to use the default prompt.":
@@ -77,7 +77,7 @@
 		"Provider ID: {0}": "供应商 ID：{0}",
 		"Provider ID": "供应商 ID",
 		"Base URL": "Base URL",
-		"API Key": "API Key",
+		"API Key": "API 密钥",
 		"Auth Method": "认证方式",
 		"API Mode": "API 模式",
 		"Custom Headers (JSON)": "自定义请求头 (JSON)",
@@ -90,8 +90,8 @@
 		"Model ID": "模型 ID",
 		"Display Name": "显示名称",
 		"Context Length": "上下文长度",
-		"Max Tokens": "最大 Token 数",
-		"Max Completion Tokens": "最大完成 Token 数",
+		"Max Tokens": "最大 Token",
+		"Max Completion Tokens": "最大补全 Token",
 		"Supports Vision": "支持视觉",
 		"Add New Model": "添加新模型",
 		"Quick Setup": "快速设置",
@@ -110,7 +110,7 @@
 		"All statuses": "所有状态",
 		"Configured": "已配置",
 		"Provider Ready": "供应商就绪",
-		"Key Needed": "需要密钥",
+		"Key Needed": "需要 API 密钥",
 		"Provider Needed": "需要供应商",
 		"Select a preset to review its ready-to-save configuration.": "选择一个预设以查看其可直接保存的配置。",
 		"Add Selected": "添加所选",
@@ -120,7 +120,7 @@
 		"Provider ID *": "供应商 ID *",
 		"Model provider.": "模型供应商。",
 		"Select Provider": "选择供应商",
-		"Provider API Key": "供应商 API Key",
+		"Provider API Key": "供应商 API 密钥",
 		"Stored under the selected provider. Leave blank to keep a saved key.":
 			"保存在所选供应商下。留空以保留已保存的密钥。",
 		"Saved - leave blank": "已保存 - 留空",
@@ -143,10 +143,10 @@
 		"e.g., thinking, no-thinking": "例如 thinking、no-thinking",
 		"Base URL for the model provider.": "模型供应商的 Base URL。",
 		"Maximum context length.": "最大上下文长度。",
-		"Maximum number of tokens to generate (range: [1, context_length)).": "生成的最大 token 数（范围：[1, context_length)）。",
+		"Maximum number of tokens to generate (range: [1, context_length)).": "生成的最大 token（范围：[1, context_length)）。",
 		"Maximum output tokens (OpenAI new standard - takes precedence over Max Tokens if both are set).":
-			"最大输出 token 数（OpenAI 新标准 - 两者都设置时优先于最大 Token 数）。",
-		"Temperature": "温度",
+			"最大输出 token （OpenAI 新标准 - 两者都设置时优先于最大 Token ）。",
+		"Temperature": "Temperature",
 		"Sampling temperature (range: [0, 2]). Default is 0.": "采样温度（范围：[0, 2]）。默认 0。",
 		"Top P": "Top P",
 		"Top-p sampling value (range: (0, 1]).": "Top-p 采样值（范围：(0, 1]）。",
@@ -154,35 +154,35 @@
 		"Show Advanced Settings": "显示高级设置",
 		"Hide Advanced Settings": "隐藏高级设置",
 		"Display name for the model that will be shown in the Copilot interface.":
-			"将在 Copilot 界面中显示的模型名称。",
+			"在 Copilot 界面中显示的模型名称。",
 		"e.g., GPT-4 Turbo": "例如 GPT-4 Turbo",
 		"Model Family": "模型系列",
 		"Model family (e.g., 'gpt-4', 'claude-3', 'gemini'). Enables model-specific optimizations and behaviors.":
 			"模型系列（例如 'gpt-4'、'claude-3'、'gemini'）。启用模型特定的优化和行为。",
 		"Expose Thinking Effort": "公开思考力度",
-		"Expose VS Code's per-model Thinking Effort picker.": "公开 VS Code 的每模型思考力度选择器。",
+		"Expose VS Code's per-model Thinking Effort picker.": "公开 VS Code 的模型思考力度选择器。",
 		"Supported Thinking Efforts": "支持的思考力度",
 		"Comma-separated values such as low, medium, high.": "逗号分隔的值，如 low、medium、high。",
 		"Default Thinking Effort": "默认思考力度",
 		"Default value for VS Code's Thinking Effort picker.": "VS Code 思考力度选择器的默认值。",
-		"None": "无",
-		"Minimal": "极低",
-		"Low": "低",
-		"Medium": "中",
-		"High": "高",
-		"XHigh": "极高",
-		"Max": "最大",
+		"None": "None",
+		"Minimal": "Minimal",
+		"Low": "Low",
+		"Medium": "Medium",
+		"High": "High",
+		"XHigh": "XHigh",
+		"Max": "Max",
 		"Top K": "Top K",
 		"Top-k sampling value (range: [1, Infinity)).": "Top-k 采样值（范围：[1, ∞)）。",
 		"Min P": "Min P",
 		"Minimum probability threshold (range: [0, 1]).": "最低概率阈值（范围：[0, 1]）。",
 		"Thinking Budget": "思考预算",
 		"Maximum number of tokens for chain-of-thought output.": "思维链输出的最大 token 数。",
-		"Frequency Penalty": "频率惩罚",
+		"Frequency Penalty": "Frequency Penalty",
 		"Frequency penalty (range: [-2, 2]).": "频率惩罚（范围：[-2, 2]）。",
-		"Presence Penalty": "存在惩罚",
+		"Presence Penalty": "Presence Penalty",
 		"Presence penalty (range: [-2, 2]).": "存在惩罚（范围：[-2, 2]）。",
-		"Repetition Penalty": "重复惩罚",
+		"Repetition Penalty": "Repetition Penalty",
 		"Repetition penalty (range: (0, 2]).": "重复惩罚（范围：(0, 2]）。",
 		"Include Reasoning": "包含推理",
 		"Include reasoning_content in assistant messages sent to the API.": "在发送给 API 的助手消息中包含 reasoning_content。",
@@ -207,7 +207,7 @@
 		"Extra Parameters (JSON)": "额外参数 (JSON)",
 		"Extra request body parameters to be sent with every request to this model.":
 			"每次请求此模型时发送的额外请求体参数。",
-		"Extra Body (JSON)": "额外 Body (JSON)",
+		"Extra Body (JSON)": "Extra Body (JSON)",
 		"LiteLLM extra_body parameters for provider/proxy-specific options.": "LiteLLM 的 extra_body 参数，用于供应商/代理特定选项。",
 		"Prompt Cache (JSON)": "提示缓存 (JSON)",
 		"Provider-aware prompt/KV cache configuration.": "供应商感知的提示/KV 缓存配置。",
@@ -217,19 +217,19 @@
 		"No": "否",
 
 		// Export / import
-		"Include API keys in the exported configuration?": "导出配置中包含 API Key？",
+		"Include API keys in the exported configuration?": "导出配置中包含 API 密钥？",
 
 		// Provider usage check
 		"Provider Usage Check": "供应商余额检查",
 		"Check All": "全部检查",
 		"Usage Plan": "用量套餐",
-		"Remaining / Usage": "剩余 / 用量",
-		"Usage Key": "用量密钥",
+		"Remaining / Usage": "剩余 / 已使用",
+		"Usage Key": "余额检查密钥",
 		"Status": "状态",
 		"Action": "操作",
 
 		// Dynamic strings (JS)
-		"Checking usage...": "正在检查用量...",
+		"Checking usage...": "正在检查余额...",
 		"Custom provider": "自定义供应商",
 		"Testing {0} of {1} model(s)...": "正在测试 {0}/{1} 个模型...",
 		"Connection test failed.": "连接测试失败。",
@@ -245,18 +245,18 @@
 		"Remove {0} selected configured model(s)?": "移除所选 {0} 个已配置的模型？",
 		"Are you sure you want to delete provider {0} and all its models?": "确定要删除供应商 {0} 及其所有模型吗？",
 		"provider only": "仅供应商",
-		"+{0} more": "+{0} 个更多",
+		"+{0} more": "还有{0}个...",
 		"Unavailable": "不可用",
 		"Not checked": "未检查",
 		"Checking": "检查中",
 		"Error": "错误",
 		"Checked": "已检查",
-		"Usage check completed.": "用量检查完成。",
-		"Usage check failed.": "用量检查失败。",
+		"Usage check completed.": "余额检查完成。",
+		"Usage check failed.": "余额检查失败。",
 		"Not used": "不使用",
-		"Admin usage key": "管理员用量密钥",
+		"Admin usage key": "管理员余额检查密钥",
 		"Provider API key": "供应商 API 密钥",
-		"No configured providers have known usage-check behavior yet": "尚无具有已知用量检查行为的已配置供应商",
+		"No configured providers have known usage-check behavior yet": "尚无具有用量检查功能的已配置供应商",
 		"No API endpoint": "无 API 端点",
 		"Checking...": "检查中...",
 		"Check": "检查",
@@ -274,12 +274,12 @@
 		"Keys not saved: {0}": "未保存密钥：{0}",
 		"No matching model presets": "没有匹配的模型预设",
 		"Remove": "移除",
-		"{0} out": "{0} 输出",
+		"{0} out": "{0} 最大输出",
 		"Close": "关闭",
 		"Save": "保存",
 		"Error fetching models": "获取模型失败",
-		"Failed to fetch models. Check the Developer Console for details.": "获取模型失败。请查看开发者控制台了解详情。",
-		"No configured models to test.": "没有已配置的模型可测试。",
+		"Failed to fetch models. Check the Developer Console for details.": "获取模型失败，请查看开发者控制台了解详情。",
+		"No configured models to test.": "没有可测试的已配置模型。",
 		"{0} passed, {1} failed in {2}.": "{2} 内 {0} 个通过，{1} 个失败。",
 		"No providers": "没有供应商",
 		"model": "个模型",
@@ -302,21 +302,21 @@
 			"已存在 ID=\"{0}\"{1} 的模型。模型 ID 和配置 ID 的组合必须唯一。",
 		" and Config ID=\"{0}\"": " 且配置 ID=\"{0}\"",
 		"Context Length must be a positive number.": "上下文长度必须为正数。",
-		"Max Tokens must be a positive number.": "最大 Token 数必须为正数。",
-		"Max Completion Tokens must be a positive number.": "最大完成 Token 数必须为正数。",
+		"Max Tokens must be a positive number.": "最大 Token 必须为正数。",
+		"Max Completion Tokens must be a positive number.": "最大补全 Token 必须为正数。",
 		"Cannot set both 'max_tokens' and 'max_completion_tokens'. Use 'max_completion_tokens' only.":
 			"不能同时设置 'max_tokens' 和 'max_completion_tokens'。只能使用 'max_completion_tokens'。",
-		"Temperature must be between 0 and 2.": "温度必须在 0 到 2 之间。",
+		"Temperature must be between 0 and 2.": "Temperature 必须在 0 到 2 之间。",
 		"Top P must be between 0 and 1.": "Top P 必须在 0 到 1 之间。",
-		"Delay must be a non-negative number.": "延迟必须为非负数。",
+		"Delay must be a non-negative number.": "延迟必须为零或正数。",
 		"{0} must be a valid JSON object.": "{0} 必须是有效的 JSON 对象。",
 		"Enter provider API key": "输入供应商 API 密钥",
 		"Optional; defaults to ollama": "可选；默认使用 ollama",
 		"Provider preset": "供应商预设",
 		"Credit": "余额",
 		"Token": "Token",
-		"Token usage": "Token 用量",
-		"Cost usage": "费用用量",
+		"Token usage": "已使用Token",
+		"Cost usage": "已消耗费用",
 		"Proxy key spend": "代理密钥消耗",
 		"Remaining credit balance": "剩余余额",
 		"Tokens left and reset time": "剩余 Token 及重置时间",
@@ -328,8 +328,8 @@
 			"小米 MiMo 用量检查不可用，因为小米仅通过网页控制台端点暴露余额/用量；没有公开的 API 密钥用量端点。",
 		"Z.AI usage checks are unavailable because Z.AI currently documents API keys and console billing/usage pages, but not a public API-key usage or balance endpoint.":
 			"Z.AI 用量检查不可用，因为 Z.AI 目前只提供 API 密钥和控制台账单/用量页面，没有公开的 API 密钥用量或余额端点。",
-		"No selected unconfigured presets to add.": "没有所选的可添加未配置预设。",
-		"No selected configured presets to remove.": "没有所选的可移除已配置预设。",
+		"No selected unconfigured presets to add.": "未选中任何未配置的预设，取消添加。",
+		"No selected configured presets to remove.": "未选中任何已配置的预设，取消移除。",
 	};
 
 	/**
@@ -339,7 +339,7 @@
 	 * @param text Source English string.
 	 * @param args Optional values substituted into {0}, {1}, ... placeholders.
 	 */
-	function t(text, ...args) {
+	function configView_l10n_t(text, ...args) {
 		if (!IS_ZH) {
 			return text;
 		}
@@ -357,7 +357,7 @@
 	 * Apply translations to static HTML elements annotated with
 	 * data-i18n (textContent) or data-i18n-placeholder (placeholder attribute).
 	 */
-	function applyI18n() {
+	function html_i18n() {
 		if (!IS_ZH) {
 			return;
 		}
@@ -373,9 +373,9 @@
 				el.setAttribute("placeholder", I18N_ZH_CN[key]);
 			}
 		});
-		document.title = t("OAIProxy Configuration");
+		document.title = configView_l10n_t("OAIProxy Configuration");
 	}
 
 	// Expose helpers to the page scope (configView.js uses them).
-	window.__oaiproxyI18n = { t, applyI18n, isZh: IS_ZH };
+	window.__oaiproxyI18n = { configView_l10n_t, html_i18n, isZh: IS_ZH };
 })();
