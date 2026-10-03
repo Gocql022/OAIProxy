@@ -85,52 +85,52 @@
 			{
 				"command": "oaiproxy.setApikey",
 				"category": "OAIProxy",
-				"title": "Set OAIProxy API Key"
+				"title": "%command.setApikey.title%"
 			},
 			{
 				"command": "oaiproxy.setProviderApikey",
 				"category": "OAIProxy",
-				"title": "Set OAIProxy Multi-Provider API Key"
+				"title": "%command.setProviderApikey.title%"
 			},
 			{
 				"command": "oaiproxy.loginXaiOAuth",
 				"category": "OAIProxy",
-				"title": "Sign in to xAI / Grok with OAuth"
+				"title": "%command.loginXaiOAuth.title%"
 			},
 			{
 				"command": "oaiproxy.logoutXaiOAuth",
 				"category": "OAIProxy",
-				"title": "Sign out of xAI / Grok OAuth"
+				"title": "%command.logoutXaiOAuth.title%"
 			},
 			{
 				"command": "oaiproxy.loginOpenAIOAuth",
 				"category": "OAIProxy",
-				"title": "Sign in to OpenAI / Codex with OAuth"
+				"title": "%command.loginOpenAIOAuth.title%"
 			},
 			{
 				"command": "oaiproxy.logoutOpenAIOAuth",
 				"category": "OAIProxy",
-				"title": "Sign out of OpenAI / Codex OAuth"
+				"title": "%command.logoutOpenAIOAuth.title%"
 			},
 			{
 				"command": "oaiproxy.openConfig",
 				"category": "OAIProxy",
-				"title": "Open Configuration UI"
+				"title": "%command.openConfig.title%"
 			},
 			{
 				"command": "oaiproxy.checkProviderUsage",
 				"category": "OAIProxy",
-				"title": "Check Provider Balance / Usage"
+				"title": "%command.checkProviderUsage.title%"
 			},
 			{
 				"command": "oaiproxy.generateGitCommitMessage",
-				"title": "Generate Commit Message with OAIProxy",
+				"title": "%command.generateGitCommitMessage.title%",
 				"category": "OAIProxy",
 				"icon": "$(wand)"
 			},
 			{
 				"command": "oaiproxy.abortGitCommitMessage",
-				"title": "Generate Commit Message with OAIProxy - Stop",
+				"title": "%command.abortGitCommitMessage.title%",
 				"category": "OAIProxy",
 				"icon": "$(debug-stop)"
 			}
@@ -160,7 +160,7 @@
 			]
 		},
 		"configuration": {
-			"title": "OAIProxy",
+			"title": "%configuration.title%",
 			"properties": {
 				"oaicopilot.logLevel": {
 					"type": "string",
@@ -172,12 +172,12 @@
 						"warn",
 						"error"
 					],
-					"description": "Debug log level. Logs are written to ~/.copilot/oaiproxy/logs/ as JSON lines. Default is 'off' (no logging)."
+					"description": "%config.logLevel.description%"
 				},
 				"oaicopilot.baseUrl": {
 					"type": "string",
 					"default": "https://router.huggingface.co/v1",
-					"description": "The base URL for the Openai Compatible Inference API. Default value is Hugging Face."
+					"description": "%config.baseUrl.description%"
 				},
 				"oaicopilot.models": {
 					"type": "array",
@@ -187,81 +187,81 @@
 						"properties": {
 							"id": {
 								"type": "string",
-								"description": "Model ID (e.g., 'glm-4.6')."
+								"description": "%config.models.id.description%"
 							},
 							"_comment": {
 								"type": "string",
-								"description": "Human-readable note for generated model presets. This is configuration metadata only and is not sent to model providers."
+								"description": "%config.models._comment.description%"
 							},
 							"displayName": {
 								"type": "string",
-								"description": "(Optional) Display name for the model that will be shown in the Copilot interface. If not provided, will be generated automatically."
+								"description": "%config.models.displayName.description%"
 							},
 							"configId": {
 								"type": "string",
-								"description": "(Optional) Configuration ID for this model. Allows defining the same model with different settings (e.g. 'glm-4.6::thinking', 'glm-4.6::no-thinking')."
+								"description": "%config.models.configId.description%"
 							},
 							"owned_by": {
 								"type": "string",
-								"description": "Model provider (e.g., 'tokenrouter', 'zai', 'openai', 'litellm', 'fireworks', 'kimi', 'deepseek', 'mimo', 'minimax')."
+								"description": "%config.models.owned_by.description%"
 							},
 							"authMode": {
 								"type": "string",
 								"enum": ["api-key", "oauth"],
-								"description": "Credential flow for this model. OAuth uses OAIProxy's refreshable xAI/Grok or OpenAI/Codex credential; api-key uses the provider API key."
+								"description": "%config.models.authMode.description%"
 							},
 							"provider": {
 								"type": "string",
-								"description": "(Alias of owned_by) Model provider (e.g., 'tokenrouter', 'zai', 'openai', 'litellm', 'fireworks', 'kimi', 'deepseek', 'mimo', 'minimax')."
+								"description": "%config.models.provider.description%"
 							},
 							"provide": {
 								"type": "string",
-								"description": "(Alias of owned_by) Model provider (e.g., 'tokenrouter', 'zai', 'openai', 'litellm', 'fireworks', 'kimi', 'deepseek', 'mimo', 'minimax')."
+								"description": "%config.models.provide.description%"
 							},
 							"family": {
 								"type": "string",
-								"description": "Model family (e.g., 'gpt-4', 'claude-3', 'gemini'). Enables model-specific optimizations and behaviors. Defaults to 'OAIProxy' if not specified."
+								"description": "%config.models.family.description%"
 							},
 							"baseUrl": {
 								"type": "string",
-								"description": "Base URL for the model provider. If not provided, the global oaicopilot.baseUrl will be used."
+								"description": "%config.models.baseUrl.description%"
 							},
 							"context_length": {
 								"type": "number",
 								"default": 128000,
 								"minimum": 1000,
 								"maximum": 10000000,
-								"description": "Model support context length. Default is 128000."
+								"description": "%config.models.context_length.description%"
 							},
 							"max_input_tokens": {
 								"type": "number",
 								"minimum": 1,
 								"maximum": 10000000,
-								"description": "Optional advertised input token budget for VS Code/OAIProxy preflight checks. Use this to leave provider-specific safety margin without changing context_length or output token parameters."
+								"description": "%config.models.max_input_tokens.description%"
 							},
 							"vision": {
 								"type": "boolean",
 								"default": false,
-								"description": "Model support vision. Default is false."
+								"description": "%config.models.vision.description%"
 							},
 							"toolCalling": {
 								"type": "boolean",
 								"default": true,
-								"description": "Advertise tool calling support to VS Code. Set false to avoid Agent optimized tool selection latency for this model."
+								"description": "%config.models.toolCalling.description%"
 							},
 							"max_tokens": {
 								"type": "number",
 								"default": 4096,
 								"minimum": 1,
 								"maximum": 10000000,
-								"description": "Maximum number of tokens to generate (range: [1, context_length)). Default is 4096."
+								"description": "%config.models.max_tokens.description%"
 							},
 							"max_completion_tokens": {
 								"type": "number",
 								"default": 4096,
 								"minimum": 1,
 								"maximum": 10000000,
-								"description": "Maximum number of tokens to generate (OpenAI new standard parameter)."
+								"description": "%config.models.max_completion_tokens.description%"
 							},
 							"reasoning_effort": {
 								"type": "string",
@@ -275,27 +275,27 @@
 									"minimal",
 									"none"
 								],
-								"description": "Reasoning effort level (OpenAI reasoning configuration)"
+								"description": "%config.models.reasoning_effort.description%"
 							},
 							"supports_reasoning_effort": {
 								"type": "boolean",
 								"default": false,
-								"description": "Expose VS Code's per-model Thinking Effort control for this model."
+								"description": "%config.models.supports_reasoning_effort.description%"
 							},
 							"supported_reasoning_efforts": {
 								"type": "array",
-								"description": "Supported values for VS Code's per-model Thinking Effort control. DeepSeek defaults to high, max. Other models default to minimal, low, medium, high, xhigh, max.",
+								"description": "%config.models.supported_reasoning_efforts.description%",
 								"items": {
 									"type": "string"
 								}
 							},
 							"default_reasoning_effort": {
 								"type": "string",
-								"description": "Default value for VS Code's per-model Thinking Effort control. If not set, reasoning_effort is used."
+								"description": "%config.models.default_reasoning_effort.description%"
 							},
 							"thinking": {
 								"type": "object",
-								"description": "Thinking configuration for providers that expose an explicit thinking mode, such as Zai, Anthropic, and MiniMax M3.",
+								"description": "%config.models.thinking.description%",
 								"properties": {
 									"type": {
 										"type": "string",
@@ -304,73 +304,73 @@
 											"disabled",
 											"adaptive"
 										],
-										"description": "Set to 'enabled' to enable thinking, 'disabled' to disable thinking, or 'adaptive' for Anthropic adaptive thinking."
+										"description": "%config.models.thinking.type.description%"
 									},
 									"clear_thinking": {
 										"type": "boolean",
-										"description": "For Z.AI/GLM-compatible endpoints, set false to preserve historical reasoning_content across turns."
+										"description": "%config.models.thinking.clear_thinking.description%"
 									}
 								}
 							},
 							"enable_thinking": {
 								"type": "boolean",
 								"default": false,
-								"description": "Switches between thinking and non-thinking modes. Not required."
+								"description": "%config.models.enable_thinking.description%"
 							},
 							"thinking_budget": {
 								"type": "number",
 								"default": 128,
 								"minimum": 128,
 								"maximum": 10000000,
-								"description": "Maximum number of tokens for chain-of-thought output. Not required."
+								"description": "%config.models.thinking_budget.description%"
 							},
 							"temperature": {
 								"type": "number",
 								"default": 0,
 								"minimum": 0,
 								"maximum": 2,
-								"description": "Sampling temperature (range: [0, 2]). Lower values make output more deterministic, higher values make it more creative. Default is 0."
+								"description": "%config.models.temperature.description%"
 							},
 							"top_p": {
 								"type": "number",
 								"default": 1,
 								"minimum": 0,
 								"maximum": 1,
-								"description": "Top-p sampling value (range: (0, 1]). Not required."
+								"description": "%config.models.top_p.description%"
 							},
 							"top_k": {
 								"type": "number",
 								"default": 50,
 								"minimum": 1,
-								"description": "Top-k sampling value (range: [1, Infinity)). Not required."
+								"description": "%config.models.top_k.description%"
 							},
 							"min_p": {
 								"type": "number",
 								"default": 0,
 								"minimum": 0,
 								"maximum": 1,
-								"description": "Minimum probability threshold (range: [0, 1]). Not required."
+								"description": "%config.models.min_p.description%"
 							},
 							"frequency_penalty": {
 								"type": "number",
 								"default": 0,
 								"minimum": -2,
 								"maximum": 2,
-								"description": "Frequency penalty (range: [-2, 2]). Not required."
+								"description": "%config.models.frequency_penalty.description%"
 							},
 							"presence_penalty": {
 								"type": "number",
 								"default": 0,
 								"minimum": -2,
 								"maximum": 2,
-								"description": "Presence penalty (range: [-2, 2]). Not required."
+								"description": "%config.models.presence_penalty.description%"
 							},
 							"repetition_penalty": {
 								"type": "number",
 								"default": 0,
 								"minimum": 0,
 								"maximum": 2,
-								"description": "Repetition penalty (range: (0, 2]). Not required."
+								"description": "%config.models.repetition_penalty.description%"
 							},
 							"reasoning": {
 								"type": "object",
@@ -390,39 +390,39 @@
 											"minimal",
 											"auto"
 										],
-										"description": "Reasoning effort level for OpenRouter/xAI (high, medium, low, minimal, auto)"
+										"description": "%config.models.reasoning.effort.description%"
 									},
 									"exclude": {
 										"type": "boolean",
 										"default": false,
-										"description": "Exclude reasoning tokens from the final response"
+										"description": "%config.models.reasoning.exclude.description%"
 									},
 									"max_tokens": {
 										"type": "number",
 										"default": 2000,
 										"minimum": 1,
-										"description": "Specific token limit for reasoning (Anthropic-style, alternative to effort)"
+										"description": "%config.models.reasoning.max_tokens.description%"
 									},
 									"enabled": {
 										"type": "boolean",
 										"default": true,
-										"description": "Enable reasoning (inferred from effort or max_tokens if not specified)"
+										"description": "%config.models.reasoning.enabled.description%"
 									}
 								},
-								"description": "Reasoning configuration for OpenRouter-compatible providers"
+								"description": "%config.models.reasoning.description%"
 							},
 							"prompt_cache": {
 								"type": "object",
-								"description": "Prompt/KV cache configuration. OpenAI prompt-cache keys are auto-applied only for official OpenAI endpoints unless explicitly configured. Known Anthropic-compatible endpoints add stable-prefix cache_control unless disabled. Providers such as DeepSeek, MiMo, MiniMax OpenAI mode, and Gemini use provider-managed cache hits.",
+								"description": "%config.models.prompt_cache.description%",
 								"properties": {
 									"enabled": {
 										"type": "boolean",
 										"default": true,
-										"description": "Enable provider-safe prompt cache request shaping. Set false to disable automatic cache parameters."
+										"description": "%config.models.prompt_cache.enabled.description%"
 									},
 									"key": {
 										"type": "string",
-										"description": "Optional OpenAI prompt_cache_key override for requests with shared prompt prefixes."
+										"description": "%config.models.prompt_cache.key.description%"
 									},
 									"retention": {
 										"type": "string",
@@ -430,16 +430,16 @@
 											"in_memory",
 											"24h"
 										],
-										"description": "Optional OpenAI prompt_cache_retention. Leave unset for provider default."
+										"description": "%config.models.prompt_cache.retention.description%"
 									},
 									"anthropic": {
 										"type": "object",
-										"description": "Anthropic-compatible prompt cache-control settings.",
+										"description": "%config.models.prompt_cache.anthropic.description%",
 										"properties": {
 											"enabled": {
 												"type": "boolean",
 												"default": false,
-												"description": "Enable Anthropic cache_control on stable system/tool prefixes. Known first-party Anthropic-compatible endpoints enable this by default unless prompt_cache.enabled is false."
+												"description": "%config.models.prompt_cache.anthropic.enabled.description%"
 											},
 											"ttl": {
 												"type": "string",
@@ -448,17 +448,17 @@
 													"1h"
 												],
 												"default": "5m",
-												"description": "Anthropic cache lifetime. Default 5m uses provider default wire shape; 1h sends ttl."
+												"description": "%config.models.prompt_cache.anthropic.ttl.description%"
 											},
 											"cache_system": {
 												"type": "boolean",
 												"default": true,
-												"description": "Add cache_control to system prompts when Anthropic prompt cache is enabled."
+												"description": "%config.models.prompt_cache.anthropic.cache_system.description%"
 											},
 											"cache_tools": {
 												"type": "boolean",
 												"default": true,
-												"description": "Add cache_control to tool definitions when Anthropic prompt cache is enabled."
+												"description": "%config.models.prompt_cache.anthropic.cache_tools.description%"
 											}
 										}
 									}
@@ -466,23 +466,23 @@
 							},
 							"extra": {
 								"type": "object",
-								"description": "Extra request body parameters."
+								"description": "%config.models.extra.description%"
 							},
 							"extra_body": {
 								"type": "object",
-								"description": "LiteLLM/OpenAI-SDK-style provider-specific request body parameters. In apiMode 'litellm', these are sent as the literal extra_body field."
+								"description": "%config.models.extra_body.description%"
 							},
 							"headers": {
 								"type": "object",
 								"additionalProperties": {
 									"type": "string"
 								},
-								"description": "Custom HTTP headers to be sent with every request to this model's provider. These headers will be merged with the default headers (Authorization, Content-Type, User-Agent)."
+								"description": "%config.models.headers.description%"
 							},
 							"include_reasoning_in_request": {
 								"type": "boolean",
 								"default": false,
-								"description": "Whether to include reasoning_content in assistant messages sent to the API. Supports DeepSeek, MiMo thinking mode, and other compatible providers."
+								"description": "%config.models.include_reasoning_in_request.description%"
 							},
 							"apiMode": {
 								"type": "string",
@@ -496,18 +496,18 @@
 									"gemini"
 								],
 								"default": "openai",
-								"description": "API mode: 'openai' (Default) for OpenAI Chat Completions (/chat/completions; Kimi, DeepSeek, MiMo, MiniMax, etc.), 'azure-foundry' for Azure Foundry Chat Completions (/chat/completions with api-key authentication), 'litellm' for LiteLLM Proxy Chat Completions (/chat/completions with extra_body support), 'openai-responses' for OpenAI Responses (/responses), 'ollama' for Ollama (/api/chat), 'anthropic' for Anthropic (/v1/messages), 'gemini' for Gemini (*/v1beta/models/{model}:streamGenerateContent?alt=sse)."
+								"description": "%config.models.apiMode.description%"
 							},
 							"useForCommitGeneration": {
 								"type": "boolean",
 								"default": false,
-								"description": "Whether to be used for Git commit message generation. Not supports gemini apiMode."
+								"description": "%config.models.useForCommitGeneration.description%"
 							},
 							"delay": {
 								"type": "number",
 								"default": 0,
 								"minimum": 0,
-								"description": "Model-specific delay in milliseconds between consecutive requests. If not specified, falls back to global oaicopilot.delay configuration."
+								"description": "%config.models.delay.description%"
 							}
 						},
 						"required": [
@@ -531,7 +531,7 @@
 							}
 						]
 					},
-					"description": "A list of preferred models to use. If provided, these models will be used directly instead of fetching from the API."
+					"description": "%config.models.description%"
 				},
 				"oaicopilot.retry": {
 					"type": "object",
@@ -545,35 +545,35 @@
 						"enabled": {
 							"type": "boolean",
 							"default": true,
-							"description": "Enable retry mechanism for api errors. Default is true."
+							"description": "%config.retry.enabled.description%"
 						},
 						"max_attempts": {
 							"type": "number",
 							"default": 3,
 							"minimum": 1,
-							"description": "Maximum number of retry attempts. Default is 3."
+							"description": "%config.retry.max_attempts.description%"
 						},
 						"interval_ms": {
 							"type": "number",
 							"default": 1000,
 							"minimum": 1,
-							"description": "Interval between retry attempts in milliseconds. Default is 1000 (1 seconds)."
+							"description": "%config.retry.interval_ms.description%"
 						},
 						"status_codes": {
 							"type": "array",
 							"items": {
 								"type": "number"
 							},
-							"description": "Additional HTTP status codes that will be merged. Default is [429, 500, 502, 503, 504]."
+							"description": "%config.retry.status_codes.description%"
 						}
 					},
-					"description": "Retry configuration for handling api errors like [429, 500, 502, 503, 504]."
+					"description": "%config.retry.description%"
 				},
 				"oaicopilot.delay": {
 					"type": "number",
 					"default": 0,
 					"minimum": 0,
-					"description": "Fixed delay in milliseconds between consecutive requests. Default is 0 (no delay)."
+					"description": "%config.delay.description%"
 				},
 				"oaicopilot.commitLanguage": {
 					"type": "string",
@@ -594,19 +594,19 @@
 						"Turkish",
 						"Polish"
 					],
-					"description": "Language for generated Git commit messages. Default is English."
+					"description": "%config.commitLanguage.description%"
 				},
 				"oaicopilot.commitMessagePrompt": {
 					"type": "string",
 					"default": "",
-					"description": "Custom system prompt for commit message generation. If not provided, uses the default prompt."
+					"description": "%config.commitMessagePrompt.description%"
 				},
 				"oaicopilot.readFileLines": {
 					"type": "number",
 					"default": 0,
 					"minimum": 0,
 					"maximum": 10000,
-					"description": "Number of lines to read when using `read_file` tool. Large lines may cost more tokens. Default is 0, let model decide lines."
+					"description": "%config.readFileLines.description%"
 				},
 				"oaicopilot.tokenEstimation": {
 					"type": "object",
@@ -633,7 +633,7 @@
 							"type": "number",
 							"minimum": 0.1,
 							"maximum": 100,
-							"description": "ASCII fallback only when the bundled tokenizer fails."
+							"description": "%config.tokenEstimation.charsPerToken.description%"
 						},
 						"nonAsciiTokensPerChar": {
 							"type": "number",
@@ -644,13 +644,13 @@
 							"type": "integer",
 							"minimum": 64,
 							"maximum": 1000000,
-							"description": "Limit for unknown object fallback serialization; ordinary text is preserved."
+							"description": "%config.tokenEstimation.maxSerializedPartChars.description%"
 						},
 						"bridgeTokens": {
 							"type": "integer",
 							"minimum": 1,
 							"maximum": 1000000,
-							"description": "Provisional allowance for an image awaiting a Vision Bridge description."
+							"description": "%config.tokenEstimation.bridgeTokens.description%"
 						},
 						"calibration": {
 							"type": "string",
@@ -658,7 +658,7 @@
 								"observe",
 								"adaptive"
 							],
-							"description": "Observe usage by default; adaptive applies a bounded multiplier after 20 eligible completed stateless text requests."
+							"description": "%config.tokenEstimation.calibration.description%"
 						},
 						"image": {
 							"type": "object",
@@ -671,7 +671,7 @@
 										"fixed",
 										"area"
 									],
-									"description": "Use documented model profiles, a fixed allowance, or a custom area heuristic."
+									"description": "%config.tokenEstimation.image.strategy.description%"
 								},
 								"profile": {
 									"type": "string",
@@ -713,7 +713,7 @@
 						},
 						"perModel": {
 							"type": "object",
-							"description": "Overrides keyed by base model ID or full modelId::configId; the full ID takes precedence.",
+							"description": "%config.tokenEstimation.perModel.description%",
 							"additionalProperties": {
 								"type": "object",
 								"additionalProperties": false,
@@ -722,7 +722,7 @@
 										"type": "number",
 										"minimum": 0.1,
 										"maximum": 100,
-										"description": "ASCII fallback only when the bundled tokenizer fails."
+										"description": "%config.tokenEstimation.charsPerToken.description%"
 									},
 									"nonAsciiTokensPerChar": {
 										"type": "number",
@@ -733,13 +733,13 @@
 										"type": "integer",
 										"minimum": 64,
 										"maximum": 1000000,
-										"description": "Limit for unknown object fallback serialization; ordinary text is preserved."
+										"description": "%config.tokenEstimation.maxSerializedPartChars.description%"
 									},
 									"bridgeTokens": {
 										"type": "integer",
 										"minimum": 1,
 										"maximum": 1000000,
-										"description": "Provisional allowance for an image awaiting a Vision Bridge description."
+										"description": "%config.tokenEstimation.bridgeTokens.description%"
 									},
 									"calibration": {
 										"type": "string",
@@ -747,7 +747,7 @@
 											"observe",
 											"adaptive"
 										],
-										"description": "Observe usage by default; adaptive applies a bounded multiplier after 20 eligible completed stateless text requests."
+										"description": "%config.tokenEstimation.calibration.description%"
 									},
 									"image": {
 										"type": "object",
@@ -760,7 +760,7 @@
 													"fixed",
 													"area"
 												],
-												"description": "Use documented model profiles, a fixed allowance, or a custom area heuristic."
+												"description": "%config.tokenEstimation.image.strategy.description%"
 											},
 											"profile": {
 												"type": "string",
@@ -804,12 +804,27 @@
 							}
 						}
 					},
-					"description": "Shared token estimation. Text uses the bundled tokenizer; image costs remain estimates. See the Token Estimation guide."
+					"description": "%config.tokenEstimation.description%"
 				},
 				"oaicopilot.debug.tokenBreakdown": {
 					"type": "boolean",
 					"default": false,
-					"description": "With logLevel debug, log token categories, largest parts and provider usage comparisons. Logs contain types, IDs and sizes only."
+					"description": "%config.debug.tokenBreakdown.description%"
+				},
+				"oaicopilot.visionBridgeEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.visionBridgeEnabled.description%"
+				},
+				"oaicopilot.visionBridgeModel": {
+					"type": "string",
+					"default": "",
+					"description": "%config.visionBridgeModel.description%"
+				},
+				"oaicopilot.visionBridgePrompt": {
+					"type": "string",
+					"default": "",
+					"description": "%config.visionBridgePrompt.description%"
 				}
 			}
 		}
