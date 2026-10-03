@@ -2,6 +2,8 @@ import * as assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
 
+import { MODEL_PRESETS } from "../modelPresets";
+
 const repoRoot = path.resolve(__dirname, "..", "..");
 
 function readJson<T>(relativePath: string): T {
@@ -55,6 +57,43 @@ function collectManifestNlsKeys(): Set<string> {
 	return keys;
 }
 
+/** Collects the keys of the configuration webview dictionary in assets/configView/i18n.js. */
+function collectWebviewL10nKeys(): Set<string> {
+	const contents = fs.readFileSync(path.join(repoRoot, "assets", "configView", "i18n.js"), "utf8");
+	const keys = new Set<string>();
+	for (const match of contents.matchAll(/^\s*"((?:[^"\\]|\\.)*)":/gm)) {
+		keys.add(unescapeStringLiteral(match[1]));
+	}
+	return keys;
+}
+
+/**
+ * Preset tags that are product names, not capability words. They intentionally keep
+ * the English source string when the webview locale is Chinese.
+ */
+const UNTRANSLATED_PRESET_TAGS = new Set([
+	"OpenAI",
+	"Codex",
+	"Anthropic",
+	"Claude",
+	"xAI",
+	"Grok",
+	"Gemini",
+	"Google",
+	"Kimi",
+	"DeepSeek",
+	"GLM",
+	"Z.AI",
+	"Qwen",
+	"MiniMax",
+	"MiMo",
+	"LiteLLM",
+	"Fireworks",
+	"TokenRouter",
+	"Azure Foundry",
+	"OAuth",
+]);
+
 suite("l10n", () => {
 	test("declares the runtime localization folder in package.json", () => {
 		const manifest = readJson<{ contributes?: Record<string, unknown>; l10n?: string }>("package.json");
@@ -103,6 +142,26 @@ suite("l10n", () => {
 		for (const key of collectManifestNlsKeys()) {
 			assert.ok(key in english, `package.json: missing key in package.nls.json -> ${key}`);
 			assert.ok(key in chinese, `package.json: missing key in package.nls.zh-cn.json -> ${key}`);
+		}
+	});
+
+	test("translates every preset description and capability tag for the configuration webview", () => {
+		const keys = collectWebviewL10nKeys();
+		assert.ok(keys.size > 0, "expected the assets/configView/i18n.js dictionary to declare translations");
+
+		for (const preset of MODEL_PRESETS) {
+			assert.ok(
+				keys.has(preset.description),
+				`assets/configView/i18n.js: missing preset description -> ${preset.description}`
+			);
+			const categoryLabel = preset.category.charAt(0).toUpperCase() + preset.category.slice(1);
+			assert.ok(keys.has(categoryLabel), `assets/configView/i18n.js: missing category label -> ${categoryLabel}`);
+			for (const tag of preset.tags) {
+				if (UNTRANSLATED_PRESET_TAGS.has(tag)) {
+					continue;
+				}
+				assert.ok(keys.has(tag), `assets/configView/i18n.js: missing preset tag -> ${tag}`);
+			}
 		}
 	});
 });

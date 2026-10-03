@@ -112,6 +112,7 @@
 		"Provider Ready": "供应商就绪",
 		"Key Needed": "需要 API 密钥",
 		"Provider Needed": "需要供应商",
+		"OAuth Sign-in Required": "需要使用 OAuth 登录",
 		"Select a preset to review its ready-to-save configuration.": "选择一个预设以查看其可直接保存的配置。",
 		"Add Selected": "添加所选",
 		"Remove Selected": "移除所选",
@@ -275,6 +276,7 @@
 		"No matching model presets": "没有匹配的模型预设",
 		"Remove": "移除",
 		"{0} out": "{0} 最大输出",
+		"{0} ctx": "{0} 上下文",
 		"Close": "关闭",
 		"Save": "保存",
 		"Error fetching models": "获取模型失败",
@@ -330,6 +332,109 @@
 			"Z.AI 用量检查不可用，因为 Z.AI 目前只提供 API 密钥和控制台账单/用量页面，没有公开的 API 密钥用量或余额端点。",
 		"No selected unconfigured presets to add.": "未选中任何未配置的预设，取消添加。",
 		"No selected configured presets to remove.": "未选中任何已配置的预设，取消移除。",
+
+		// Model preset capability tags (brand names such as OpenAI / xAI / Grok
+		// stay untranslated and fall back to the English source string).
+		"Adaptive Thinking": "自适应思考",
+		"Cache": "缓存",
+		"Chat Completions": "Chat Completions",
+		"Code": "代码",
+		"Coding": "编程",
+		"Prompt Cache": "提示词缓存",
+		"Reasoning": "推理",
+		"Responses": "响应",
+		"Stable": "稳定",
+		"Thinking": "思考",
+		"Tools": "工具",
+		"Vision": "视觉",
+
+		// Model preset descriptions (keys must match src/modelPresets.ts).
+		"Anthropic's high-capability Claude model for complex reasoning and agentic coding.":
+			"Anthropic 的高能力 Claude 模型，适用于复杂推理与智能体编程。",
+		"Balanced Claude setup for coding, agent workflows, and daily production use.":
+			"均衡的 Claude 配置，适用于编程、智能体工作流与日常生产使用。",
+		"Coding model with 1M context and thinking.": "具备 1M 上下文与思考能力的编程模型。",
+		"Cost-conscious Kimi multimodal setup for dialogue and agent tasks.":
+			"注重成本的 Kimi 多模态配置，适用于对话与智能体任务。",
+		"DeepSeek V4.1 Flash through the LiteLLM proxy sample endpoint with vision, thinking, and tools.":
+			"通过 LiteLLM 代理示例端点使用 DeepSeek V4.1 Flash，支持视觉、思考与工具。",
+		"DeepSeek V4.1 Flash with vision, thinking, and tools through the OpenAI-compatible endpoint.":
+			"通过 OpenAI 兼容端点使用 DeepSeek V4.1 Flash，支持视觉、思考与工具。",
+		"DeepSeek V4 Pro 0813 through TokenRouter's OpenAI-compatible gateway.":
+			"通过 TokenRouter 的 OpenAI 兼容网关使用 DeepSeek V4 Pro 0813。",
+		"DeepSeek V4 Pro through Azure Foundry with max reasoning and automatic model caching.":
+			"通过 Azure Foundry 使用 DeepSeek V4 Pro，启用最高推理等级与自动模型缓存。",
+		"DeepSeek V4 Pro through Fireworks serverless inference.":
+			"通过 Fireworks 无服务器推理使用 DeepSeek V4 Pro。",
+		"DeepSeek V4 Pro with thinking mode enabled for agentic coding workflows.":
+			"启用思考模式的 DeepSeek V4 Pro，适用于智能体编程工作流。",
+		"Fast Gemini 3 preview setup for high-volume multimodal work.":
+			"快速的 Gemini 3 预览配置，适用于高负载多模态工作。",
+		"Fast multimodal model with 1M context.": "具备 1M 上下文的快速多模态模型。",
+		"Fast Xiaomi MiMo V2.6 model for frequent calls and large-scale professional workflows.":
+			"快速的 Xiaomi MiMo V2.6 模型，适用于高频调用与大规模专业工作流。",
+		"Fast Xiaomi MiMo V2 option for lower-cost responses and everyday agent work.":
+			"快速的 Xiaomi MiMo V2 选项，适用于更低成本的响应与日常智能体工作。",
+		"GLM-5.2 through Fireworks serverless inference.": "通过 Fireworks 无服务器推理使用 GLM-5.2。",
+		"GLM-5.3-Flash through the LiteLLM proxy sample endpoint with vision and upstream-default thinking.":
+			"通过 LiteLLM 代理示例端点使用 GLM-5.3-Flash，支持视觉与上游默认思考。",
+		"GLM-5.3 through the LiteLLM proxy sample endpoint with tools and upstream-default thinking.":
+			"通过 LiteLLM 代理示例端点使用 GLM-5.3，支持工具与上游默认思考。",
+		"GLM-5.3 through TokenRouter with forced thinking and preserved reasoning content.":
+			"通过 TokenRouter 使用 GLM-5.3，强制思考并保留推理内容。",
+		"Google Gemini's advanced multimodal reasoning model.": "Google Gemini 的高级多模态推理模型。",
+		"GPT-5.6 Luna through the ChatGPT/Codex OAuth Responses route.":
+			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-5.6 Luna。",
+		"GPT-5.6 Sol through the ChatGPT/Codex OAuth Responses route.":
+			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-5.6 Sol。",
+		"GPT-5.6 Terra through the ChatGPT/Codex OAuth Responses route.":
+			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-5.6 Terra。",
+		"GPT-6.1 Sol through the ChatGPT/Codex OAuth Responses route with xhigh reasoning.":
+			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-6.1 Sol，启用 xhigh 推理。",
+		"GPT-6 Astra through the ChatGPT/Codex OAuth Responses route.":
+			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-6 Astra。",
+		"GPT-6 Luna through the ChatGPT/Codex OAuth Responses route.":
+			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-6 Luna。",
+		"GPT-6 Sol through the ChatGPT/Codex OAuth Responses route.":
+			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-6 Sol。",
+		"Grok 4.6 through the xAI subscription OAuth route.": "通过 xAI 订阅 OAuth 路由使用 Grok 4.6。",
+		"Grok 4.7 through the xAI subscription OAuth route.": "通过 xAI 订阅 OAuth 路由使用 Grok 4.7。",
+		"Kimi K2.6 through Azure Foundry with high reasoning and automatic model caching.":
+			"通过 Azure Foundry 使用 Kimi K2.6，启用高推理等级与自动模型缓存。",
+		"Kimi K2.6 through the LiteLLM proxy sample endpoint with thinking enabled.":
+			"通过 LiteLLM 代理示例端点使用 Kimi K2.6，已启用思考。",
+		"Kimi K2.7 Code through Fireworks serverless inference.":
+			"通过 Fireworks 无服务器推理使用 Kimi K2.7 Code。",
+		"Kimi K3 through the LiteLLM proxy sample endpoint for long-horizon coding and deep reasoning.":
+			"通过 LiteLLM 代理示例端点使用 Kimi K3，适用于长程编程与深度推理。",
+		"Kimi K3 through TokenRouter with 1M context, vision, tools, and always-on thinking.":
+			"通过 TokenRouter 使用 Kimi K3，1M 上下文，支持视觉、工具与常开思考。",
+		"Kimi's flagship 1M-context model for long-horizon coding, knowledge work, and deep reasoning.":
+			"Kimi 的旗舰 1M 上下文模型，适用于长程编程、知识工作与深度推理。",
+		"Kimi's general-purpose multimodal model with thinking enabled for agent tasks.":
+			"Kimi 的通用多模态模型，已启用思考，适用于智能体任务。",
+		"Kimi's latest code-focused model with multimodal input, tool calling, and always-on thinking.":
+			"Kimi 最新的代码模型，支持多模态输入、工具调用与常开思考。",
+		"MiniMax M3 through MiniMax's Anthropic-compatible API.":
+			"通过 MiniMax 的 Anthropic 兼容 API 使用 MiniMax M3。",
+		"MiniMax M3 through the OpenAI-compatible API.": "通过 OpenAI 兼容 API 使用 MiniMax M3。",
+		"OpenAI-compatible Chat Completions setup for GPT-5.5.": "适用于 GPT-5.5 的 OpenAI 兼容 Chat Completions 配置。",
+		"OpenAI frontier model for complex coding and professional work.":
+			"OpenAI 前沿模型，适用于复杂编程与专业工作。",
+		"OpenAI GPT-6.1 Sol for complex coding and professional work with xhigh reasoning.":
+			"OpenAI GPT-6.1 Sol，适用于复杂编程与专业工作，启用 xhigh 推理。",
+		"Qwen3.8-27B through the LiteLLM proxy sample endpoint with native 262K context and adjustable reasoning.":
+			"通过 LiteLLM 代理示例端点使用 Qwen3.8-27B，原生 262K 上下文并支持可调推理等级。",
+		"Qwen3.8-Max through TokenRouter with multimodal input and adjustable reasoning effort.":
+			"通过 TokenRouter 使用 Qwen3.8-Max，支持多模态输入与可调推理等级。",
+		"Stable Gemini price-performance model for low-latency agentic tasks.":
+			"稳定版 Gemini 性价比模型，适用于低延迟智能体任务。",
+		"Xiaomi MiMo V2.5 full-modal model for multimodal agent workflows.":
+			"Xiaomi MiMo V2.5 全模态模型，适用于多模态智能体工作流。",
+		"Xiaomi MiMo V2.5 Pro for complex agent, coding, and long-context reasoning.":
+			"Xiaomi MiMo V2.5 Pro，适用于复杂智能体、编程与长上下文推理。",
+		"Xiaomi MiMo V2.6 Pro for complex projects, long-horizon agent work, and high-value reasoning.":
+			"Xiaomi MiMo V2.6 Pro，适用于复杂项目、长程智能体工作与高价值推理。",
 	};
 
 	/**

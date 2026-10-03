@@ -642,7 +642,7 @@ function getPresetProviderState(model) {
 			return {
 				className: "warning",
 				filterValue: "oauth-needed",
-				label: "OAuth Sign-in Required",
+				label: configView_l10n_t("OAuth Sign-in Required"),
 			};
 		}
 	}
@@ -1109,7 +1109,7 @@ function renderModelPresetFilters() {
 		new Set(state.modelPresets.map((preset) => preset.model?.owned_by).filter(Boolean))
 	).sort(compareProviders);
 	modelPresetProviderFilterInput.innerHTML =
-		'<option value="">All providers</option>' +
+		`<option value="">${configView_l10n_t("All providers")}</option>` +
 		providers
 			.map((provider) => `<option value="${escapeHtml(provider)}">${escapeHtml(getProviderLabel(provider))}</option>`)
 			.join("");
@@ -1244,15 +1244,15 @@ function renderModelPresets() {
 						</div>
 					</div>
 					<div class="preset-model-id">${escapeHtml(fullModelId)}</div>
-					<div class="preset-description">${escapeHtml(preset.description)}</div>
+					<div class="preset-description">${escapeHtml(configView_l10n_t(preset.description))}</div>
 					<div class="preset-meta">
 						<span>${escapeHtml(getProviderLabel(model.owned_by))}</span>
 						<span>${escapeHtml(apiMode)}</span>
-						<span>${escapeHtml(model.context_length || "")} ctx</span>
+						<span>${configView_l10n_t("{0} ctx", escapeHtml(model.context_length || ""))}</span>
 						<span>${configView_l10n_t("{0} out", escapeHtml(getModelOutputLimit(model)))}</span>
 					</div>
 					<div class="preset-tags">
-						${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
+						${tags.map((tag) => `<span>${escapeHtml(configView_l10n_t(tag))}</span>`).join("")}
 					</div>
 				</div>
 			`;
