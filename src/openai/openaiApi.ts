@@ -383,6 +383,7 @@ export class OpenaiApi extends CommonApi<OpenAIChatMessage, Record<string, unkno
 						logCacheUsage(this._cacheUsageApiMode, modelId, parsed);
 						await this.processDelta(parsed, progress);
 					} catch (e) {
+						this.streamOutcome.malformed();
 						console.error("[OpenAI Provider] Failed to parse SSE chunk:", e, "data:", data);
 						logger.error("openai.stream.chunk.error", {
 							modelId,

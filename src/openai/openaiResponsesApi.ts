@@ -405,6 +405,7 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 						logCacheUsage("openai-responses", modelId, parsed);
 						await this.processEvent(parsed, progress);
 					} catch (e) {
+						this.streamOutcome.malformed();
 						console.error("[OpenAI-Responses Provider] Failed to parse SSE chunk:", e, "data:", data);
 						logger.error("responses.stream.chunk.error", {
 							modelId,

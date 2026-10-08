@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { StreamOutcome } from "./streamOutcome";
 import {
 	ProvideLanguageModelChatResponseOptions,
 	LanguageModelChatRequestMessage,
@@ -24,6 +25,7 @@ export abstract class CommonApi<TMessage, TRequestBody> {
 		this.streamObserver = undefined;
 	}
 
+	readonly streamOutcome = new StreamOutcome();
 	private _responseCompleted = false;
 
 	get responseCompleted(): boolean {
@@ -32,6 +34,7 @@ export abstract class CommonApi<TMessage, TRequestBody> {
 
 	/** Calibration requires an explicit terminal event, not just an HTTP EOF. */
 	protected observeResponseCompletion(payload: unknown): void {
+		this.streamOutcome.observe(payload);
 		if (!payload || typeof payload !== "object") {
 			return;
 		}

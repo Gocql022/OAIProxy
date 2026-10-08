@@ -818,6 +818,7 @@ export class GeminiApi extends CommonApi<GeminiChatMessage, GeminiGenerateConten
 					try {
 						payload = JSON.parse(data) as GeminiGenerateContentResponse;
 					} catch (e) {
+						this.streamOutcome.malformed();
 						console.error("[Gemini Provider] Failed to parse streaming chunk:", e, "data:", data);
 						logger.error("gemini.stream.chunk.error", {
 							modelId,

@@ -112,6 +112,22 @@
 					</div>
 				</div>
 			</div>
+			<div class="retry-config">
+				<h3>Compaction</h3>
+				<div class="field-description">Summarize long Copilot conversations with a separate model. Your coding model stays selected. The compaction model must fit the entire history; otherwise OAIProxy falls back to the coding model.</div>
+				<div class="row">
+					<div class="field">
+						<label for="compactionModel">Compaction Model</label>
+						<select id="compactionModel" class="model-input"><option value="">Use current coding model</option></select>
+					</div>
+					<div class="field">
+						<label for="compactionReasoningEffort">Compaction Reasoning Effort</label>
+						<select id="compactionReasoningEffort" class="model-input" disabled><option value="default">Use model default</option></select>
+						<div class="field-description">Independent of coding effort. Lower effort may improve speed.</div>
+					</div>
+				</div>
+				<div id="compactionWarning" class="field-description" role="status"></div>
+			</div>
 			<div class="block-gap">
 				<button id="saveBase">Save Global Configuration</button>
 			</div>

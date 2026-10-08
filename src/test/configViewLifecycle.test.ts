@@ -99,7 +99,8 @@ suite("configuration panel lifecycle", () => {
 			} as unknown as vscode.SecretStorage,
 			{
 				get: (_key: string, fallback: unknown) => fallback,
-			} as vscode.Memento,
+				update: async () => undefined,
+			} as unknown as vscode.Memento,
 			async () => ({ durationMs: 1 })
 		);
 		return ConfigViewPanel.currentPanel!;
@@ -118,7 +119,8 @@ suite("configuration panel lifecycle", () => {
 		panels = [];
 		vscode.workspace.getConfiguration = (() => ({
 			get: (key: string, fallback: unknown) => configuration[key] ?? fallback,
-		})) as typeof originalConfig;
+			update: async (key: string, value: unknown) => { configuration[key] = value; },
+		})) as unknown as typeof originalConfig;
 		vscode.workspace.fs.readFile = async () => htmlGate ?? new TextEncoder().encode("test html");
 		vscode.window.createWebviewPanel = (() => {
 			const fake = makePanel();
@@ -214,4 +216,61 @@ suite("configuration panel lifecycle", () => {
 		await view.handleMessage({ type: "requestInit" });
 		assert.strictEqual(panels[0].messages.at(-1)?.type, "init");
 	});
+	test("compaction init includes every added model and save preserves full identity", async () => {
+		configuration["oaicopilot.models"] = [
+			{ id: "same", configId: "one", owned_by: "first", supported_reasoning_efforts: ["low", "high"] },
+			{ id: "same", configId: "two", owned_by: "second" },
+			{ id: "gemini", owned_by: "google", apiMode: "gemini" },
+		];
+		const view = open();
+		await view.handleMessage({ type: "requestInit" });
+		const choices = panels[0].messages.at(-1)!.payload!.compactionModels as Array<{ id: string; efforts: string[] }>;
+		assert.deepStrictEqual(choices.map((model) => model.id), ["same::one", "same::two", "gemini"]);
+		assert.deepStrictEqual(choices[0].efforts, ["low", "high"]);
+		assert.deepStrictEqual(choices[2].efforts, []);
+		await view.handleMessage({ type: "saveGlobalConfig", baseUrl: "", apiKey: "", delay: 0, readFileLines: 0, retry: {}, commitModel: "", commitLanguage: "English", compactionModel: "same::one", compactionReasoningEffort: "low" });
+		assert.strictEqual(configuration["oaicopilot.compactionModel"], "same::one");
+		assert.strictEqual(configuration["oaicopilot.compactionReasoningEffort"], "low");
+		view.dispose();
+		const reopened = open();
+		await reopened.handleMessage({ type: "requestInit" });
+		assert.strictEqual(panels.at(-1)!.messages.at(-1)!.payload!.compactionModel, "same::one");
+		assert.strictEqual(panels.at(-1)!.messages.at(-1)!.payload!.compactionReasoningEffort, "low");
+	});
+
+	test("compaction exports/imports and legacy imports disable routing", async () => {
+		const originalSave = vscode.window.showSaveDialog;
+		const originalOpen = vscode.window.showOpenDialog;
+		const originalWrite = vscode.workspace.fs.writeFile;
+		const originalReadFile = vscode.workspace.fs.readFile;
+		let exported = new Uint8Array();
+		try {
+			configuration["oaicopilot.models"] = [{ id: "fast", owned_by: "test", supported_reasoning_efforts: ["low"] }];
+			configuration["oaicopilot.compactionModel"] = "fast";
+			configuration["oaicopilot.compactionReasoningEffort"] = "low";
+			const view = open();
+			await tick();
+			vscode.window.showSaveDialog = async () => vscode.Uri.file("/test/export.json");
+			vscode.window.showOpenDialog = async () => [vscode.Uri.file("/test/export.json")];
+			vscode.workspace.fs.writeFile = async (_uri, bytes) => { exported = Uint8Array.from(bytes); };
+			await view.handleMessage({ type: "exportConfig" });
+			const data = JSON.parse(new TextDecoder().decode(exported));
+			assert.strictEqual(data.compactionModel, "fast");
+			assert.strictEqual(data.compactionReasoningEffort, "low");
+			configuration["oaicopilot.compactionModel"] = "";
+			vscode.workspace.fs.readFile = async () => exported;
+			await view.handleMessage({ type: "importConfig" });
+			assert.strictEqual(configuration["oaicopilot.compactionModel"], "fast");
+			assert.strictEqual(configuration["oaicopilot.compactionReasoningEffort"], "low");
+			delete data.compactionModel; delete data.compactionReasoningEffort;
+			exported = new TextEncoder().encode(JSON.stringify(data));
+			await view.handleMessage({ type: "importConfig" });
+			assert.strictEqual(configuration["oaicopilot.compactionModel"], "");
+			assert.strictEqual(configuration["oaicopilot.compactionReasoningEffort"], "default");
+		} finally {
+			vscode.window.showSaveDialog = originalSave; vscode.window.showOpenDialog = originalOpen;
+			vscode.workspace.fs.writeFile = originalWrite; vscode.workspace.fs.readFile = originalReadFile;
+		}
+	});
+
 });

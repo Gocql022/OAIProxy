@@ -42,6 +42,27 @@ There are two ways to open the configuration interface:
    - Select your configured models
    - Start chatting with the model!
 
+### Compaction Model
+
+Open **Global Configuration → Compaction**, choose an added model and its compaction reasoning effort, then click **Save Global Configuration**. Keep your preferred coding model selected in Copilot. For example, Astra can continue coding while a separately configured model summarizes the history. You can also select Astra itself and use a lower compaction effort.
+
+| Setting | Default | Behavior |
+| --- | --- | --- |
+| `oaicopilot.compactionModel` | `""` | Empty keeps existing coding-model behavior. Otherwise use the exact added model ID, including `::configId` when present. The UI lists all added models, including Gemini and Ollama. |
+| `oaicopilot.compactionReasoningEffort` | `"default"` | Use the target's saved settings, or choose an effort supported by that model's adapter. Independent of the coding model's effort; invalid values fall back to the model default. |
+
+Selections are included in configuration export/import. Importing an older export without these settings disables routing. A deleted selection remains marked unavailable rather than silently resolving to a different configuration with the same model name.
+
+The target uses its own endpoint, credentials, API adapter, context budget, and output settings. It must fit **all** input plus its output allowance; a 128K model cannot compact a 498K-token history in one request. OAIProxy checks capacity and supported media before dispatch and does not truncate history or perform chunked summarization. Unsupported input, unavailable credentials, and request/stream failures fall back once to the original coding model. Cancellation never starts fallback. No interactive sign-in or API-key prompt opens during compaction.
+
+Summary text is buffered until the provider reports successful completion. Failed/truncated/empty attempts and unexpected tool calls are rejected; partial text is discarded. Buffering has an 8 MiB text limit. If both models fail, the request reports an error without publishing an incomplete summary. Normal bounded transport retries still apply; identical effective model configurations are not retried as fallback.
+
+The status bar shows the active compaction model and fallback reason. OAIProxy output logs include `compaction.attempt`, `compaction.preflight`, `compaction.completed`, `compaction.fallback`, `compaction.failed`, and `compaction.cancelled`, correlated through a route ID and request timing. Log level must include the relevant events (for example `info`, or `debug` for detailed timing).
+
+Copilot consumes the completed summary and continues with the selected coding model. Compaction response IDs, opaque thinking, and tool-call state are isolated from normal coding requests. Historical tool names, IDs, arguments, and results are preserved as text for compaction, so another provider does not need the coding model's signed tool state. Summarization can lose detail; model choice and reduced effort should be evaluated on representative work. Faster completion is not guaranteed, and changing models does not fix an underlying transport interruption.
+
+Compatibility: recognition is tested against the separate/full/simple and in-conversation compaction prompts in [VS Code 1.141.0](https://github.com/microsoft/vscode/blob/1.141.0/extensions/copilot/src/extension/prompts/node/agent/summarizedConversationHistory.tsx). Copilot does not expose an explicit purpose flag through its model-provider bridge. OAIProxy therefore matches the calling extension plus specific instruction structure, not arbitrary requests containing “summarize.” Unknown formats use the coding model. Revalidate detection after Copilot prompt changes. Utility-model settings do not replace this compaction setting.
+
 ### Tips & Best Practices
 
 - **Important**: If you use the configuration UI, the global baseURL and API key become invalid.

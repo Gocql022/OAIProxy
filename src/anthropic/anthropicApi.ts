@@ -418,6 +418,7 @@ export class AnthropicApi extends CommonApi<AnthropicMessage, AnthropicRequestBo
 						}
 						await this.processAnthropicChunk(chunk, progress);
 					} catch (e) {
+						this.streamOutcome.malformed();
 						console.error("[Anthropic Provider] Failed to parse SSE chunk:", e, "data:", data);
 						logger.error("anthropic.stream.chunk.error", {
 							modelId,

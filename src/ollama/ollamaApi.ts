@@ -217,6 +217,7 @@ export class OllamaApi extends CommonApi<OllamaMessage, OllamaRequestBody> {
 							this.reportEndThinking(progress);
 						}
 					} catch (e) {
+						this.streamOutcome.malformed();
 						console.error("[Ollama Provider] Failed to parse streaming chunk:", e, "data:", line);
 						logger.error("ollama.stream.chunk.error", {
 							modelId,

@@ -63,6 +63,8 @@ English | [简体中文](README.zh-CN.md)
 > - `"copilot"` (recommended when GitHub Copilot utility models are available) keeps OAIProxy/Kimi K3 as the main agent model while Copilot handles lightweight background tasks such as intent detection, chat titles, summaries, and commit messages.
 > - `"mainAgent"` uses the currently selected OAIProxy/BYOK main model for those utility tasks too. Choose this when Copilot utility models are unavailable; it can send more requests to your provider and may be slower or cost more.
 >
+> Agent context compaction uses the agent endpoint and is separate from utility-model routing. Use OAIProxy's Compaction setting below to select a separate model for recognized context-compaction requests.
+>
 > Explicit `chat.utilityModel` or `chat.utilitySmallModel` selections take precedence over this default. See the [VS Code BYOK utility-model documentation](https://code.visualstudio.com/updates/v1_128#_configure-the-default-utility-model-for-byok).
 
 ### Settings Example
@@ -100,6 +102,8 @@ Codex OAuth prompt caching has special request-affinity and Responses-body requi
 Model Management provides a per-model `Test` action and a parallel `Test all` action. Each test sends a small real inference request through the model's saved provider, API mode, headers, and advanced request settings, so it may incur minimal provider usage.
 
 The standalone Provider Usage Check table lists configured supported providers dynamically and reports xAI/Grok weekly credit remaining, Codex OAuth quota windows, credit, token, token-plan, or cost usage. Codex quota uses the saved OAuth credential and OpenClaw-compatible `https://chatgpt.com/backend-api/wham/usage` bearer endpoint; it is best-effort compatibility support and may become unavailable if OpenAI changes that undocumented route. Fireworks account discovery and month-to-date serverless token checks reuse the normal Fireworks provider key. OpenAI and Anthropic usage/admin keys are stored separately from chat API keys. TokenRouter uses a separate Management Key and reports account credits from its Management API self-wallet endpoint. Azure Foundry inference keys cannot call an official usage/cost endpoint; use Azure Monitor or Cost Management with Azure RBAC. Z.AI and MiMo entries are likewise shown with unavailable reasons when their public docs do not expose API-key usage or balance endpoints.
+
+**Separate compaction model:** In **Global Configuration → Compaction**, choose any added model and an optional independent reasoning effort, then save. Recognized Copilot `/compact` and automatic compaction requests use that model while your coding model stays selected. The target must fit the entire history. Failed or unsupported attempts fall back once to the coding model; partial summaries are withheld. This opt-in feature recognizes the VS Code 1.141 compaction prompts and leaves unknown prompt formats unchanged. [Compaction setup and limitations](doc/configuration.md#compaction-model).
 
 → [Full Configuration Guide](doc/configuration.md)
 

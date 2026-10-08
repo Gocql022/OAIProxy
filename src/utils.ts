@@ -297,10 +297,11 @@ export function createRetryConfig(): RetryConfig {
  * Execute a function with retry logic for rate limiting.
  * @param fn The async function to execute
  * @param retryConfig Retry configuration
- * @param token Cancellation token
+ * @param signal Optional cancellation for compaction attempts and retry backoff
  * @returns Result of the function execution
  */
-export async function executeWithRetry<T>(fn: () => Promise<T>, retryConfig: RetryConfig): Promise<T> {
+export async function executeWithRetry<T>(fn: () => Promise<T>, retryConfig: RetryConfig, signal?: AbortSignal): Promise<T> {
+	signal?.throwIfAborted();
 	if (!retryConfig.enabled) {
 		return await fn();
 	}
@@ -314,9 +315,11 @@ export async function executeWithRetry<T>(fn: () => Promise<T>, retryConfig: Ret
 	let lastError: Error | undefined;
 
 	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		signal?.throwIfAborted();
 		try {
 			return await fn();
 		} catch (error) {
+			signal?.throwIfAborted();
 			lastError = error instanceof Error ? error : new Error(String(error));
 
 			// Check if error is retryable based on status codes
@@ -346,7 +349,12 @@ export async function executeWithRetry<T>(fn: () => Promise<T>, retryConfig: Ret
 			);
 
 			// Wait for the calculated interval before retrying
-			await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+			await new Promise<void>((resolve) => {
+				const done = () => { clearTimeout(timer); signal?.removeEventListener("abort", done); resolve(); };
+				const timer = setTimeout(done, delayMs);
+				signal?.addEventListener("abort", done, { once: true });
+				if (signal?.aborted) { done(); }
+			});
 		}
 	}
 

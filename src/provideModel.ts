@@ -39,36 +39,7 @@ export async function prepareLanguageModelChatInformation(
 		// Return user-provided models directly
 		infos = userModels
 			.filter((m) => !m.id.startsWith("__provider__"))
-			.map((m) => {
-				const tokenLimits = resolveModelTokenLimits(m);
-
-				// 使用配置ID（如果存在）来生成唯一的模型ID
-				const modelId = m.configId ? `${m.id}::${m.configId}` : m.id;
-				const modelName = m.displayName || (m.configId ? `${m.id}::${m.configId}` : `${m.id}`);
-				const detail = m.owned_by ? `${m.owned_by} (${EXTENSION_LABEL})` : EXTENSION_LABEL;
-
-				// Advertise imageInput even for vision:false models when a
-				// vision-capable model is available for the bridge.
-				const nativeVision = m?.vision ?? false;
-				const bridgedVision =
-					!nativeVision && m?.vision === false && hasVisionModelAvailable(userModels, modelId);
-				return {
-					id: modelId,
-					name: modelName,
-					detail: detail,
-					tooltip: detail,
-					family: m.family ?? EXTENSION_LABEL,
-					version: "1.0.0",
-					...MODEL_PICKER_METADATA,
-					maxInputTokens: tokenLimits.maxInputTokens,
-					maxOutputTokens: tokenLimits.maxOutputTokens,
-					capabilities: {
-						toolCalling: m.toolCalling ?? true,
-						imageInput: nativeVision || bridgedVision,
-					},
-					configurationSchema: createModelConfigurationSchema(m, options.configuration),
-				} satisfies LanguageModelChatInformation;
-			});
+			.map((m) => createConfiguredModelInformation(m, userModels, options.configuration));
 	} else {
 		// Fallback: Fetch models from API
 		const apiKey = await ensureApiKey(options.silent, secrets);
@@ -142,6 +113,41 @@ export async function prepareLanguageModelChatInformation(
 
 	logger.info("models.loaded", { count: infos.length, source: userModels && userModels.length > 0 ? "config" : "api" });
 	return infos;
+}
+
+export function createConfiguredModelInformation(
+	m: HFModelItem,
+	userModels: HFModelItem[],
+	configuration?: Readonly<Record<string, unknown>>
+): LanguageModelChatInformation {
+	const tokenLimits = resolveModelTokenLimits(m);
+
+	// 使用配置ID（如果存在）来生成唯一的模型ID
+	const modelId = m.configId ? `${m.id}::${m.configId}` : m.id;
+	const modelName = m.displayName || (m.configId ? `${m.id}::${m.configId}` : `${m.id}`);
+	const detail = m.owned_by ? `${m.owned_by} (${EXTENSION_LABEL})` : EXTENSION_LABEL;
+
+	// Advertise imageInput even for vision:false models when a
+	// vision-capable model is available for the bridge.
+	const nativeVision = m?.vision ?? false;
+	const bridgedVision =
+		!nativeVision && m?.vision === false && hasVisionModelAvailable(userModels, modelId);
+	return {
+		id: modelId,
+		name: modelName,
+		detail: detail,
+		tooltip: detail,
+		family: m.family ?? EXTENSION_LABEL,
+		version: "1.0.0",
+		...MODEL_PICKER_METADATA,
+		maxInputTokens: tokenLimits.maxInputTokens,
+		maxOutputTokens: tokenLimits.maxOutputTokens,
+		capabilities: {
+			toolCalling: m.toolCalling ?? true,
+			imageInput: nativeVision || bridgedVision,
+		},
+		configurationSchema: createModelConfigurationSchema(m, configuration),
+	} satisfies LanguageModelChatInformation;
 }
 
 function createModelConfigurationSchema(

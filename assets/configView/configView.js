@@ -5,6 +5,9 @@ const state = {
 	delay: 0,
 	retry: { enabled: true, max_attempts: 3, interval_ms: 1000, status_codes: [429, 500, 502, 503, 504] },
 	commitModel: "",
+	compactionModels: [],
+	compactionModel: "",
+	compactionReasoningEffort: "default",
 	models: [],
 	providerKeys: {},
 	providerUsageKeys: {},
@@ -104,6 +107,19 @@ const saveModelBtn = document.getElementById("saveModel");
 const cancelModelBtn = document.getElementById("cancelModel");
 const toggleAdvancedSettingsBtn = document.getElementById("toggleAdvancedSettings");
 const commitModelInput = document.getElementById("commitModel");
+const compactionModelInput = document.getElementById("compactionModel");
+const compactionEffortInput = document.getElementById("compactionReasoningEffort");
+const compactionWarning = document.getElementById("compactionWarning");
+let compactionDirty = false;
+compactionModelInput.addEventListener("change", () => {
+	compactionDirty = true;
+	state.compactionModel = compactionModelInput.value;
+	populateCompactionDropdowns();
+});
+compactionEffortInput.addEventListener("change", () => {
+	compactionDirty = true;
+	state.compactionReasoningEffort = compactionEffortInput.value;
+});
 const commitLanguageInput = document.getElementById("commitLanguage");
 const advancedSettingsContent = document.getElementById("advancedSettingsContent");
 
@@ -135,6 +151,8 @@ document.getElementById("saveBase").addEventListener("click", () => {
 		delay: parseInt(delayInput.value) || 0,
 		readFileLines: parseInt(readFileLinesInput.value) || 0,
 		retry: retry,
+		compactionModel: compactionModelInput.value,
+		compactionReasoningEffort: compactionEffortInput.value,
 		commitModel: commitModelInput.value,
 		commitLanguage: commitLanguageInput.value,
 	});
@@ -146,6 +164,7 @@ const configurationLoadingText = document.getElementById("configurationLoadingTe
 const retryInitialization = document.getElementById("retryInitialization");
 
 const handleRefresh = () => {
+	compactionDirty = false;
 	configurationContent.inert = true;
 	configurationContent.setAttribute("aria-busy", "true");
 	configurationLoading.hidden = false;
@@ -165,6 +184,7 @@ document.getElementById("exportConfig").addEventListener("click", () => {
 });
 
 document.getElementById("importConfig").addEventListener("click", () => {
+	compactionDirty = false;
 	vscode.postMessage({ type: "importConfig" });
 });
 
@@ -1641,6 +1661,14 @@ window.addEventListener("message", (event) => {
 			state.models = models || [];
 			state.providers = providers || [];
 			state.commitModel = commitModel || "";
+			state.compactionModels = message.payload.compactionModels || [];
+			if (!compactionDirty || (message.payload.compactionModel === state.compactionModel &&
+				message.payload.compactionReasoningEffort === state.compactionReasoningEffort)) {
+				compactionDirty = false;
+				state.compactionModel = message.payload.compactionModel || "";
+				state.compactionReasoningEffort = message.payload.compactionReasoningEffort || "default";
+			}
+			populateCompactionDropdowns();
 			state.providerKeys = providerKeys || {};
 			state.providerUsageKeys = providerUsageKeys || {};
 			state.xaiOAuthSignedIn = Boolean(xaiOAuthSignedIn);
@@ -2596,3 +2624,20 @@ function initDropdownEvents() {
 initDropdownEvents();
 
 vscode.postMessage({ type: "requestInit" });
+
+function populateCompactionDropdowns() {
+	compactionModelInput.replaceChildren(new Option("Use current coding model", ""));
+	const models = [...state.compactionModels].sort((a, b) => a.label.localeCompare(b.label));
+	for (const model of models) { compactionModelInput.add(new Option(model.label, model.id)); }
+	const selected = models.find((model) => model.id === state.compactionModel);
+	const missing = state.compactionModel && !selected;
+	if (missing) { compactionModelInput.add(new Option(`Unavailable: ${state.compactionModel}`, state.compactionModel)); }
+	compactionModelInput.value = state.compactionModel;
+	compactionWarning.textContent = missing ? "The selected model is unavailable. Compaction will use the current coding model until you choose another model." : "";
+	const efforts = selected?.efforts || [];
+	compactionEffortInput.replaceChildren(new Option("Use model default", "default"));
+	for (const effort of efforts) { compactionEffortInput.add(new Option(effort, effort)); }
+	if (!efforts.includes(state.compactionReasoningEffort)) { state.compactionReasoningEffort = "default"; }
+	compactionEffortInput.value = state.compactionReasoningEffort;
+	compactionEffortInput.disabled = efforts.length === 0;
+}

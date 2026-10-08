@@ -575,6 +575,18 @@
 					"minimum": 0,
 					"description": "Fixed delay in milliseconds between consecutive requests. Default is 0 (no delay)."
 				},
+				"oaicopilot.compactionModel": {
+					"type": "string",
+					"default": "",
+					"scope": "window",
+					"description": "Optional configured model ID (including ::configId) for recognized Copilot compaction requests. Choose from added models in OAIProxy Global Configuration. Empty uses the coding model. Failures or insufficient context fall back to the coding model."
+				},
+				"oaicopilot.compactionReasoningEffort": {
+					"type": "string",
+					"default": "default",
+					"scope": "window",
+					"description": "Independent reasoning effort for the compaction model. Use default for that model's saved settings; the OAIProxy UI lists its supported values. Ignored when compactionModel is empty."
+				},
 				"oaicopilot.commitLanguage": {
 					"type": "string",
 					"default": "English",
