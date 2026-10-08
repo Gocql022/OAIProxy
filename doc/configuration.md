@@ -44,7 +44,7 @@ There are two ways to open the configuration interface:
 
 ### Compaction Model
 
-Open **Global Configuration → Compaction**, choose an added model and its compaction reasoning effort, then click **Save Global Configuration**. Keep your preferred coding model selected in Copilot. For example, Astra can continue coding while a separately configured model summarizes the history. You can also select Astra itself and use a lower compaction effort.
+In **Model Management**, choose an added model under **Compaction Model** and its compaction reasoning effort, then click the adjacent **Save** button. Keep your preferred coding model selected in Copilot. For example, Astra can continue coding while a separately configured model summarizes the history. You can also select Astra itself and use a lower compaction effort.
 
 | Setting | Default | Behavior |
 | --- | --- | --- |

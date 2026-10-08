@@ -228,7 +228,12 @@ suite("configuration panel lifecycle", () => {
 		assert.deepStrictEqual(choices.map((model) => model.id), ["same::one", "same::two", "gemini"]);
 		assert.deepStrictEqual(choices[0].efforts, ["low", "high"]);
 		assert.deepStrictEqual(choices[2].efforts, []);
-		await view.handleMessage({ type: "saveGlobalConfig", baseUrl: "", apiKey: "", delay: 0, readFileLines: 0, retry: {}, commitModel: "", commitLanguage: "English", compactionModel: "same::one", compactionReasoningEffort: "low" });
+		configuration["oaicopilot.baseUrl"] = "https://saved.example/v1";
+		stored.set("oaicopilot.apiKey", "saved-test-key");
+		await view.handleMessage({ type: "saveCompactionConfig", compactionModel: "same::one", compactionReasoningEffort: "low" });
+		assert.strictEqual(configuration["oaicopilot.baseUrl"], "https://saved.example/v1");
+		assert.strictEqual(stored.get("oaicopilot.apiKey"), "saved-test-key");
+		await view.handleMessage({ type: "saveGlobalConfig", baseUrl: "", apiKey: "", delay: 0, readFileLines: 0, retry: {}, commitModel: "", commitLanguage: "English" });
 		assert.strictEqual(configuration["oaicopilot.compactionModel"], "same::one");
 		assert.strictEqual(configuration["oaicopilot.compactionReasoningEffort"], "low");
 		view.dispose();

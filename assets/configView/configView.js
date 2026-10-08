@@ -120,6 +120,13 @@ compactionEffortInput.addEventListener("change", () => {
 	compactionDirty = true;
 	state.compactionReasoningEffort = compactionEffortInput.value;
 });
+document.getElementById("saveCompaction").addEventListener("click", () => {
+	vscode.postMessage({
+		type: "saveCompactionConfig",
+		compactionModel: compactionModelInput.value,
+		compactionReasoningEffort: compactionEffortInput.value,
+	});
+});
 const commitLanguageInput = document.getElementById("commitLanguage");
 const advancedSettingsContent = document.getElementById("advancedSettingsContent");
 
@@ -151,8 +158,6 @@ document.getElementById("saveBase").addEventListener("click", () => {
 		delay: parseInt(delayInput.value) || 0,
 		readFileLines: parseInt(readFileLinesInput.value) || 0,
 		retry: retry,
-		compactionModel: compactionModelInput.value,
-		compactionReasoningEffort: compactionEffortInput.value,
 		commitModel: commitModelInput.value,
 		commitLanguage: commitLanguageInput.value,
 	});

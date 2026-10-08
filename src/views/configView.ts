@@ -300,10 +300,13 @@ type IncomingMessage =
 			delay: number;
 			readFileLines: number;
 			retry: { enabled?: boolean; max_attempts?: number; interval_ms?: number; status_codes?: number[] };
-			compactionModel: string;
-			compactionReasoningEffort: string;
 			commitModel: string;
 			commitLanguage: string;
+	  }
+	| {
+			type: "saveCompactionConfig";
+			compactionModel: string;
+			compactionReasoningEffort: string;
 	  }
 	| {
 			type: "fetchModels";
@@ -528,10 +531,11 @@ export class ConfigViewPanel {
 					message.readFileLines,
 					message.retry,
 					message.commitModel,
-					message.commitLanguage,
-					message.compactionModel,
-					message.compactionReasoningEffort
+					message.commitLanguage
 				);
+				break;
+			case "saveCompactionConfig":
+				await this.saveCompactionConfig(message.compactionModel, message.compactionReasoningEffort);
 				break;
 			case "fetchModels": {
 				try {
@@ -837,9 +841,7 @@ export class ConfigViewPanel {
 		readFileLines: number,
 		retry: { enabled?: boolean; max_attempts?: number; interval_ms?: number; status_codes?: number[] },
 		commitModel: string,
-		commitLanguage: string,
-		compactionModel = "",
-		compactionReasoningEffort = "default"
+		commitLanguage: string
 	) {
 		const baseUrl = rawBaseUrl.trim();
 		const apiKey = rawApiKey.trim();
@@ -849,10 +851,6 @@ export class ConfigViewPanel {
 		await config.update("oaicopilot.readFileLines", readFileLines, vscode.ConfigurationTarget.Global);
 		await config.update("oaicopilot.retry", retry, vscode.ConfigurationTarget.Global);
 		await config.update("oaicopilot.commitLanguage", commitLanguage, vscode.ConfigurationTarget.Global);
-		const available = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
-		const target = resolveProviderBackedModel(available.find((model) => compactionModelId(model) === compactionModel), available, this.getProviderConfigs());
-		await config.update("oaicopilot.compactionModel", compactionModel, vscode.ConfigurationTarget.Global);
-		await config.update("oaicopilot.compactionReasoningEffort", compactionEffort(target, compactionReasoningEffort) ?? "default", vscode.ConfigurationTarget.Global);
 		if (apiKey) {
 			await this.secrets.store("oaicopilot.apiKey", apiKey);
 		} else {
@@ -880,6 +878,17 @@ export class ConfigViewPanel {
 		);
 		this.refreshConfiguration();
 		// Send refresh signal to frontend
+		await this.sendInit();
+	}
+
+	private async saveCompactionConfig(compactionModel: string, compactionReasoningEffort: string) {
+		const config = vscode.workspace.getConfiguration();
+		const available = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
+		const target = resolveProviderBackedModel(available.find((model) => compactionModelId(model) === compactionModel), available, this.getProviderConfigs());
+		await config.update("oaicopilot.compactionModel", compactionModel, vscode.ConfigurationTarget.Global);
+		await config.update("oaicopilot.compactionReasoningEffort", compactionEffort(target, compactionReasoningEffort) ?? "default", vscode.ConfigurationTarget.Global);
+		vscode.window.showInformationMessage("OAIProxy compaction settings have been saved.");
+		this.refreshConfiguration();
 		await this.sendInit();
 	}
 
