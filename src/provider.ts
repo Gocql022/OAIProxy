@@ -17,8 +17,7 @@ import {
 	Progress,
 } from "vscode";
 
-import { CompactionBuffer, compactionModelId, compactionEffort, compactionEfforts, compactionMessages, detectCompaction, prepareCompactionBody, compactionFailure, validateCompactionInput } from "./compaction";
-import type { HFModelItem, ProviderConfigItem } from "./types";
+import type { HFModelItem } from "./types";
 
 import type { OllamaRequestBody } from "./ollama/ollamaTypes";
 
@@ -38,7 +37,7 @@ import {
 } from "./providerTransport";
 import { messagesContainImages, processMessagesForVision, hasVisionModelAvailable, getCachedVisionDescription, VISION_BRIDGE_REQUEST_OPTION } from "./visionBridge";
 
-import { createConfiguredModelInformation, prepareLanguageModelChatInformation } from "./provideModel";
+import { prepareLanguageModelChatInformation } from "./provideModel";
 import { countMessageTokens } from "./provideToken";
 import { updateContextStatusBar } from "./statusBar";
 import { OllamaApi } from "./ollama/ollamaApi";
@@ -52,7 +51,7 @@ import { GeminiApi, buildGeminiGenerateContentUrl, type GeminiToolCallMeta } fro
 import type { GeminiGenerateContentRequest } from "./gemini/geminiTypes";
 import { CommonApi } from "./commonApi";
 import { logger } from "./logger";
-import { getDefaultReasoningEffort, getRequestedReasoningEffort, normalizeReasoningEffortForModel } from "./reasoningEffort";
+import { getRequestedReasoningEffort, normalizeReasoningEffortForModel } from "./reasoningEffort";
 import { applyOpenAIPromptCache, hasCacheControl } from "./promptCache";
 import { createTokenUsageReport, getTokenBudgetErrorMessage, type TokenUsageReport } from "./tokenUsage";
 import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "./vscodeCompat";
@@ -72,14 +71,6 @@ interface ChatInformationOptions {
 
 interface ChatExecutionOptions {
 	readonly diagnostic?: boolean;
-	readonly compaction?: {
-		routeId: string;
-		configuredModel: HFModelItem | undefined;
-		models: HFModelItem[];
-		providers: ProviderConfigItem[];
-		baseUrl: string;
-		effort?: string;
-	};
 }
 
 export interface ModelConnectionTestResult {
@@ -233,73 +224,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		progress: Progress<LanguageModelResponsePart2>,
 		token: CancellationToken
 	): Promise<void> {
-		const config = vscode.workspace.getConfiguration();
-		const targetId = config.get<string>("oaicopilot.compactionModel", "");
-		const purpose = targetId ? detectCompaction(messages, options) : undefined;
-		if (!purpose) { return this.executeLanguageModelChatResponse(model, messages, options, progress, token); }
-		if (token.isCancellationRequested) { return; }
-		const models = structuredClone(normalizeUserModels(config.get<unknown>("oaicopilot.models", [])));
-		const providers = normalizeProviderConfigs(this.globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, []));
-		const baseUrl = config.get<string>("oaicopilot.baseUrl", "");
-		const target = models.find((item) => !item.id.startsWith("__provider__") && compactionModelId(item) === targetId);
-		const sourceId = parseModelId(model.id);
-		const source = models.find((item) => compactionModelId(item) === model.id) ?? models.find((item) => item.id === sourceId.baseId);
-		const resolve = (item: HFModelItem | undefined) => resolveProviderBackedModel(item, models, providers);
-		const effort = compactionEffort(resolve(target), config.get<string>("oaicopilot.compactionReasoningEffort", "default"));
-		const resolvedTarget = resolve(target);
-		const targetDefault = resolvedTarget ? getDefaultReasoningEffort(resolvedTarget, compactionEfforts(resolvedTarget)) : undefined;
-		const routeId = randomUUID();
-		const startedAt = Date.now();
-		let delivering = false;
-		const cleanMessages = compactionMessages(messages);
-		const targetOptions = { ...options, tools: undefined, toolMode: vscode.LanguageModelChatToolMode.Auto, modelConfiguration: targetDefault ? { reasoningEffort: targetDefault } : undefined, modelOptions: undefined };
-		const sourceOptions = { ...options, tools: undefined, toolMode: vscode.LanguageModelChatToolMode.Auto };
-		const attempt = async (selected: LanguageModelChatInformation, configured: HFModelItem | undefined,
-			requestOptions: ProvideLanguageModelChatResponseOptions, selectedEffort?: string, fallbackReason?: string) => {
-			if (token.isCancellationRequested) { return; }
-			const cancellation = new vscode.CancellationTokenSource();
-			const listener = token.onCancellationRequested(() => cancellation.cancel());
-			if (token.isCancellationRequested) { cancellation.cancel(); }
-			const buffer = new CompactionBuffer(() => cancellation.cancel());
-			const status = vscode.window.setStatusBarMessage(`$(sync~spin) OAIProxy: Compacting with ${selected.name || selected.id}…${fallbackReason ? ` (${fallbackReason})` : ""}`);
-			logger.info("compaction.attempt", { routeId, requestedModelId: model.id, effectiveModelId: selected.id, purpose, effort: selectedEffort ?? "model-default" });
-			try {
-				await this.executeLanguageModelChatResponse(selected, cleanMessages, requestOptions, buffer, cancellation.token, {
-					compaction: { routeId, configuredModel: configured, models, providers, baseUrl, effort: selectedEffort },
-				});
-				if (token.isCancellationRequested) { return; }
-				buffer.assertValid();
-				delivering = true;
-				buffer.publish(progress);
-				logger.info("compaction.completed", { routeId, effectiveModelId: selected.id, durationMs: Date.now() - startedAt });
-			} finally { status.dispose(); listener.dispose(); cancellation.dispose(); }
-		};
-		try {
-			if (!target) { throw new Error("Compaction model is no longer configured."); }
-			await attempt(createConfiguredModelInformation(resolve(target)!, models), target, targetOptions, effort);
-		} catch (error) {
-			if (token.isCancellationRequested) { return; }
-			if (delivering) { throw error; }
-			// Do not retry an identical effective model configuration.
-			const original = applyModelConfiguration(resolve(source), options.modelConfiguration, options.modelOptions);
-			const originalEffort = getConfiguredWireEffort(original);
-			const targetEffort = effort ?? getConfiguredWireEffort(applyModelConfiguration(resolvedTarget, targetOptions.modelConfiguration, undefined));
-			if (target && targetId === model.id && targetEffort === originalEffort) {
-				logger.error("compaction.failed", { routeId, ...compactionFailure(error) });
-				throw error;
-			}
-			const failure = compactionFailure(error);
-			logger.warn("compaction.fallback", { routeId, requestedModelId: model.id, targetModelId: targetId, ...failure });
-			try { await attempt(model, source, sourceOptions, undefined, String(failure.reason)); }
-			catch (fallbackError) {
-				if (!token.isCancellationRequested) {
-					logger.error("compaction.failed", { routeId, ...compactionFailure(fallbackError) });
-					throw new Error("Compaction failed with both the selected model and the coding model. See OAIProxy output for details.");
-				}
-			}
-		} finally {
-			if (token.isCancellationRequested) { logger.info("compaction.cancelled", { routeId }); }
-		}
+		return this.executeLanguageModelChatResponse(model, messages, options, progress, token);
 	}
 
 	async testModelConnection(
@@ -398,7 +323,6 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		executionOptions: ChatExecutionOptions = {}
 	): Promise<void> {
 		const requestId = randomUUID();
-		const isolated = !!executionOptions.diagnostic || !!executionOptions.compaction;
 		const timing = new RequestTiming(requestId, model.id);
 		timing.mark("entry");
 		let observedUsage: CopilotResponseUsage | undefined;
@@ -426,10 +350,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		};
 		const processStream = async <TMessage, TBody>(api: CommonApi<TMessage, TBody>, body: ReadableStream<Uint8Array>) => {
 			api.setStreamObserver(() => timing.once("firstChunk"));
-			await timing.measure("stream", async () => {
-				await api.processStreamingResponse(body, trackingProgress, token);
-				if (executionOptions.compaction && !token.isCancellationRequested) { api.streamOutcome.assertSuccessful(); }
-			});
+			await timing.measure("stream", () => api.processStreamingResponse(body, trackingProgress, token));
 		};
 		const requestStartTime = Date.now();
 		const abortController = new AbortController();
@@ -440,8 +361,8 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		try {
 			// get model config from user settings
 			const config = vscode.workspace.getConfiguration();
-			const userModels = executionOptions.compaction?.models ?? normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
-			const providerConfigs = executionOptions.compaction?.providers ?? normalizeProviderConfigs(this.globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, []));
+			const userModels = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
+			const providerConfigs = normalizeProviderConfigs(this.globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, []));
 
 			// Parse model ID to handle config ID
 			const parsedModelId = parseModelId(model.id);
@@ -460,7 +381,6 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			if (!um) {
 				um = userModels.find((um) => um.id === parsedModelId.baseId);
 			}
-			if (executionOptions.compaction) { um = executionOptions.compaction.configuredModel; }
 			const missingProviderSetupMessage = getMissingProviderSetupMessage(um, userModels, providerConfigs);
 			if (missingProviderSetupMessage) {
 				logger.warn("provider.setupMissing", {
@@ -471,25 +391,13 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			}
 			um = resolveProviderBackedModel(um, userModels, providerConfigs);
 			um = applyModelConfiguration(um, options.modelConfiguration, options.modelOptions);
-			if (executionOptions.compaction && um) {
-				um = structuredClone(um);
-				if (executionOptions.compaction.effort) {
-					um = applyModelConfiguration(um, { reasoningEffort: executionOptions.compaction.effort }, undefined)!;
-				}
-				// The caller's history/instructions/model cannot be replaced by the target's extra fields.
-				for (const extra of [um.extra, um.extra_body]) {
-					if (!extra) { continue; }
-					for (const key of ["model", "messages", "input", "contents", "instructions", "system", "systemInstruction", "stream"]) { delete extra[key]; }
-				}
-			}
 
 			// Check if using Ollama native API mode
 			const apiMode = um?.apiMode ?? "openai";
-			const baseUrl = um?.baseUrl || (executionOptions.compaction ? executionOptions.compaction.baseUrl : config.get<string>("oaicopilot.baseUrl", ""));
+			const baseUrl = um?.baseUrl || config.get<string>("oaicopilot.baseUrl", "");
 
 			logger.info("request.start", {
 				requestId,
-				compactionRouteId: executionOptions.compaction?.routeId,
 				modelId: model.id,
 				messageCount: messages.length,
 				apiMode,
@@ -497,14 +405,10 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			});
 
 			const modelConfig = this.createEstimationContext(model, um, userModels);
-			if (executionOptions.compaction) {
-				modelConfig.includeReasoningInRequest = false;
-				validateCompactionInput(messages, um);
-			}
 			const debugBreakdown = config.get<boolean>("oaicopilot.debug.tokenBreakdown", false);
 			let finalReport: TokenUsageReport | undefined;
 			let rawEstimate = 0;
-			let calibrationEligible = !isolated;
+			let calibrationEligible = !executionOptions.diagnostic;
 			// Apply delay between consecutive requests
 			const modelDelay = um?.delay;
 			const globalDelay = config.get<number>("oaicopilot.delay", 0);
@@ -548,7 +452,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 							provider,
 							baseUrl,
 							apiMode,
-							!isolated
+							!executionOptions.diagnostic
 						);
 			if (!modelApiKey) {
 				logger.warn("apiKey.missing", {
@@ -558,7 +462,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				throw new Error(
 					isOpenAICodexOAuth
 						? "Sign in to OpenAI / Codex with OAuth before using this model."
-						: isolated && provider
+						: executionOptions.diagnostic && provider
 							? `No API key found for provider ${provider}.`
 							: "OAIProxy API key not found"
 				);
@@ -582,9 +486,6 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			const retryConfig = createRetryConfig();
 			const isVisionBridgeRequest = options.modelOptions?.[VISION_BRIDGE_REQUEST_OPTION] === true;
 			const inputContainsImages = messagesContainImages(messages);
-			if (executionOptions.compaction && inputContainsImages && modelConfig.imageMode !== "native") {
-				throw new Error("Compaction input requires a model with native image support.");
-			}
 
 			// prepare headers with custom headers if specified
 			const requestHeaders = CommonApi.prepareHeaders(modelApiKey, apiMode, um?.headers);
@@ -625,8 +526,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			// Bridge descriptions are now ordinary text. No later conversion may reintroduce omitted images.
 			const preflight = async (body: unknown, logicalBody: unknown = body, stateful = false): Promise<void> => timing.measure("preflight", async () => {
 				if (token.isCancellationRequested) { throw new Error("Request cancelled"); }
-				if (executionOptions.compaction) { prepareCompactionBody(body, apiMode, executionOptions.compaction.effort); }
-				finalReport = await timing.measure("estimate", () => isolated
+				finalReport = await timing.measure("estimate", () => executionOptions.diagnostic
 					? createTokenUsageReport({ messages: workingMessages, tools: options.tools, model, modelConfig, preparedBody: logicalBody })
 					: updateContextStatusBar(workingMessages, options.tools, model, this.statusBarItem, modelConfig, logicalBody));
 				calibrationEligible = calibrationEligible && !stateful && !inputContainsImages && !usedVisionBridge &&
@@ -645,17 +545,11 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 						transmittedInputTokens: wire ? wire.details.totalTokens + wire.toolDefinitionTokens : finalReport.inputTokens,
 						categories: finalReport.categories, partTypes: finalReport.partTypes, largestParts: finalReport.largestParts, stateful, usedVisionBridge });
 				}
-				if (executionOptions.compaction) {
-					logger.info("compaction.preflight", { routeId: executionOptions.compaction.routeId, requestId, modelId: model.id,
-						inputTokens: finalReport.inputTokens, maxInputTokens: finalReport.maxInputTokens,
-						effort: getNestedString(body, "reasoning_effort") ?? getNestedString(getNestedObject(body, "reasoning"), "effort") ??
-							getNestedString(getNestedObject(body, "output_config"), "effort") });
-				}
 				const error = getTokenBudgetErrorMessage(finalReport);
 				if (error) {
 					logger.warn("request.contextTooLarge", { requestId, modelId: model.id, inputTokens: finalReport.inputTokens,
 						maxInputTokens: finalReport.maxInputTokens, largestParts: finalReport.largestParts });
-					throw new Error(executionOptions.compaction ? `Compaction input exceeds this model's capacity (${finalReport.inputTokens} > ${finalReport.maxInputTokens} tokens).` : error);
+					throw new Error(error);
 				}
 			});
 
@@ -695,7 +589,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					}
 
 					return res;
-				}, retryConfig, executionOptions.compaction ? abortController.signal : undefined);
+				}, retryConfig);
 
 				if (!response.body) {
 					throw new Error("No response body from Ollama API");
@@ -741,7 +635,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					}
 
 					return res;
-				}, retryConfig, executionOptions.compaction ? abortController.signal : undefined);
+				}, retryConfig);
 
 				if (!response.body) {
 					throw new Error("No response body from Anthropic API");
@@ -755,7 +649,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				const statefulModelId = parsedModelId.baseId;
 				const codexResponsesConversionOptions = isOpenAICodexOAuth
 					? { replayResponsesItemIds: false, codexEasyInput: true }
-					: executionOptions.compaction ? { replayResponsesItemIds: false } : undefined;
+					: undefined;
 
 				// Convert full history once (also extracts system `instructions`).
 				const fullInput = openaiResponsesApi.convertMessages(
@@ -764,7 +658,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					codexResponsesConversionOptions
 				);
 
-				const marker = isolated
+				const marker = executionOptions.diagnostic
 					? undefined
 					: findLastOpenAIResponsesStatefulMarker(statefulModelId, workingMessages);
 				let markerDeltaInput: unknown[] | null = null;
@@ -786,13 +680,12 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					stream: true,
 				};
 				preparedFullRequestBody = openaiResponsesApi.prepareRequestBody(preparedFullRequestBody, um, options);
-				if (executionOptions.compaction) { prepareCompactionBody(preparedFullRequestBody, apiMode, executionOptions.compaction.effort); }
 
 				const previousResponseIdUnsupported = this._openaiResponsesPreviousResponseIdUnsupportedBaseUrls.has(normalizedBaseUrl);
 				const explicitPreviousResponseId = preparedFullRequestBody.previous_response_id !== undefined;
-				const memoryState = isolated
+				const memoryState = executionOptions.diagnostic
 					? {
-							stateKey: executionOptions.compaction ? `compaction:${executionOptions.compaction.routeId}:${model.id}` : "",
+							stateKey: "",
 							inputSignatures: createOpenAIResponsesInputSignatures(fullInput),
 							deltaInput: null,
 							memoryStateFound: false,
@@ -926,7 +819,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 						}
 
 						return res;
-					}, retryConfig, executionOptions.compaction ? abortController.signal : undefined);
+					}, retryConfig);
 				};
 
 				let response: Response;
@@ -972,7 +865,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 						previousResponseIdFallback: true,
 					});
 					response = await sendRequest(fallbackBody);
-					if (!isolated) {
+					if (!executionOptions.diagnostic) {
 						this._openaiResponsesState.clear(memoryState.stateKey);
 					}
 					requestBody = fallbackBody;
@@ -989,7 +882,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 
 				// Append a stateful marker so future requests can reuse `previous_response_id` (Copilot Chat style).
 				const responseId = openaiResponsesApi.responseId;
-				const memoryStateStored = !isolated && !!responseId && !explicitPreviousResponseId && !previousResponseIdFallback &&
+				const memoryStateStored = !executionOptions.diagnostic && !!responseId && !explicitPreviousResponseId && !previousResponseIdFallback &&
 					!this._openaiResponsesPreviousResponseIdUnsupportedBaseUrls.has(normalizedBaseUrl) &&
 					this._openaiResponsesState.update({
 						stateKey: memoryState.stateKey,
@@ -999,7 +892,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				logger.debug("responses.state", {
 					modelId: model.id,
 					responseIdCaptured: !!responseId,
-					statefulMarkerEmitted: !!responseId && !isolated,
+					statefulMarkerEmitted: !!responseId && !executionOptions.diagnostic,
 					addedPreviousResponseId,
 					explicitPreviousResponseId,
 					usedStatefulDeltaInput: addedPreviousResponseId,
@@ -1010,12 +903,12 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					fullInputCount: fullInput.length,
 					requestInputCount: getArrayLength(requestBody.input),
 				});
-				if (responseId && !isolated) {
+				if (responseId && !executionOptions.diagnostic) {
 					trackingProgress.report(createOpenAIResponsesStatefulMarkerPart(statefulModelId, responseId));
 				}
 			} else if (apiMode === "gemini") {
 				// Gemini native API mode
-				const geminiApi = new GeminiApi(model.id, executionOptions.compaction ? new Map() : this._geminiToolCallMetaByCallId);
+				const geminiApi = new GeminiApi(model.id, this._geminiToolCallMetaByCallId);
 				const geminiMessages = geminiApi.convertMessages(workingMessages, modelConfig);
 
 				const systemParts: string[] = [];
@@ -1070,7 +963,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					}
 
 					return res;
-				}, retryConfig, executionOptions.compaction ? abortController.signal : undefined);
+				}, retryConfig);
 
 				if (!response.body) {
 					throw new Error("No response body from Gemini API");
@@ -1119,7 +1012,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 					}
 
 					return res;
-				}, retryConfig, executionOptions.compaction ? abortController.signal : undefined);
+				}, retryConfig);
 
 				if (!response.body) {
 					throw new Error("No response body from OAIProxy API");
@@ -1142,7 +1035,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				}
 			}
 		} catch (err) {
-			if (token.isCancellationRequested || (!executionOptions.compaction && isAbortError(err))) {
+			if (token.isCancellationRequested || isAbortError(err)) {
 				logger.info("request.cancelled", { requestId, modelId: model.id });
 				return;
 			}
@@ -1298,16 +1191,6 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 interface OpenAIResponsesStatefulMarkerLocation {
 	marker: string;
 	index: number;
-}
-
-function getConfiguredWireEffort(model: HFModelItem | undefined): unknown {
-	if (model?.apiMode === "gemini" || model?.apiMode === "ollama") { return undefined; }
-	const extra = model?.extra;
-	const nested = (value: unknown, key: string) => value && typeof value === "object" ? (value as Record<string, unknown>)[key] : undefined;
-	if (model?.apiMode === "anthropic") { return nested(extra?.output_config, "effort") ?? model.reasoning_effort; }
-	if (model?.apiMode === "openai-responses") { return nested(extra?.reasoning, "effort") ?? model.reasoning_effort; }
-	return nested(model?.extra_body, "reasoning_effort") ?? nested(extra?.extra_body, "reasoning_effort") ??
-		extra?.reasoning_effort ?? nested(extra?.reasoning, "effort") ?? model?.reasoning_effort ?? model?.reasoning?.effort;
 }
 
 function applyModelConfiguration(

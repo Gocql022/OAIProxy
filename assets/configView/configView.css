@@ -116,16 +116,6 @@ button:active {
 	flex: 1;
 	margin-bottom: 0;
 }
-.compaction-controls {
-	align-items: flex-end;
-}
-.compaction-controls select,
-.compaction-controls button {
-	margin: 0;
-}
-#compactionWarning:empty {
-	display: none;
-}
 .checkbox {
 	width: 16px;
 	height: 16px;

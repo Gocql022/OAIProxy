@@ -153,19 +153,6 @@
 					<button id="refreshModels" class="secondary">Refresh</button>
 				</div>
 			</div>
-			<div class="row compaction-controls">
-				<div class="field">
-					<label for="compactionModel">Compaction Model</label>
-					<select id="compactionModel" class="model-input" aria-describedby="compactionDescription compactionWarning"><option value="">Use current coding model</option></select>
-				</div>
-				<div class="field">
-					<label for="compactionReasoningEffort">Compaction Reasoning Effort</label>
-					<select id="compactionReasoningEffort" class="model-input" aria-describedby="compactionDescription" disabled><option value="default">Use model default</option></select>
-				</div>
-				<button id="saveCompaction" aria-label="Save compaction settings">Save</button>
-			</div>
-			<div id="compactionDescription" class="field-description">Summarize with any added model while your coding model stays selected. Lower effort may improve speed. The model must fit the entire history; otherwise the coding model is used.</div>
-			<div id="compactionWarning" class="field-description" role="status"></div>
 			<div id="modelTestSummary" class="model-test-summary" role="status" aria-live="polite" hidden></div>
 			<div class="table-container">
 				<table id="modelTable">
