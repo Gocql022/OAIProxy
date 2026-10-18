@@ -6,6 +6,7 @@ import { type CacheUsageRecord, getLatestCacheHitUsage, getLatestCacheUsage } fr
 import { countMessageTokenDetails, countToolTokens, type MessageTokenDetails } from "./provideToken";
 import { isToolResultPart, mapRole } from "./utils";
 import { isResponseUsagePart } from "./responseUsage";
+import type { ThroughputSnapshot } from "./responseThroughput";
 
 export type TokenUsageCategoryId =
 	| "systemContext"
@@ -188,7 +189,7 @@ export function formatTokenPercentage(value: number, maxTokens: number): string 
 	return `${calculatePercentage(value, maxTokens).toFixed(1)}%`;
 }
 
-export function formatTokenUsageTooltip(report: TokenUsageReport): vscode.MarkdownString {
+export function formatTokenUsageTooltip(report: TokenUsageReport, throughput?: ThroughputSnapshot): vscode.MarkdownString {
 	const cacheUsage = getLatestCacheUsage(report.modelId) ?? getLatestCacheUsage();
 	const lastCacheHit = cacheUsage ? getLatestCacheHitUsage(cacheUsage.modelId) : undefined;
 	const warning = getWarningText(report);
@@ -214,8 +215,20 @@ export function formatTokenUsageTooltip(report: TokenUsageReport): vscode.Markdo
 		markdown.appendMarkdown(`\n$(warning) ${warning}\n`);
 	}
 
+	if (throughput) {
+		appendThroughputTooltip(markdown, report.modelName, throughput);
+	}
 	markdown.appendMarkdown(`$(gear) Click to open OAIProxy Configuration`);
 	return markdown;
+}
+
+export function appendThroughputTooltip(markdown: vscode.MarkdownString, modelName: string, throughput: ThroughputSnapshot): void {
+	const status = { waiting: "Waiting for output", streaming: "Streaming", completed: "Completed", cancelled: "Cancelled (partial)", failed: "Failed (partial)" }[throughput.status];
+	const rate = throughput.tokensPerSecond === undefined ? "— tok/s" : `~${throughput.tokensPerSecond.toFixed(1)} tok/s`;
+	markdown.appendMarkdown("\n\n---\n\n$(dashboard) **Estimated output speed**\n\n");
+	markdown.appendText(modelName);
+	markdown.appendMarkdown(` · ${status}\n\n**${rate}** average · ~${formatTokenCount(throughput.estimatedTokens)} output tokens · ${(throughput.elapsedMs / 1000).toFixed(1)} s measured\n\n`);
+	markdown.appendMarkdown("Reference estimate of received text and thinking; excludes hidden reasoning and tool payloads. Initial waiting time is excluded; pauses during streaming are included.\n\n");
 }
 
 export function formatTokenUsageDetails(report: TokenUsageReport): string {

@@ -45,6 +45,22 @@ export const DEFAULT_TOKEN_ESTIMATION: TokenEstimationConfig = {
 	},
 };
 
+export function fallbackTextTokenLength(
+	text: string,
+	settings: Pick<TokenEstimationConfig, "charsPerToken" | "nonAsciiTokensPerChar"> = DEFAULT_TOKEN_ESTIMATION
+): number {
+	let ascii = 0;
+	let nonAscii = 0;
+	for (const char of text) {
+		if (char.codePointAt(0)! < 128) {
+			ascii++;
+		} else {
+			nonAscii++;
+		}
+	}
+	return Math.ceil(ascii / settings.charsPerToken + nonAscii * settings.nonAsciiTokensPerChar);
+}
+
 function record(value: unknown): Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }

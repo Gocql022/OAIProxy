@@ -14,6 +14,18 @@ VS Code's `provideTokenCount` uses the same content normalization, tokenizer, an
 
 The hard guard and existing advertised budget remain enabled. In particular, a configured 1,050,000-token context is currently normalized to 1,000,000 for the model picker, leaving 872,000 input tokens after a 128,000 output reserve. This change does not modify context limits or verify private OAuth endpoint limits.
 
+## Live estimated output speed
+
+During an ordinary model request, the status bar shows the context percentage and estimated response speed, for example `23.4% · ~42.0 tok/s`. It updates every 500 ms. Hover shows the model, estimated output tokens, measured duration, response-average TPS, and whether the request is streaming, completed, cancelled, or failed. Cancelled and failed requests retain partial statistics; the final estimate stays visible until the next ordinary request.
+
+TPS is estimated received output tokens divided by seconds since the first non-empty text or thinking output. Initial waiting time is excluded, while pauses during the stream are included. Timing freezes when streaming ends, before usage persistence. Tool execution between model requests is outside the measurement. Before output the display says `Waiting…`; empty, tool-only, and responses measured for less than 500 ms show `— tok/s` rather than an unstable rate.
+
+The estimate counts answer text and thinking text exposed by the provider. Hidden reasoning, tool arguments/results, and usage or state metadata are excluded. Thinking summaries measure only the summary text received, not the underlying reasoning. Provider-reported output totals do not replace the estimate. This is a reference for observed streaming speed, not billing usage or a measurement of server-side inference speed.
+
+Counting uses the bundled `o200k_base` tokenizer with the same configured character fallback on tokenizer failure, without input-calibration multipliers. Text and thinking are counted separately in blocks of up to 4,096 UTF-16 code units, preserving surrogate pairs and recounting only unfinished tails. Different model tokenizers and block boundaries introduce approximation. Counting yields between blocks and does not retain the complete output or populate the input-token cache with output text.
+
+The newest ordinary request owns the display; older concurrent requests cannot overwrite its context or speed. Connection diagnostics and internal Vision Bridge requests leave the display alone. Statistics are enabled automatically, kept in memory, and cleared on extension disposal. The existing context-budget guard, cache details, warning colors, and click-to-configure action are unchanged.
+
 ## Image estimates
 
 PNG, JPEG, GIF, and WebP dimensions are read from bytes without decoding pixels. Bounds checks respect typed-array offsets. Invalid/unsupported headers use the fallback. Unknown model aliases use the fallback instead of inheriting a rule solely from the API mode. Supported profiles are:
