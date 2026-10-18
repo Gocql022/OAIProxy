@@ -1,4 +1,5 @@
 import { RequestTiming } from "./requestTiming";
+import { summarizeNetworkError } from "./network";
 import { TokenCountWork } from "./tokenCountWork";
 import { randomUUID } from "crypto";
 import { prepareMessagesForApi } from "./messageContent";
@@ -1050,6 +1051,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				messageCount: messages.length,
 				errorName: err instanceof Error ? err.name : String(err),
 				errorMessage: err instanceof Error ? err.message : String(err),
+				errorDetails: summarizeNetworkError(err),
 			});
 			throw err;
 		} finally {

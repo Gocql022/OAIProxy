@@ -14,6 +14,7 @@ import {
 import { abortCommitGeneration, generateCommitMsg } from "./gitCommit/commitMessageGenerator";
 import { TokenizerManager } from "./tokenizer/tokenizerManager";
 import { VersionManager } from "./versionManager";
+import { configureConnectionAttemptTimeout } from "./network";
 import {
 	checkProviderUsage,
 	formatProviderUsageResult,
@@ -48,6 +49,12 @@ export function activate(context: vscode.ExtensionContext) {
 	logger.init();
 	context.subscriptions.push({ dispose: () => logger.dispose() });
 	recordExtensionLifecycle(context);
+	const networkConfiguration = configureConnectionAttemptTimeout();
+	context.subscriptions.push(networkConfiguration);
+	logger.info("network.configuration", {
+		previousConnectionAttemptTimeoutMs: networkConfiguration.previousTimeoutMs,
+		connectionAttemptTimeoutMs: networkConfiguration.timeoutMs,
+	});
 
 	// Initialize TokenizerManager with extension path
 	TokenizerManager.initialize(context.extensionPath);

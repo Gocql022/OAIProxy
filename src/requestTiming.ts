@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { summarizeNetworkError } from "./network";
 
 /** Content-free timing for one provider invocation, including retries. */
 export class RequestTiming {
@@ -54,6 +55,7 @@ export class RequestTiming {
 				attempt,
 				durationMs: performance.now() - startedAt,
 				errorName: error instanceof Error ? error.name : "Error",
+				error: summarizeNetworkError(error),
 			});
 			throw error;
 		}
