@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.1.49 (2026-10-18)
+
+- Add live estimated tokens per second beside the status-bar context percentage, refreshed every 500 ms while receiving answer or thinking text.
+- Keep the speed hover to one compact row with estimated output tokens, measured duration, and a short completion, cancellation, or failure label; retain the final average until the next request.
+- Measure from the first output, excluding initial waiting time, hidden reasoning, and tool payloads. Use bounded tokenizer blocks with a Unicode-aware fallback without changing provider usage totals or input-budget accounting.
+- Keep the newest ordinary request's context and speed together, prevent older concurrent requests from overwriting the display, and exclude connection diagnostics and internal Vision Bridge requests.
+- Document the estimate's limits and add regression coverage for streaming, Unicode, cancellation, overlapping requests, cache refreshes, and responsiveness.
+
 ## 0.1.48 (2026-10-18)
 
 - Fix premature `fetch failed` errors on slower connections by raising Node's address-family connection-attempt timeout to at least 5 seconds while OAIProxy is active, preserving existing longer values and VS Code's fetch, proxy, certificate, and cancellation handling.
