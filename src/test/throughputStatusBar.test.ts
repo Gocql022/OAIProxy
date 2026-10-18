@@ -31,18 +31,19 @@ suite("throughput status bar", () => {
 	});
 
 	test("context, cache and TPS share the tooltip and keep the configuration action", async () => {
-		beginStatusBarRequest(item, "model", "Model");
+		beginStatusBarRequest(item, "model");
 		assert.ok(item.text.includes("Waiting…"));
+		assert.strictEqual(tooltip(), "$(dashboard) **Speed** · Waiting…\n\n$(gear) Click to open OAIProxy Configuration");
 		const report = await context("model", "hello world ".repeat(50));
 		updateStatusBarThroughput(item, "model", { status: "streaming", estimatedTokens: 42, elapsedMs: 1000, tokensPerSecond: 42 });
 		const color = item.backgroundColor;
 		assert.ok(color, "high input usage should retain its warning color");
 		assert.ok(item.text.includes("% · ~42.0 tok/s"));
-		assert.ok(tooltip().includes("Streaming"));
+		assert.ok(tooltip().includes("**Speed** ~42.0 tok/s · ~42 tok · 1.0s"));
 		recordCacheUsage("openai", "model", { inputTokens: 100, cachedTokens: 50 });
 		assert.ok(tooltip().includes("50.0% hit"));
 		assert.ok(tooltip().includes("~42.0 tok/s"));
-		assert.ok(tooltip().includes("hidden reasoning and tool payloads"));
+		assert.ok(!tooltip().includes("Reference estimate"));
 		assert.strictEqual(item.command, "oaiproxy.openConfig");
 		assert.strictEqual(item.backgroundColor?.id, color?.id);
 		assert.strictEqual(getLatestTokenUsageReport(), report);
@@ -59,10 +60,10 @@ suite("throughput status bar", () => {
 			return originalCount.call(tokenizerManager, text);
 		};
 		try {
-			beginStatusBarRequest(item, "old", "Old");
+			beginStatusBarRequest(item, "old");
 			const oldReport = context("old", "old prompt");
 			await paused;
-			beginStatusBarRequest(item, "new", "New");
+			beginStatusBarRequest(item, "new");
 			const current = await context("new");
 			updateStatusBarThroughput(item, "new", { status: "completed", estimatedTokens: 21, elapsedMs: 1000, tokensPerSecond: 21 });
 			const before = tooltip();
@@ -78,7 +79,7 @@ suite("throughput status bar", () => {
 	});
 
 	test("disposed request ownership rejects late UI updates", async () => {
-		beginStatusBarRequest(item, "old", "Old");
+		beginStatusBarRequest(item, "old");
 		endStatusBarRequests(item);
 		const before = item.text;
 		await context("old");

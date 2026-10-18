@@ -212,23 +212,24 @@ export function formatTokenUsageTooltip(report: TokenUsageReport, throughput?: T
 	}
 
 	if (warning) {
-		markdown.appendMarkdown(`\n$(warning) ${warning}\n`);
+		markdown.appendMarkdown(`\n$(warning) ${warning}\n\n`);
 	}
 
 	if (throughput) {
-		appendThroughputTooltip(markdown, report.modelName, throughput);
+		appendThroughputTooltip(markdown, throughput);
 	}
 	markdown.appendMarkdown(`$(gear) Click to open OAIProxy Configuration`);
 	return markdown;
 }
 
-export function appendThroughputTooltip(markdown: vscode.MarkdownString, modelName: string, throughput: ThroughputSnapshot): void {
-	const status = { waiting: "Waiting for output", streaming: "Streaming", completed: "Completed", cancelled: "Cancelled (partial)", failed: "Failed (partial)" }[throughput.status];
+export function appendThroughputTooltip(markdown: vscode.MarkdownString, throughput: ThroughputSnapshot): void {
+	if (throughput.status === "waiting") {
+		markdown.appendMarkdown("$(dashboard) **Speed** · Waiting…\n\n");
+		return;
+	}
+	const status = { streaming: "", completed: " · Done", cancelled: " · Cancelled", failed: " · Failed" }[throughput.status];
 	const rate = throughput.tokensPerSecond === undefined ? "— tok/s" : `~${throughput.tokensPerSecond.toFixed(1)} tok/s`;
-	markdown.appendMarkdown("\n\n---\n\n$(dashboard) **Estimated output speed**\n\n");
-	markdown.appendText(modelName);
-	markdown.appendMarkdown(` · ${status}\n\n**${rate}** average · ~${formatTokenCount(throughput.estimatedTokens)} output tokens · ${(throughput.elapsedMs / 1000).toFixed(1)} s measured\n\n`);
-	markdown.appendMarkdown("Reference estimate of received text and thinking; excludes hidden reasoning and tool payloads. Initial waiting time is excluded; pauses during streaming are included.\n\n");
+	markdown.appendMarkdown(`$(dashboard) **Speed** ${rate} · ~${formatTokenCount(throughput.estimatedTokens)} tok · ${(throughput.elapsedMs / 1000).toFixed(1)}s${status}\n\n`);
 }
 
 export function formatTokenUsageDetails(report: TokenUsageReport): string {

@@ -16,7 +16,7 @@ The hard guard and existing advertised budget remain enabled. In particular, a c
 
 ## Live estimated output speed
 
-During an ordinary model request, the status bar shows the context percentage and estimated response speed, for example `23.4% · ~42.0 tok/s`. It updates every 500 ms. Hover shows the model, estimated output tokens, measured duration, response-average TPS, and whether the request is streaming, completed, cancelled, or failed. Cancelled and failed requests retain partial statistics; the final estimate stays visible until the next ordinary request.
+During an ordinary model request, the status bar shows the context percentage and estimated response speed, for example `23.4% · ~42.0 tok/s`. It updates every 500 ms. Hover adds one compact row, such as `Speed ~42.0 tok/s · ~1.2K tok · 28.6s`. Finished requests append `Done`, `Cancelled`, or `Failed`; before output, the row only says `Speed · Waiting…`. Cancelled and failed requests retain partial statistics; the final estimate stays visible until the next ordinary request. Detailed counting explanations stay in this guide to keep the hover small.
 
 TPS is estimated received output tokens divided by seconds since the first non-empty text or thinking output. Initial waiting time is excluded, while pauses during the stream are included. Timing freezes when streaming ends, before usage persistence. Tool execution between model requests is outside the measurement. Before output the display says `Waiting…`; empty, tool-only, and responses measured for less than 500 ms show `— tok/s` rather than an unstable rate.
 

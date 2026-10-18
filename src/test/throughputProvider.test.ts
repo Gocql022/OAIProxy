@@ -83,9 +83,9 @@ suite("throughput provider integration", () => {
 		const tokenizer = await tokenizerManager.getTokenizer();
 		// The adapter appends a whitespace flush before emitting a tool call.
 		const expected = tokenizer.encode("thinking clearly").length + tokenizer.encode("Hello world ").length;
-		assert.ok(tooltip().includes(`~${expected} output tokens`), tooltip());
-		assert.ok(tooltip().includes("1.0 s measured"));
-		assert.ok(tooltip().includes("Completed"));
+		assert.ok(tooltip().includes(`~${expected} tok ·`), tooltip());
+		assert.ok(tooltip().includes("1.0s"));
+		assert.ok(tooltip().includes("Done"));
 		assert.ok(!tooltip().includes("99,999"));
 		assert.ok(request.parts.some((part) => part instanceof vscode.LanguageModelTextPart && part.value === "Hello world"));
 		assert.ok(request.parts.some((part) => part instanceof vscode.LanguageModelDataPart && part.mimeType === "usage"));
@@ -142,7 +142,7 @@ suite("throughput provider integration", () => {
 		cancelled.cancellation.cancel();
 		streams[0].close();
 		await cancelled.done;
-		assert.ok(tooltip().includes("Cancelled (partial)"));
+		assert.ok(tooltip().includes("Cancelled"));
 		const failed = run();
 		await until(() => streams.length === 2);
 		send(1, { choices: [{ delta: { content: "partial" } }] });
@@ -151,7 +151,7 @@ suite("throughput provider integration", () => {
 		const rejected = assert.rejects(failed.done, /broken stream/);
 		streams[1].error(new Error("broken stream"));
 		await rejected;
-		assert.ok(tooltip().includes("Failed (partial)"));
+		assert.ok(tooltip().includes("Failed"));
 	});
 
 	test("stream duration freezes before usage persistence", async () => {
@@ -170,7 +170,7 @@ suite("throughput provider integration", () => {
 		release();
 		await request.done;
 		assert.strictEqual(tooltip(), before);
-		assert.ok(tooltip().includes("1.0 s measured"));
+		assert.ok(tooltip().includes("1.0s"));
 	});
 });
 

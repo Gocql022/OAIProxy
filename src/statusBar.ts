@@ -17,7 +17,6 @@ let latestTokenUsageReport: TokenUsageReport | undefined;
 
 interface StatusState {
 	requestId?: string;
-	modelName?: string;
 	report?: TokenUsageReport;
 	throughput?: ThroughputSnapshot;
 }
@@ -54,8 +53,8 @@ export function getLatestTokenUsageReport(): TokenUsageReport | undefined {
 	return latestTokenUsageReport;
 }
 
-export function beginStatusBarRequest(item: vscode.StatusBarItem, requestId: string, modelName: string): void {
-	states.set(item, { requestId, modelName, throughput: { status: "waiting", estimatedTokens: 0, elapsedMs: 0 } });
+export function beginStatusBarRequest(item: vscode.StatusBarItem, requestId: string): void {
+	states.set(item, { requestId, throughput: { status: "waiting", estimatedTokens: 0, elapsedMs: 0 } });
 	latestTokenUsageReport = undefined;
 	renderStatusBar(item);
 }
@@ -106,7 +105,7 @@ export async function updateContextStatusBar(
 }
 
 function renderStatusBar(statusBarItem: vscode.StatusBarItem): void {
-	const { report, throughput, modelName } = stateFor(statusBarItem);
+	const { report, throughput } = stateFor(statusBarItem);
 	const context = report ? createProgressBar(report.inputTokens, report.maxContextTokens) : "OAIProxy";
 	const speed = throughput?.status === "waiting" ? "Waiting…"
 		: throughput?.tokensPerSecond !== undefined ? `~${throughput.tokensPerSecond.toFixed(1)} tok/s` : "— tok/s";
@@ -115,7 +114,7 @@ function renderStatusBar(statusBarItem: vscode.StatusBarItem): void {
 		statusBarItem.tooltip = formatTokenUsageTooltip(report, throughput);
 	} else if (throughput) {
 		const markdown = new vscode.MarkdownString(undefined, true);
-		appendThroughputTooltip(markdown, modelName ?? "OAIProxy", throughput);
+		appendThroughputTooltip(markdown, throughput);
 		markdown.appendMarkdown("$(gear) Click to open OAIProxy Configuration");
 		statusBarItem.tooltip = markdown;
 	} else {

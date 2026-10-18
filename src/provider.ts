@@ -335,7 +335,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		let throughput: ResponseThroughput | undefined;
 		if (showRequestStatistics) {
 			this._responseThroughput?.dispose();
-			beginStatusBarRequest(this.statusBarItem, requestId, model.name || model.id);
+			beginStatusBarRequest(this.statusBarItem, requestId);
 			throughput = this._responseThroughput = new ResponseThroughput({
 				// Avoid retaining streamed output in the shared input-token cache.
 				countTokens: async (text) => (await tokenizerManager.getTokenizer()).encode(text).length,
