@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.1.48 (2026-10-18)
+
+- Fix premature `fetch failed` errors on slower connections by raising Node's address-family connection-attempt timeout to at least 5 seconds while OAIProxy is active, preserving existing longer values and VS Code's fetch, proxy, certificate, and cancellation handling.
+- Report bounded nested transport error codes and system calls so connection timeouts, unreachable networks, and DNS failures can be diagnosed from OAIProxy logs without copying nested error messages, URLs, or headers.
+- Document the shared extension-host timeout setting and its restoration on deactivation, and add regression coverage for timeout lifecycle, error summaries, streaming, retries, and cancellation.
+
 ## 0.1.47 (2026-10-02)
 
 - Fix Grok OAuth requests rejected with HTTP 426 Upgrade Required by updating the Grok CLI compatibility version to `1.0.13`.
