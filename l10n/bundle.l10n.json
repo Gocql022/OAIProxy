@@ -150,5 +150,14 @@
   "Signed out of xAI/Grok OAuth.": "Signed out of xAI/Grok OAuth.",
   "Signed in to OpenAI/Codex as {0}.": "Signed in to OpenAI/Codex as {0}.",
   "Signed in to OpenAI/Codex.": "Signed in to OpenAI/Codex.",
-  "Signed out of OpenAI/Codex OAuth.": "Signed out of OpenAI/Codex OAuth."
+  "Signed out of OpenAI/Codex OAuth.": "Signed out of OpenAI/Codex OAuth.",
+  "Waiting…": "Waiting…",
+  "Ready": "Ready",
+  "~{0} tok/s": "~{0} tok/s",
+  "— tok/s": "— tok/s",
+  " · Done": " · Done",
+  " · Cancelled": " · Cancelled",
+  " · Failed": " · Failed",
+  "$(dashboard) **Speed** · Waiting…": "$(dashboard) **Speed** · Waiting…",
+  "$(dashboard) **Speed** {0} · ~{1} tok · {2}s{3}": "$(dashboard) **Speed** {0} · ~{1} tok · {2}s{3}"
 }

@@ -151,5 +151,14 @@
   "Signed out of xAI/Grok OAuth.": "已退出 xAI/Grok OAuth。",
   "Signed in to OpenAI/Codex as {0}.": "已登录 OpenAI/Codex：{0}。",
   "Signed in to OpenAI/Codex.": "已登录 OpenAI/Codex。",
-  "Signed out of OpenAI/Codex OAuth.": "已退出 OpenAI/Codex OAuth。"
+  "Signed out of OpenAI/Codex OAuth.": "已退出 OpenAI/Codex OAuth。",
+  "Waiting…": "等待中…",
+  "Ready": "就绪",
+  "~{0} tok/s": "~{0} tok/s",
+  "— tok/s": "— tok/s",
+  " · Done": " · 完成",
+  " · Cancelled": " · 已取消",
+  " · Failed": " · 失败",
+  "$(dashboard) **Speed** · Waiting…": "$(dashboard) **速度** · 等待中…",
+  "$(dashboard) **Speed** {0} · ~{1} tok · {2}s{3}": "$(dashboard) **速度** {0} · ~{1} tok · {2}s{3}"
 }

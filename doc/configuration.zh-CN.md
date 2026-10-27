@@ -331,3 +331,9 @@ MiniMax M3 应使用精确模型 ID `MiniMax-M3`。MiniMax 官方文档列出 1,
 上述示例中，你将可以在 VS Code 中使用 glm-4.6 模型的两种不同配置：
 - `glm-4.6::thinking` - 使用 GLM-4.6 并开启思维链
 - `glm-4.6::no-thinking` - 使用 GLM-4.6 并关闭思维链
+
+## 连接失败
+
+如果模型 Test 操作和聊天都失败并提示 `fetch failed`，请检查 **输出 → OAIProxy**。启用调试日志后，`request.timing` 条目可以区分发生在 HTTP 响应头之前的传输层失败与 API 响应。`transportError` 和 `request.error` 中嵌套的错误摘要会包含 `ETIMEDOUT`、`ENETUNREACH`、`ENOTFOUND` 等错误码，但不会把错误消息、URL 或请求头复制进这些摘要。
+
+OAIProxy 处于活动状态时，会将 Node 的地址族连接尝试超时提升到至少 5 秒。过短的默认值可能在尝试不可达的 IPv6 地址之前就放弃较慢的 IPv4 连接。此改动只影响连接建立，不影响模型生成时间，也不影响 60 秒的模型测试时限。已有的更长值会被保留。该设置由同一扩展宿主中的扩展共享；停用时，OAIProxy 仅在值此后未被修改的情况下恢复其先前的值。VS Code 的 fetch、代理路由、证书校验和请求取消机制仍然照常使用。

@@ -240,12 +240,27 @@ export function formatTokenUsageTooltip(report: TokenUsageReport, throughput?: T
 
 export function appendThroughputTooltip(markdown: vscode.MarkdownString, throughput: ThroughputSnapshot): void {
 	if (throughput.status === "waiting") {
-		markdown.appendMarkdown("$(dashboard) **Speed** · Waiting…\n\n");
+		markdown.appendMarkdown(vscode.l10n.t("$(dashboard) **Speed** · Waiting…") + "\n\n");
 		return;
 	}
-	const status = { streaming: "", completed: " · Done", cancelled: " · Cancelled", failed: " · Failed" }[throughput.status];
-	const rate = throughput.tokensPerSecond === undefined ? "— tok/s" : `~${throughput.tokensPerSecond.toFixed(1)} tok/s`;
-	markdown.appendMarkdown(`$(dashboard) **Speed** ${rate} · ~${formatTokenCount(throughput.estimatedTokens)} tok · ${(throughput.elapsedMs / 1000).toFixed(1)}s${status}\n\n`);
+	const status = {
+		streaming: "",
+		completed: vscode.l10n.t(" · Done"),
+		cancelled: vscode.l10n.t(" · Cancelled"),
+		failed: vscode.l10n.t(" · Failed"),
+	}[throughput.status];
+	const rate = throughput.tokensPerSecond === undefined
+		? vscode.l10n.t("— tok/s")
+		: vscode.l10n.t("~{0} tok/s", throughput.tokensPerSecond.toFixed(1));
+	markdown.appendMarkdown(
+		vscode.l10n.t(
+			"$(dashboard) **Speed** {0} · ~{1} tok · {2}s{3}",
+			rate,
+			formatTokenCount(throughput.estimatedTokens),
+			(throughput.elapsedMs / 1000).toFixed(1),
+			status
+		) + "\n\n"
+	);
 }
 
 export function formatTokenUsageDetails(report: TokenUsageReport): string {

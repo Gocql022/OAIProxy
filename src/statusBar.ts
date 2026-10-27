@@ -107,18 +107,19 @@ export async function updateContextStatusBar(
 function renderStatusBar(statusBarItem: vscode.StatusBarItem): void {
 	const { report, throughput } = stateFor(statusBarItem);
 	const context = report ? createProgressBar(report.inputTokens, report.maxContextTokens) : "OAIProxy";
-	const speed = throughput?.status === "waiting" ? "Waiting…"
-		: throughput?.tokensPerSecond !== undefined ? `~${throughput.tokensPerSecond.toFixed(1)} tok/s` : "— tok/s";
-	statusBarItem.text = `$(server-process) ${context}${throughput ? ` · ${speed}` : report ? "" : " Ready"}`;
+	const speed = throughput?.status === "waiting" ? vscode.l10n.t("Waiting…")
+		: throughput?.tokensPerSecond !== undefined ? vscode.l10n.t("~{0} tok/s", throughput.tokensPerSecond.toFixed(1))
+			: vscode.l10n.t("— tok/s");
+	statusBarItem.text = `$(server-process) ${context}${throughput ? ` · ${speed}` : report ? "" : ` ${vscode.l10n.t("Ready")}`}`;
 	if (report) {
 		statusBarItem.tooltip = formatTokenUsageTooltip(report, throughput);
 	} else if (throughput) {
 		const markdown = new vscode.MarkdownString(undefined, true);
 		appendThroughputTooltip(markdown, throughput);
-		markdown.appendMarkdown("$(gear) Click to open OAIProxy Configuration");
+		markdown.appendMarkdown(vscode.l10n.t("$(gear) Click to open OAIProxy Configuration"));
 		statusBarItem.tooltip = markdown;
 	} else {
-		statusBarItem.tooltip = "Current model token usage - Click to Open Configuration UI";
+		statusBarItem.tooltip = vscode.l10n.t("Current model token usage - Click to Open Configuration UI");
 	}
 
 	// Add color coding based on advertised input budget usage
