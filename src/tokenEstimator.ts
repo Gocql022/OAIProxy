@@ -9,7 +9,7 @@ import {
 	prepareMessagesForApi,
 } from "./messageContent";
 import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "./vscodeCompat";
-import { DEFAULT_TOKEN_ESTIMATION, type EstimationContext, type ImageTokenConfig } from "./tokenEstimationConfig";
+import { DEFAULT_TOKEN_ESTIMATION, fallbackTextTokenLength, type EstimationContext, type ImageTokenConfig } from "./tokenEstimationConfig";
 import { logger } from "./logger";
 
 export const BaseTokensPerMessage = 3;
@@ -68,17 +68,7 @@ export async function textTokenLength(text: string, context?: EstimationContext)
 	try {
 		tokens = await tokenizerManager.countTokens(text);
 	} catch {
-		const settings = context?.settings ?? DEFAULT_TOKEN_ESTIMATION;
-		let ascii = 0;
-		let nonAscii = 0;
-		for (const char of text) {
-			if (char.codePointAt(0)! < 128) {
-				ascii++;
-			} else {
-				nonAscii++;
-			}
-		}
-		tokens = Math.ceil(ascii / settings.charsPerToken + nonAscii * settings.nonAsciiTokensPerChar);
+		tokens = fallbackTextTokenLength(text, context?.settings);
 		logger.debug("tokenizer.fallback", { textLength: text.length });
 	}
 	return Math.ceil(tokens * Math.max(1, Math.min(2, context?.textMultiplier ?? 1)));

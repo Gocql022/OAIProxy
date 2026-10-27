@@ -6,6 +6,7 @@ import { type CacheUsageRecord, getLatestCacheHitUsage, getLatestCacheUsage } fr
 import { countMessageTokenDetails, countToolTokens, type MessageTokenDetails } from "./provideToken";
 import { isToolResultPart, mapRole } from "./utils";
 import { isResponseUsagePart } from "./responseUsage";
+import type { ThroughputSnapshot } from "./responseThroughput";
 
 export type TokenUsageCategoryId =
 	| "systemContext"
@@ -189,7 +190,7 @@ export function formatTokenPercentage(value: number, maxTokens: number): string 
 	return `${calculatePercentage(value, maxTokens).toFixed(1)}%`;
 }
 
-export function formatTokenUsageTooltip(report: TokenUsageReport): vscode.MarkdownString {
+export function formatTokenUsageTooltip(report: TokenUsageReport, throughput?: ThroughputSnapshot): vscode.MarkdownString {
 	const cacheUsage = getLatestCacheUsage(report.modelId) ?? getLatestCacheUsage();
 	const lastCacheHit = cacheUsage ? getLatestCacheHitUsage(cacheUsage.modelId) : undefined;
 	const warning = getWarningText(report);
@@ -227,11 +228,24 @@ export function formatTokenUsageTooltip(report: TokenUsageReport): vscode.Markdo
 	}
 
 	if (warning) {
-		markdown.appendMarkdown(`\n$(warning) ${warning}\n`);
+		markdown.appendMarkdown(`\n$(warning) ${warning}\n\n`);
 	}
 
+	if (throughput) {
+		appendThroughputTooltip(markdown, throughput);
+	}
 	markdown.appendMarkdown(vscode.l10n.t("$(gear) Click to open OAIProxy Configuration"));
 	return markdown;
+}
+
+export function appendThroughputTooltip(markdown: vscode.MarkdownString, throughput: ThroughputSnapshot): void {
+	if (throughput.status === "waiting") {
+		markdown.appendMarkdown("$(dashboard) **Speed** · Waiting…\n\n");
+		return;
+	}
+	const status = { streaming: "", completed: " · Done", cancelled: " · Cancelled", failed: " · Failed" }[throughput.status];
+	const rate = throughput.tokensPerSecond === undefined ? "— tok/s" : `~${throughput.tokensPerSecond.toFixed(1)} tok/s`;
+	markdown.appendMarkdown(`$(dashboard) **Speed** ${rate} · ~${formatTokenCount(throughput.estimatedTokens)} tok · ${(throughput.elapsedMs / 1000).toFixed(1)}s${status}\n\n`);
 }
 
 export function formatTokenUsageDetails(report: TokenUsageReport): string {

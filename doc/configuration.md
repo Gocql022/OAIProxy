@@ -337,3 +337,9 @@ To use this feature:
 In this example, you'll have two different configurations of the glm-4.6 model available in VS Code:
 - `glm-4.6::thinking` - use GLM-4.6 with thinking
 - `glm-4.6::no-thinking` - use GLM-4.6 without thinking
+
+## Connection failures
+
+If both the model Test action and chat fail with `fetch failed`, check **Output → OAIProxy**. With debug logging enabled, `request.timing` entries distinguish a transport failure before HTTP headers from an API response. Nested error summaries in `transportError` and `request.error` include codes such as `ETIMEDOUT`, `ENETUNREACH`, and `ENOTFOUND`, without copying error messages, URLs, or headers into those summaries.
+
+OAIProxy raises Node's address-family connection-attempt timeout to at least 5 seconds while active. A short default can abandon a slow IPv4 connection before trying an unreachable IPv6 address. This changes connection establishment, not model generation time or the 60-second model-test deadline. Existing longer values are preserved. The setting is shared by extensions in the same extension host; on deactivation OAIProxy restores its previous value only if the value has not subsequently changed. VS Code's fetch, proxy routing, certificate validation, and request cancellation remain in use.

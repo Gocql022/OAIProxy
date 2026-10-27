@@ -1,8 +1,11 @@
 import { RequestTiming } from "./requestTiming";
+import { summarizeNetworkError } from "./network";
 import { TokenCountWork } from "./tokenCountWork";
+import { ResponseThroughput } from "./responseThroughput";
+import { tokenizerManager } from "./tokenizer/tokenizerManager";
 import { randomUUID } from "crypto";
 import { prepareMessagesForApi } from "./messageContent";
-import { resolveTokenEstimationConfig, type EstimationContext } from "./tokenEstimationConfig";
+import { resolveTokenEstimationConfig, type EstimationContext, type TokenEstimationConfig } from "./tokenEstimationConfig";
 import { estimatePreparedRequest } from "./tokenEstimator";
 import { TokenCalibration, calibrationKey } from "./tokenCalibration";
 import { isResponseUsagePart, type CopilotResponseUsage } from "./responseUsage";
@@ -45,7 +48,7 @@ import {
 
 import { prepareLanguageModelChatInformation } from "./provideModel";
 import { countMessageTokens } from "./provideToken";
-import { updateContextStatusBar } from "./statusBar";
+import { beginStatusBarRequest, endStatusBarRequests, updateContextStatusBar, updateStatusBarThroughput } from "./statusBar";
 import { OllamaApi } from "./ollama/ollamaApi";
 import { OpenaiApi } from "./openai/openaiApi";
 import { OpenaiResponsesApi } from "./openai/openaiResponsesApi";
@@ -95,6 +98,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 	private readonly _tokenCalibration: TokenCalibration;
 	private readonly _tokenCountContexts = new Map<string, EstimationContext>();
 	private readonly _tokenCountWork = new TokenCountWork();
+	private _responseThroughput?: ResponseThroughput;
 	private readonly _tokenCountConfigurationListener: vscode.Disposable;
 
 	private readonly _onDidChangeLanguageModelChatInformation = new vscode.EventEmitter<void>();
@@ -130,6 +134,8 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 	}
 
 	dispose(): void {
+		this._responseThroughput?.dispose();
+		endStatusBarRequests(this.statusBarItem);
 		this._tokenCountConfigurationListener.dispose();
 		this._tokenCountContexts.clear();
 		this._tokenCountWork.dispose();
@@ -329,11 +335,30 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		executionOptions: ChatExecutionOptions = {}
 	): Promise<void> {
 		const requestId = randomUUID();
+		const isVisionBridgeRequest = options.modelOptions?.[VISION_BRIDGE_REQUEST_OPTION] === true;
+		const showRequestStatistics = !executionOptions.diagnostic && !isVisionBridgeRequest;
+		let outputSettings: TokenEstimationConfig | undefined;
+		let throughput: ResponseThroughput | undefined;
+		if (showRequestStatistics) {
+			this._responseThroughput?.dispose();
+			beginStatusBarRequest(this.statusBarItem, requestId);
+			throughput = this._responseThroughput = new ResponseThroughput({
+				// Avoid retaining streamed output in the shared input-token cache.
+				countTokens: async (text) => (await tokenizerManager.getTokenizer()).encode(text).length,
+				fallbackSettings: () => outputSettings,
+				onUpdate: (snapshot) => updateStatusBarThroughput(this.statusBarItem, requestId, snapshot),
+			});
+		}
 		const timing = new RequestTiming(requestId, model.id);
 		timing.mark("entry");
 		let observedUsage: CopilotResponseUsage | undefined;
 		const trackingProgress: Progress<LanguageModelResponsePart2> = {
 			report: (part) => {
+				if (part instanceof vscode.LanguageModelTextPart) {
+					throughput?.observe("text", part.value);
+				} else if (isLanguageModelThinkingPart(part)) {
+					throughput?.observe("thinking", getLanguageModelThinkingText(part));
+				}
 				if (part instanceof vscode.LanguageModelTextPart && part.value.trim().length > 0) {
 					timing.once("firstText");
 				} else if (isLanguageModelThinkingPart(part)) {
@@ -356,11 +381,20 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 		};
 		const processStream = async <TMessage, TBody>(api: CommonApi<TMessage, TBody>, body: ReadableStream<Uint8Array>) => {
 			api.setStreamObserver(() => timing.once("firstChunk"));
-			await timing.measure("stream", () => api.processStreamingResponse(body, trackingProgress, token));
+			try {
+				await timing.measure("stream", () => api.processStreamingResponse(body, trackingProgress, token));
+				await throughput?.finish(token.isCancellationRequested ? "cancelled" : api.responseCompleted ? "completed" : "failed");
+			} catch (error) {
+				await throughput?.finish(token.isCancellationRequested || isAbortError(error) ? "cancelled" : "failed");
+				throw error;
+			}
 		};
 		const requestStartTime = Date.now();
 		const abortController = new AbortController();
-		const cancellationListener = token.onCancellationRequested(() => abortController.abort());
+		const cancellationListener = token.onCancellationRequested(() => {
+			abortController.abort();
+			void throughput?.finish("cancelled");
+		});
 		if (token.isCancellationRequested) {
 			abortController.abort();
 		}
@@ -411,6 +445,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			});
 
 			const modelConfig = this.createEstimationContext(model, um, userModels);
+			outputSettings = modelConfig.settings;
 			const debugBreakdown = config.get<boolean>("oaicopilot.debug.tokenBreakdown", false);
 			let finalReport: TokenUsageReport | undefined;
 			let rawEstimate = 0;
@@ -490,7 +525,6 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 
 			// get retry config
 			const retryConfig = createRetryConfig();
-			const isVisionBridgeRequest = options.modelOptions?.[VISION_BRIDGE_REQUEST_OPTION] === true;
 			const inputContainsImages = messagesContainImages(messages);
 
 			// prepare headers with custom headers if specified
@@ -534,9 +568,9 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			// Bridge descriptions are now ordinary text. No later conversion may reintroduce omitted images.
 			const preflight = async (body: unknown, logicalBody: unknown = body, stateful = false): Promise<void> => timing.measure("preflight", async () => {
 				if (token.isCancellationRequested) { throw new Error("Request cancelled"); }
-				finalReport = await timing.measure("estimate", () => executionOptions.diagnostic
+				finalReport = await timing.measure("estimate", () => !showRequestStatistics
 					? createTokenUsageReport({ messages: workingMessages, tools: options.tools, model, modelConfig, preparedBody: logicalBody })
-					: updateContextStatusBar(workingMessages, options.tools, model, this.statusBarItem, modelConfig, logicalBody));
+					: updateContextStatusBar(workingMessages, options.tools, model, this.statusBarItem, modelConfig, logicalBody, requestId));
 				calibrationEligible = calibrationEligible && !stateful && !inputContainsImages && !usedVisionBridge &&
 					!isVisionBridgeRequest && !finalReport.categories.some((category) => category.id === "media" && category.tokens > 0);
 				if (calibrationEligible) {
@@ -1043,6 +1077,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				}
 			}
 		} catch (err) {
+			await throughput?.finish(token.isCancellationRequested || isAbortError(err) ? "cancelled" : "failed");
 			if (token.isCancellationRequested || isAbortError(err)) {
 				logger.info("request.cancelled", { requestId, modelId: model.id });
 				return;
@@ -1058,9 +1093,11 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				messageCount: messages.length,
 				errorName: err instanceof Error ? err.name : String(err),
 				errorMessage: err instanceof Error ? err.message : String(err),
+				errorDetails: summarizeNetworkError(err),
 			});
 			throw err;
 		} finally {
+			await throughput?.finish(token.isCancellationRequested ? "cancelled" : "completed");
 			cancellationListener.dispose();
 			const durationMs = Date.now() - requestStartTime;
 			timing.mark("complete", { cancelled: token.isCancellationRequested });

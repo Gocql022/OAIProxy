@@ -31,6 +31,7 @@ English | [简体中文](README.zh-CN.md)
 - **Auto-retry**: Handles API errors (429, 500, 502, 503, 504) with exponential backoff
 - **Request cancellation**: Stop in-progress chat requests instantly — cancellation is wired to HTTP `AbortController` across all API modes
 - **Token usage**: Shared text/image/tool accounting, a prepared-request context guard, and optional usage calibration; see the [Token Estimation Guide](doc/token-estimation.md)
+- **Live output speed**: Estimated tokens per second beside the status-bar context percentage, updated every 500 ms; hover for output counts, duration, and the final response average.
 - **Git integration**: Generate commit messages directly from source control with OpenAI/OpenAI Responses/Ollama/Anthropic models
 - **Import/export**: Easily share and backup configurations
 - **Tools optimization**: Optimize agent `read_file` tool handling for supported streamed tool calls, avoiding small chunks for large files.
