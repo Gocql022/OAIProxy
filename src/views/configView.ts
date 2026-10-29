@@ -368,7 +368,7 @@ function optionalBoolean(value: unknown, field: string): boolean | undefined {
 		return undefined;
 	}
 	if (typeof value !== "boolean") {
-		throw new Error(`Invalid configuration file: ${field} must be a boolean`);
+		throw new Error(vscode.l10n.t("Invalid configuration file: {0} must be a boolean", field));
 	}
 	return value;
 }
@@ -378,7 +378,7 @@ function optionalString(value: unknown, field: string): string | undefined {
 		return undefined;
 	}
 	if (typeof value !== "string") {
-		throw new Error(`Invalid configuration file: ${field} must be a string`);
+		throw new Error(vscode.l10n.t("Invalid configuration file: {0} must be a string", field));
 	}
 	return value;
 }
@@ -388,7 +388,7 @@ function optionalNumber(value: unknown, field: string): number | undefined {
 		return undefined;
 	}
 	if (typeof value !== "number" || !Number.isFinite(value)) {
-		throw new Error(`Invalid configuration file: ${field} must be a finite number`);
+		throw new Error(vscode.l10n.t("Invalid configuration file: {0} must be a finite number", field));
 	}
 	return value;
 }
@@ -398,12 +398,12 @@ function optionalStringMap(value: unknown, field: string): Record<string, string
 		return undefined;
 	}
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
-		throw new Error(`Invalid configuration file: ${field} must be an object`);
+		throw new Error(vscode.l10n.t("Invalid configuration file: {0} must be an object", field));
 	}
 	const result: Record<string, string> = {};
 	for (const [key, entry] of Object.entries(value)) {
 		if (typeof entry !== "string") {
-			throw new Error(`Invalid configuration file: ${field}.${key} must be a string`);
+			throw new Error(vscode.l10n.t("Invalid configuration file: {0}.{1} must be a string", field, key));
 		}
 		result[key] = entry;
 	}
@@ -427,37 +427,51 @@ function validateImportedProviders(value: unknown): ProviderConfigItem[] | undef
 		return undefined;
 	}
 	if (!Array.isArray(value)) {
-		throw new Error("Invalid configuration file: providers must be an array");
+		throw new Error(vscode.l10n.t("Invalid configuration file: providers must be an array"));
 	}
 	return value.map((item, index) => {
 		if (!item || typeof item !== "object" || Array.isArray(item)) {
-			throw new Error(`Invalid configuration file: providers[${index}] must be an object`);
+			throw new Error(vscode.l10n.t("Invalid configuration file: providers[{0}] must be an object", index));
 		}
 		const provider = item as Record<string, unknown>;
 		const providerId = optionalString(provider.provider, `providers[${index}].provider`);
 		if (!providerId?.trim()) {
-			throw new Error(`Invalid configuration file: providers[${index}].provider must be a non-empty string`);
+			throw new Error(
+				vscode.l10n.t("Invalid configuration file: providers[{0}].provider must be a non-empty string", index)
+			);
 		}
 		const baseUrl = optionalString(provider.baseUrl, `providers[${index}].baseUrl`);
 		if (provider.apiMode !== undefined && !isApiMode(provider.apiMode)) {
-			throw new Error(`Invalid configuration file: providers[${index}].apiMode is not supported`);
+			throw new Error(
+				vscode.l10n.t("Invalid configuration file: providers[{0}].apiMode is not supported", index)
+			);
 		}
 		if (
 			provider.authMode !== undefined &&
 			provider.authMode !== "api-key" &&
 			provider.authMode !== "oauth"
 		) {
-			throw new Error(`Invalid configuration file: providers[${index}].authMode must be api-key or oauth`);
+			throw new Error(
+				vscode.l10n.t("Invalid configuration file: providers[{0}].authMode must be api-key or oauth", index)
+			);
 		}
 		let headers: Record<string, string> | undefined;
 		if (provider.headers !== undefined) {
 			if (!provider.headers || typeof provider.headers !== "object" || Array.isArray(provider.headers)) {
-				throw new Error(`Invalid configuration file: providers[${index}].headers must be an object`);
+				throw new Error(
+					vscode.l10n.t("Invalid configuration file: providers[{0}].headers must be an object", index)
+				);
 			}
 			headers = {};
 			for (const [name, value] of Object.entries(provider.headers)) {
 				if (typeof value !== "string") {
-					throw new Error(`Invalid configuration file: providers[${index}].headers.${name} must be a string`);
+					throw new Error(
+						vscode.l10n.t(
+							"Invalid configuration file: providers[{0}].headers.{1} must be a string",
+							index,
+							name
+						)
+					);
 				}
 				headers[name] = value;
 			}
@@ -479,18 +493,18 @@ function optionalRetryConfig(value: unknown): ExportConfig["retry"] {
 		return undefined;
 	}
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
-		throw new Error("Invalid configuration file: retry must be an object");
+		throw new Error(vscode.l10n.t("Invalid configuration file: retry must be an object"));
 	}
 	const retry = value as Record<string, unknown>;
 	if (retry.enabled !== undefined && typeof retry.enabled !== "boolean") {
-		throw new Error("Invalid configuration file: retry.enabled must be a boolean");
+		throw new Error(vscode.l10n.t("Invalid configuration file: retry.enabled must be a boolean"));
 	}
 	const maxAttempts = optionalNumber(retry.max_attempts, "retry.max_attempts");
 	const intervalMs = optionalNumber(retry.interval_ms, "retry.interval_ms");
 	let statusCodes: number[] | undefined;
 	if (retry.status_codes !== undefined) {
 		if (!Array.isArray(retry.status_codes) || retry.status_codes.some((code) => typeof code !== "number")) {
-			throw new Error("Invalid configuration file: retry.status_codes must be an array of numbers");
+			throw new Error(vscode.l10n.t("Invalid configuration file: retry.status_codes must be an array of numbers"));
 		}
 		statusCodes = retry.status_codes;
 	}
@@ -504,15 +518,17 @@ function optionalRetryConfig(value: unknown): ExportConfig["retry"] {
 
 export function validateImportedConfig(value: unknown): ExportConfig {
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
-		throw new Error("Invalid configuration file: root must be an object");
+		throw new Error(vscode.l10n.t("Invalid configuration file: root must be an object"));
 	}
 	const obj = value as Record<string, unknown>;
 	if (!Array.isArray(obj.models)) {
-		throw new Error("Invalid configuration file: models must be an array");
+		throw new Error(vscode.l10n.t("Invalid configuration file: models must be an array"));
 	}
 	const models = normalizeUserModels(obj.models);
 	if (models.length !== obj.models.length) {
-		throw new Error("Invalid configuration file: every model must be an object with a non-empty id");
+		throw new Error(
+			vscode.l10n.t("Invalid configuration file: every model must be an object with a non-empty id")
+		);
 	}
 
 	const providers = validateImportedProviders(obj.providers);
@@ -1366,7 +1382,7 @@ export class ConfigViewPanel {
 			if (!adapter) {
 				throw new Error(
 					getProviderUsageUnsupportedReason(trimmedProvider, baseUrl) ??
-						`Provider ${trimmedProvider} does not support usage checks yet.`
+						vscode.l10n.t("Provider {0} does not support usage checks yet.", trimmedProvider)
 				);
 			}
 			const isXaiOAuth = adapter === "xai" && isXaiGrokOAuthBaseUrl(baseUrl);
@@ -1397,11 +1413,19 @@ export class ConfigViewPanel {
 							? vscode.l10n.t("Sign in to OpenAI / Codex with OAuth before checking quota.")
 							: providerRequiresUsageApiKey(adapter)
 								? getMissingProviderUsageKeyMessage(trimmedProvider, adapter)
-								: `No API key found for provider ${trimmedProvider}. Configure its provider API key first.`
+								: vscode.l10n.t(
+										"No API key found for provider {0}. Configure its provider API key first.",
+										trimmedProvider
+									)
 				);
 			}
 			if (adapter === "litellm" && !providerApiKey) {
-				throw new Error(`No LiteLLM provider API key found for ${trimmedProvider}. Save the provider key first.`);
+				throw new Error(
+					vscode.l10n.t(
+						"No LiteLLM provider API key found for {0}. Save the provider key first.",
+						trimmedProvider
+					)
+				);
 			}
 
 			const result = await checkProviderUsage({
@@ -1427,9 +1451,12 @@ export class ConfigViewPanel {
 	}
 
 	private async confirmProviderUsageDestination(origin: string): Promise<boolean> {
-		const action = "Send Credentials";
+		const action = vscode.l10n.t("Send Credentials");
 		const selected = await vscode.window.showWarningMessage(
-			`Send privileged usage credentials to ${origin}? Only confirm if you configured this LiteLLM host intentionally.`,
+			vscode.l10n.t(
+				"Send privileged usage credentials to {0}? Only confirm if you configured this LiteLLM host intentionally.",
+				origin
+			),
 			{ modal: true },
 			action
 		);
@@ -1593,14 +1620,18 @@ export class ConfigViewPanel {
 	private async exportConfig(includeApiKeys = false) {
 		try {
 			if (includeApiKeys) {
+				const confirmLabel = vscode.l10n.t("Export with API keys");
+				const cancelLabel = vscode.l10n.t("Cancel");
 				const confirmed = await vscode.window.showWarningMessage(
-					"The exported file will contain generic, provider, and usage/admin API keys in cleartext. Store it securely and do not share it.",
+					vscode.l10n.t(
+						"The exported file will contain generic, provider, and usage/admin API keys in cleartext. Store it securely and do not share it."
+					),
 					{ modal: true },
-					"Export with API keys",
-					"Cancel"
+					confirmLabel,
+					cancelLabel
 				);
-				if (confirmed !== "Export with API keys") {
-					vscode.window.showInformationMessage("Export configuration cancelled.");
+				if (confirmed !== confirmLabel) {
+					vscode.window.showInformationMessage(vscode.l10n.t("Export configuration cancelled."));
 					return;
 				}
 			}
@@ -1692,8 +1723,8 @@ export class ConfigViewPanel {
 
 			vscode.window.showInformationMessage(
 				includeApiKeys
-					? `Configuration with API keys exported to ${uri.fsPath}`
-					: `Configuration exported without API keys to ${uri.fsPath}`
+					? vscode.l10n.t("Configuration with API keys exported to {0}", uri.fsPath)
+					: vscode.l10n.t("Configuration exported without API keys to {0}", uri.fsPath)
 			);
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -1723,7 +1754,7 @@ export class ConfigViewPanel {
 			try {
 				parsed = JSON.parse(jsonContent);
 			} catch {
-				throw new Error("Invalid configuration file: content is not valid JSON");
+				throw new Error(vscode.l10n.t("Invalid configuration file: content is not valid JSON"));
 			}
 			const importData = validateImportedConfig(parsed);
 			const config = vscode.workspace.getConfiguration();
@@ -1828,13 +1859,18 @@ export class ConfigViewPanel {
 			}
 
 			const omittedHeaderNames = Array.from(omittedRedactedHeaders).sort((a, b) => a.localeCompare(b));
-			const omittedHeaderNotice = omittedHeaderNames.length > 0
-				? ` Redacted header values without a current match were omitted: ${omittedHeaderNames.join(", ")}.`
-				: "";
+			const omittedHeaderNotice =
+				omittedHeaderNames.length > 0
+					? vscode.l10n.t(
+							" Redacted header values without a current match were omitted: {0}.",
+							omittedHeaderNames.join(", ")
+						)
+					: "";
 			vscode.window.showInformationMessage(
 				(secretChanges.size > 0
-					? "Configuration imported successfully, including API keys from the file."
-					: "Configuration imported successfully. Existing API keys were preserved.") + omittedHeaderNotice
+					? vscode.l10n.t("Configuration imported successfully, including API keys from the file.")
+					: vscode.l10n.t("Configuration imported successfully. Existing API keys were preserved.")) +
+					omittedHeaderNotice
 			);
 			this.refreshConfiguration();
 			try {

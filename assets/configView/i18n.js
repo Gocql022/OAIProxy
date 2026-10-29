@@ -33,6 +33,9 @@
 		"The base URL for the Openai Compatible Inference API.": "OpenAI 兼容 API 的 Base URL。",
 		"Global API Key": "全局 API 密钥",
 		"The API Key for Authentication.": "用于验证的 API 密钥。",
+		"Export API Keys": "导出 API 密钥",
+		"Include generic, provider, and usage/admin API keys in configuration exports. Off by default.":
+			"在配置导出中包含通用、供应商以及余额检查/管理用 API 密钥。默认关闭。",
 		"Delay (ms)": "延迟（毫秒）",
 		"Fixed delay in milliseconds between consecutive requests.": "连续请求之间的固定延迟（毫秒）。",
 		"Read File Lines": "文件读取行数",
@@ -388,6 +391,8 @@
 			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-6.1 Sol，启用 xhigh 推理。",
 		"GPT-6 Astra through the ChatGPT/Codex OAuth Responses route.":
 			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-6 Astra。",
+		"GPT-6 Astra through ChatGPT/Codex OAuth with OpenAI Fast mode.":
+			"通过 ChatGPT/Codex OAuth 使用 GPT-6 Astra，启用 OpenAI 快速模式。",
 		"GPT-6 Luna through the ChatGPT/Codex OAuth Responses route.":
 			"通过 ChatGPT/Codex OAuth 的 Responses 路由使用 GPT-6 Luna。",
 		"GPT-6 Sol through the ChatGPT/Codex OAuth Responses route.":

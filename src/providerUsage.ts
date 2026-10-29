@@ -106,7 +106,9 @@ function parseHttpsUrl(value: string | undefined): URL | undefined {
 function requireHttpsUrl(value: string, label: string): URL {
 	const url = parseHttpsUrl(value);
 	if (!url) {
-		throw new Error(`${label} must be an absolute HTTPS URL without embedded credentials or fragments.`);
+		throw new Error(
+			vscode.l10n.t("{0} must be an absolute HTTPS URL without embedded credentials or fragments.", label)
+		);
 	}
 	return url;
 }
@@ -295,7 +297,9 @@ export async function checkProviderUsage(request: ProviderUsageRequest): Promise
 	} else {
 		if (!request.targetApiKey) {
 			throw new Error(
-				"LiteLLM usage checks require the provider API key to inspect plus a separate master/admin Usage Key."
+				vscode.l10n.t(
+					"LiteLLM usage checks require the provider API key to inspect plus a separate master/admin Usage Key."
+				)
 			);
 		}
 		const endpoint = buildLiteLLMKeyInfoEndpoint(request.baseUrl, request.targetApiKey);
@@ -303,11 +307,16 @@ export async function checkProviderUsage(request: ProviderUsageRequest): Promise
 		if (endpointUrl.origin !== DEFAULT_LITELLM_ORIGIN) {
 			if (!request.confirmDestination) {
 				throw new Error(
-					`LiteLLM usage checks require confirmation before sending usage credentials to ${endpointUrl.origin}.`
+					vscode.l10n.t(
+						"LiteLLM usage checks require confirmation before sending usage credentials to {0}.",
+						endpointUrl.origin
+					)
 				);
 			}
 			if (!(await request.confirmDestination(endpointUrl.origin))) {
-				throw new Error(`LiteLLM usage check cancelled for ${endpointUrl.origin}.`);
+				throw new Error(
+					vscode.l10n.t("LiteLLM usage check cancelled for {0}.", endpointUrl.origin)
+				);
 			}
 		}
 		parsed = parseLiteLLMKeyInfo(
@@ -980,9 +989,9 @@ function buildAnthropicCostReportEndpoint(): string {
 export function buildLiteLLMKeyInfoEndpoint(baseUrl: string | undefined, targetApiKey: string): string {
 	const trimmed = (baseUrl ?? "").trim();
 	if (!trimmed) {
-		throw new Error("LiteLLM usage checks require a configured provider Base URL.");
+		throw new Error(vscode.l10n.t("LiteLLM usage checks require a configured provider Base URL."));
 	}
-	const url = requireHttpsUrl(trimmed, "LiteLLM Base URL");
+	const url = requireHttpsUrl(trimmed, vscode.l10n.t("LiteLLM Base URL"));
 	const path = url.pathname.replace(/\/+$/u, "");
 	const managementPath = path.endsWith("/api/v1")
 		? path.slice(0, -"/api/v1".length)

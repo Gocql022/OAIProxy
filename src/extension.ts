@@ -514,7 +514,9 @@ async function runProviderUsageCheck(
 		}
 		const targetApiKey = adapter === "litellm" ? await context.secrets.get(getProviderSecretKey(provider)) : undefined;
 		if (adapter === "litellm" && !targetApiKey) {
-			throw new Error(`No LiteLLM provider API key found for ${provider}. Save the provider API key first.`);
+			throw new Error(
+				vscode.l10n.t("No LiteLLM provider API key found for {0}. Save the provider API key first.", provider)
+			);
 		}
 
 		const result = await checkProviderUsage({
@@ -539,9 +541,12 @@ async function runProviderUsageCheck(
 }
 
 async function confirmProviderUsageDestination(origin: string): Promise<boolean> {
-	const action = "Send Credentials";
+	const action = vscode.l10n.t("Send Credentials");
 	const selected = await vscode.window.showWarningMessage(
-		`Send privileged usage credentials to ${origin}? Only confirm if you configured this LiteLLM host intentionally.`,
+		vscode.l10n.t(
+			"Send privileged usage credentials to {0}? Only confirm if you configured this LiteLLM host intentionally.",
+			origin
+		),
 		{ modal: true },
 		action
 	);
