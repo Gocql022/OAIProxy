@@ -8,6 +8,7 @@ import { OllamaApi } from "../ollama/ollamaApi";
 import { normalizeUserModels } from "../utils";
 import {
 	getMissingProviderSetupMessage,
+	isCommitGenerationCompatibleModel,
 	normalizeProviderConfigs,
 	PROVIDER_CONFIG_STORAGE_KEY,
 	resolveProviderBackedModel,
@@ -183,7 +184,8 @@ async function generateCommitMsgForRepository(
 			),
 			cancellable: true,
 		},
-		() => performCommitMsgGeneration(secrets, globalState, gitDiff, inputBox)
+			(_progress, cancellationToken) =>
+				performCommitMsgGeneration(secrets, globalState, gitDiff, inputBox, cancellationToken)
 	);
 }
 
@@ -191,7 +193,8 @@ async function performCommitMsgGeneration(
 	secrets: vscode.SecretStorage,
 	globalState: vscode.Memento,
 	gitDiff: string,
-	inputBox: GitInputBox
+	inputBox: GitInputBox,
+	cancellationToken: vscode.CancellationToken
 ) {
 	const startTime = Date.now();
 	let modelId: string | undefined;
@@ -222,8 +225,12 @@ async function performCommitMsgGeneration(
 		const userModels = normalizeUserModels(config.get<unknown>("oaicopilot.models", []));
 		const providerConfigs = normalizeProviderConfigs(globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, []));
 
-		// Filter models that are marked for commit generation
-		const commitModels = userModels.filter((model: HFModelItem) => model.useForCommitGeneration === true);
+		// OAuth-backed and Gemini models are excluded because this code path only
+		// resolves provider API keys and the supported non-Gemini adapters.
+		const commitModels = userModels.filter(
+			(model: HFModelItem) =>
+				model.useForCommitGeneration === true && isCommitGenerationCompatibleModel(model, providerConfigs)
+		);
 
 		if (commitModels.length === 0) {
 			throw new Error(
@@ -277,15 +284,29 @@ async function performCommitMsgGeneration(
 		}
 
 		commitGenerationAbortController = new AbortController();
-		const stream = apiInstance.createMessage(selectedModel, systemPrompt, messages, baseUrl, apiKey);
+		const cancellationListener = cancellationToken.onCancellationRequested(() => {
+			commitGenerationAbortController?.abort();
+		});
+		const stream = apiInstance.createMessage(
+			selectedModel,
+			systemPrompt,
+			messages,
+			baseUrl,
+			apiKey,
+			commitGenerationAbortController.signal
+		);
 
 		let response = "";
-		for await (const chunk of stream) {
-			commitGenerationAbortController.signal.throwIfAborted();
-			if (chunk.type === "text") {
-				response += chunk.text;
-				inputBox.value = extractCommitMessage(response);
+		try {
+			for await (const chunk of stream) {
+				commitGenerationAbortController.signal.throwIfAborted();
+				if (chunk.type === "text") {
+					response += chunk.text;
+					inputBox.value = extractCommitMessage(response);
+				}
 			}
+		} finally {
+			cancellationListener.dispose();
 		}
 
 		inputBox.value = removeThinkTags(inputBox.value);
@@ -296,6 +317,10 @@ async function performCommitMsgGeneration(
 
 		logger.info("commit.end", { modelId, durationMs: Date.now() - startTime });
 	} catch (error) {
+		if (cancellationToken.isCancellationRequested || (error instanceof Error && error.name === "AbortError")) {
+			logger.info("commit.cancelled", { modelId: modelId ?? "unknown" });
+			return;
+		}
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		logger.error("commit.error", { modelId: modelId ?? "unknown", error: errorMessage });
 		vscode.window.showErrorMessage(vscode.l10n.t("Failed to generate commit message: {0}", errorMessage));
@@ -322,9 +347,14 @@ function extractCommitMessage(str: string): string {
 		.trim();
 }
 
-function removeThinkTags(text: string): string {
-	const regex = /<think>.*?<\/think>/gs;
-	return text.replace(regex, "").trim();
+export function removeThinkTags(text: string): string {
+	return text
+		.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, "")
+		.replace(/<｜begin▁of▁thinking｜>[\s\S]*?<｜end▁of▁thinking｜>/g, "")
+		.replace(/<｜begin▁of▁thinking｜>/g, "")
+		.replace(/<｜end▁of▁thinking｜>/g, "")
+		.replace(/<\/?think(?:ing)?>/gi, "")
+		.trim();
 }
 
 /**

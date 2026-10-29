@@ -18,19 +18,23 @@ import {
 	collectToolResultText,
 	convertToolsToOpenAIResponses,
 	mapRole,
+	parseModelId,
 } from "../utils";
 
 import { CommonApi } from "../commonApi";
 import { logger } from "../logger";
-import { getLanguageModelThinkingText, isLanguageModelThinkingPart } from "../vscodeCompat";
+import { createLanguageModelThinkingPart, getLanguageModelThinkingText, isLanguageModelThinkingPart } from "../vscodeCompat";
 import { logCacheUsage } from "../promptCache";
 import { ResponseUsageAccumulator } from "../responseUsage";
+import { createProviderStreamError, extractProviderErrorMessage } from "../streamUtils";
 import { applyXaiGrokOAuthHeaders, isXaiGrokOAuthBaseUrl } from "../xaiOAuth";
 import {
 	applyOpenAICodexOAuthHeaders,
 	isOpenAICodexOAuthBaseUrl,
 	isOpenAICodexOAuthProvider,
 } from "../openaiOAuth";
+import { createOpenAIResponsesConversationKey, type OpenAIResponsesStateIdentity } from "./openaiResponsesState";
+import { OPENAI_RESPONSES_REPLAY_METADATA, readResponsesReplayItem, restoreResponsesReplay, type ResponsesReplayItem } from "./openaiResponsesReplay";
 
 export interface ResponsesInputMessage {
 	role: "user" | "assistant" | "system";
@@ -68,6 +72,7 @@ export interface ResponsesReasoning {
 	type: "reasoning";
 	summary: ResponsesContentPart[];
 	id?: string;
+	encrypted_content?: string;
 	status?: "completed";
 }
 
@@ -77,12 +82,50 @@ export type ResponsesInputItem =
 	| ResponsesFunctionCallOutput
 	| ResponsesReasoning;
 
+function extractResponsesStreamErrorMessage(
+	parsed: Record<string, unknown>,
+	responseObject: Record<string, unknown> | undefined
+): string | undefined {
+	const direct = extractProviderErrorMessage(parsed);
+	if (direct) {
+		return direct;
+	}
+
+	const nested = responseObject?.error;
+	if (nested !== undefined) {
+		const message = extractProviderErrorMessage({ error: nested });
+		if (message) {
+			return message;
+		}
+	}
+
+	const source = responseObject ?? parsed;
+	if (source.code !== undefined || source.message !== undefined) {
+		return extractProviderErrorMessage({
+			error: {
+				code: source.code,
+				message: source.message,
+			},
+		});
+	}
+	return undefined;
+}
+
 export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<string, unknown>> {
 	private _responseId: string | null = null;
 	private _sawOutputTextDelta = false;
+	private _conversationKey: string | undefined;
+	private readonly _replayOutput = new Map<number, ResponsesReplayItem>();
 
-	constructor(modelId: string) {
+	constructor(modelId: string, private readonly _replayIdentity?: OpenAIResponsesStateIdentity) {
 		super(modelId);
+		if (_replayIdentity) {
+			this._conversationKey = createOpenAIResponsesConversationKey(_replayIdentity, []);
+		}
+	}
+
+	get conversationKey(): string | undefined {
+		return this._conversationKey;
 	}
 
 	get responseId(): string | null {
@@ -100,6 +143,7 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 		const codexEasyInput = options?.codexEasyInput === true;
 
 		for (let messageIndex = 0; messageIndex < messages.length; messageIndex++) {
+			const outputStart = out.length;
 			const m = messages[messageIndex];
 			const role = mapRole(m);
 			const textParts: string[] = [];
@@ -177,6 +221,10 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 						...(codexEasyInput ? {} : { status: "completed" as const }),
 					});
 				}
+				const restored = restoreResponsesReplay(m.content ?? [], this._conversationKey, out.slice(outputStart));
+				if (restored) {
+					out.splice(outputStart, out.length - outputStart, ...restored);
+				}
 			}
 
 			// tool outputs
@@ -225,6 +273,9 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 			if (role === "system" && joinedText) {
 				this._systemContent = joinedText;
 			}
+			if (!this._conversationKey && this._replayIdentity && role === "user") {
+				this._conversationKey = createOpenAIResponsesConversationKey(this._replayIdentity, out);
+			}
 		}
 
 		// the last user message may be incomplete
@@ -243,7 +294,8 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 	prepareRequestBody(
 		rb: Record<string, unknown>,
 		um: HFModelItem | undefined,
-		options?: ProvideLanguageModelChatResponseOptions
+		options?: ProvideLanguageModelChatResponseOptions,
+		baseUrl?: string
 	): Record<string, unknown> {
 		const isPlainObject = (v: unknown): v is Record<string, unknown> =>
 			!!v && typeof v === "object" && !Array.isArray(v);
@@ -329,8 +381,13 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 		// The ChatGPT/Codex OAuth Responses route is stateless and rejects omitted
 		// or true storage and several controls supported by the public Responses API.
 		// Keep direct OpenAI API-key Responses requests unchanged.
-		if (um?.authMode === "oauth" && isOpenAICodexOAuthProvider(um.owned_by)) {
+		if (um?.authMode === "oauth" && isOpenAICodexOAuthProvider(um.owned_by, um.authMode, baseUrl)) {
 			rb.store = false;
+			// The ChatGPT/Codex backend still uses the pre-rename Fast tier name.
+			// Keep `fast` as the public/configured alias and translate it on the wire.
+			if (rb.service_tier === "fast") {
+				rb.service_tier = "priority";
+			}
 			const include = Array.isArray(rb.include)
 				? rb.include.filter((value): value is string => typeof value === "string")
 				: [];
@@ -358,6 +415,7 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 		token: CancellationToken
 	): Promise<void> {
 		this._responseId = null;
+		this._replayOutput.clear();
 		const modelId = this._modelId;
 		logger.debug("responses.stream.start", { modelId });
 		const reader = responseBody.getReader();
@@ -366,6 +424,52 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 		const responseUsage = new ResponseUsageAccumulator("openai-responses");
 		let completed = false;
 		let sawProviderError = false;
+		let providerErrorMessage: string | undefined;
+
+		const handleLine = async (line: string): Promise<void> => {
+			if (!line.startsWith("data:")) {
+				return;
+			}
+			const data = line.slice(5).trim();
+			logger.debug("responses.stream.chunk", { modelId, data });
+			if (data === "[DONE]") {
+				await this.flushToolCallBuffers(progress, false);
+				return;
+			}
+
+			try {
+				const parsed = JSON.parse(data) as Record<string, unknown>;
+				responseUsage.record(parsed);
+				this.observeResponseCompletion(parsed);
+				const eventType = typeof parsed.type === "string" ? parsed.type : "";
+				const responseObject =
+					parsed.response && typeof parsed.response === "object" && !Array.isArray(parsed.response)
+						? (parsed.response as Record<string, unknown>)
+						: undefined;
+				const responseStatus = typeof responseObject?.status === "string" ? responseObject.status : "";
+				if (
+					eventType === "error" ||
+					eventType === "response.failed" ||
+					eventType === "response.cancelled" ||
+					responseStatus === "failed" ||
+					responseStatus === "cancelled"
+				) {
+					sawProviderError = true;
+					providerErrorMessage = extractResponsesStreamErrorMessage(parsed, responseObject) ?? providerErrorMessage;
+				}
+				logCacheUsage("openai-responses", modelId, parsed);
+				await this.processEvent(parsed, progress);
+			} catch (e) {
+				// A malformed payload can contain opaque reasoning. Never print the raw chunk
+				// or JSON.parse's error message (which can quote the offending content).
+				console.error("[OpenAI-Responses Provider] Failed to process SSE chunk");
+				logger.error("responses.stream.chunk.error", {
+					modelId,
+					errorType: e instanceof Error ? e.name : "unknown",
+					rawLength: data.length,
+				});
+			}
+		};
 
 		try {
 			while (true) {
@@ -384,35 +488,19 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 				buffer = lines.pop() || "";
 
 				for (const line of lines) {
-					if (!line.startsWith("data:")) {
-						continue;
-					}
-					const data = line.slice(5).trim();
-					logger.debug("responses.stream.chunk", { modelId, data });
-					if (data === "[DONE]") {
-						await this.flushToolCallBuffers(progress, false);
-						continue;
-					}
-
-					try {
-						const parsed = JSON.parse(data) as Record<string, unknown>;
-						responseUsage.record(parsed);
-						this.observeResponseCompletion(parsed);
-						const eventType = typeof parsed.type === "string" ? parsed.type : "";
-						if (eventType === "error" || eventType === "response.failed" || eventType === "response.cancelled") {
-							sawProviderError = true;
-						}
-						logCacheUsage("openai-responses", modelId, parsed);
-						await this.processEvent(parsed, progress);
-					} catch (e) {
-						console.error("[OpenAI-Responses Provider] Failed to parse SSE chunk:", e, "data:", data);
-						logger.error("responses.stream.chunk.error", {
-							modelId,
-							error: e instanceof Error ? e.message : String(e),
-							data,
-						});
-					}
+					await handleLine(line);
 				}
+			}
+			buffer += decoder.decode();
+			if (buffer.length > 0) {
+				for (const line of buffer.split("\n")) {
+					await handleLine(line);
+				}
+				buffer = "";
+			}
+			if (sawProviderError && !token.isCancellationRequested) {
+				this._responseId = null;
+				throw createProviderStreamError("OpenAI Responses", providerErrorMessage);
 			}
 			completed = !token.isCancellationRequested && !sawProviderError;
 			logger.debug("responses.stream.done", { modelId, responseId: this._responseId ?? "" });
@@ -424,11 +512,18 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 			reader.releaseLock();
 			this.reportEndThinking(progress);
 			if (completed) {
+				const output = [...this._replayOutput.entries()].sort(([a], [b]) => a - b).map(([, item]) => item);
+				if (this._conversationKey && this._responseId && output.some((item) => item.type === "reasoning")) {
+					progress.report(createLanguageModelThinkingPart("", this._responseId, {
+						[OPENAI_RESPONSES_REPLAY_METADATA]: { version: 1, scope: this._conversationKey, output },
+					}));
+				}
 				const usagePart = responseUsage.toDataPart();
 				if (usagePart) {
 					progress.report(usagePart);
 				}
 			}
+			this._replayOutput.clear();
 		}
 	}
 
@@ -501,12 +596,21 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 			return;
 		}
 
-		this.captureResponseIdFromEvent(event);
+		// A response id is only resumable when the stream reached a terminal event
+		// that leaves stored state behind. `response.incomplete` (for example a
+		// max_output_tokens stop) is explicitly continuable with
+		// `previous_response_id`; failed/cancelled/error turns are not.
+		const terminalResponseEvent =
+			eventType === "response.completed" || eventType === "response.done" || eventType === "response.incomplete";
+		if (terminalResponseEvent) {
+			this.captureResponseIdFromEvent(event);
+		} else if (eventType === "response.failed" || eventType === "response.cancelled" || eventType === "error") {
+			this._responseId = null;
+		}
 
 		switch (eventType) {
 			case "error": {
-				const errorText = JSON.stringify(event);
-				console.error("[OAIProxy Model Provider] Responses API streaming process error:", errorText);
+				// The stream reader reports the provider error; do not print raw events.
 				return;
 			}
 
@@ -625,6 +729,9 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 			case "response.output_item.added":
 			case "response.output_item.done": {
 				const item = event.item && typeof event.item === "object" ? (event.item as Record<string, unknown>) : null;
+				if (eventType === "response.output_item.done") {
+					this.captureReplayItem(item, event.output_index);
+				}
 				if (!item || item.type !== "function_call") {
 					return;
 				}
@@ -681,12 +788,31 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 			}
 
 			case "response.completed":
-			case "response.done": {
+			case "response.done":
+			case "response.incomplete": {
+				const response = event.response as { output?: unknown[] } | undefined;
+				if (this._conversationKey && Array.isArray(response?.output)) {
+					for (const [index, item] of response.output.entries()) {
+						// Some routes send output only in the terminal event. Reuse the normal
+						// item handler; completed tool indices prevent duplicate tool calls.
+						await this.processEvent({ type: "response.output_item.done", output_index: index, item }, progress);
+					}
+				}
 				// End of message - ensure thinking is ended and flush all tool calls
 				await this.flushToolCallBuffers(progress, false);
 				this.reportEndThinking(progress);
 				return;
 			}
+		}
+	}
+
+	private captureReplayItem(item: unknown, index: unknown): void {
+		if (!this._conversationKey || typeof index !== "number" || !Number.isSafeInteger(index) || index < 0) {
+			return;
+		}
+		const parsed = readResponsesReplayItem(item);
+		if (parsed) {
+			this._replayOutput.set(index, parsed);
 		}
 	}
 
@@ -703,7 +829,12 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 
 		const response = event.response;
 		if (response && typeof response === "object" && !Array.isArray(response)) {
-			const id = (response as Record<string, unknown>).id;
+			const responseRecord = response as Record<string, unknown>;
+			const status = typeof responseRecord.status === "string" ? responseRecord.status : "";
+			if (status && status !== "completed" && status !== "incomplete") {
+				return;
+			}
+			const id = responseRecord.id;
 			if (typeof id === "string" && id.trim()) {
 				this._responseId = id;
 			}
@@ -740,7 +871,8 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 		systemPrompt: string,
 		messages: { role: string; content: string }[],
 		baseUrl: string,
-		apiKey: string
+		apiKey: string,
+		signal?: AbortSignal
 	): AsyncGenerator<{ type: "text"; text: string }> {
 		// Convert to Responses API format
 		const input: ResponsesInputItem[] = [];
@@ -776,13 +908,17 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 			stream: true,
 		};
 
-		requestBody = this.prepareRequestBody(requestBody, model, undefined);
+		requestBody = this.prepareRequestBody(requestBody, model, undefined, baseUrl);
 
 		const headers = CommonApi.prepareHeaders(apiKey, model.apiMode ?? "openai-responses", model.headers);
 		if (model.authMode === "oauth" && model.owned_by?.trim().toLowerCase() === "xai" && isXaiGrokOAuthBaseUrl(baseUrl)) {
-			applyXaiGrokOAuthHeaders(headers, model.id);
+			applyXaiGrokOAuthHeaders(headers, parseModelId(model.id).baseId);
 		}
-		if (model.authMode === "oauth" && isOpenAICodexOAuthProvider(model.owned_by) && isOpenAICodexOAuthBaseUrl(baseUrl)) {
+		if (
+			model.authMode === "oauth" &&
+			isOpenAICodexOAuthProvider(model.owned_by, model.authMode, baseUrl) &&
+			isOpenAICodexOAuthBaseUrl(baseUrl)
+		) {
 			applyOpenAICodexOAuthHeaders(headers);
 		}
 
@@ -793,6 +929,7 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 			method: "POST",
 			headers,
 			body: JSON.stringify(requestBody),
+			signal,
 		});
 
 		if (!response.ok) {
@@ -809,6 +946,40 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 		const decoder = new TextDecoder();
 		let buffer = "";
 
+		const handleLine = async function* (line: string): AsyncGenerator<{ type: "text"; text: string }> {
+			if (!line.startsWith("data:")) {
+				return;
+			}
+			const data = line.slice(5).trim();
+			if (data === "[DONE]") {
+				return;
+			}
+
+			try {
+				const parsed = JSON.parse(data);
+				const eventType = typeof parsed.type === "string" ? parsed.type : "";
+
+				// Only handle text output events, skip reasoning/thinking events
+				const textOutputEvents = ["response.output_text.delta"];
+
+				const isTextEvent = textOutputEvents.includes(eventType) || !eventType; // Also support events without explicit type
+
+				if (isTextEvent) {
+					// Extract text from various possible locations
+					const textSources = [parsed.delta, parsed.text, parsed.content, parsed.output?.[0]?.content?.[0]?.text];
+
+					for (const textSource of textSources) {
+						if (typeof textSource === "string" && textSource) {
+							yield { type: "text", text: textSource };
+							break;
+						}
+					}
+				}
+			} catch (e) {
+				console.error("[OpenAI-Responses Provider] Failed to parse SSE chunk:", e, "data:", data);
+			}
+		};
+
 		try {
 			while (true) {
 				const { done, value } = await reader.read();
@@ -821,45 +992,18 @@ export class OpenaiResponsesApi extends CommonApi<ResponsesInputItem, Record<str
 				buffer = lines.pop() || "";
 
 				for (const line of lines) {
-					if (!line.startsWith("data:")) {
-						continue;
-					}
-					const data = line.slice(5).trim();
-					if (data === "[DONE]") {
-						continue;
-					}
-
-					try {
-						const parsed = JSON.parse(data);
-						const eventType = typeof parsed.type === "string" ? parsed.type : "";
-
-						// Only handle text output events, skip reasoning/thinking events
-						const textOutputEvents = ["response.output_text.delta"];
-
-						const isTextEvent = textOutputEvents.includes(eventType) || !eventType; // Also support events without explicit type
-
-						if (isTextEvent) {
-							// Extract text from various possible locations
-							const textSources = [parsed.delta, parsed.text, parsed.content, parsed.output?.[0]?.content?.[0]?.text];
-
-							for (const textSource of textSources) {
-								if (typeof textSource === "string" && textSource) {
-									yield { type: "text", text: textSource };
-									break;
-								}
-							}
-						}
-
-						// Check for completion
-						if (parsed.done || parsed.type === "response.completed" || parsed.type === "response.done") {
-							break;
-						}
-					} catch (e) {
-						console.error("[OpenAI-Responses Provider] Failed to parse SSE chunk:", e, "data:", data);
-					}
+					yield* handleLine(line);
 				}
 			}
+			buffer += decoder.decode();
+			if (buffer.length > 0) {
+				for (const line of buffer.split("\n")) {
+					yield* handleLine(line);
+				}
+				buffer = "";
+			}
 		} finally {
+			await reader.cancel().catch(() => undefined);
 			reader.releaseLock();
 		}
 	}

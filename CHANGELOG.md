@@ -1,5 +1,41 @@
 # Change Log
 
+## 0.1.54 (2026-10-25)
+
+- Preserve encrypted OpenAI Codex OAuth reasoning state across tool continuations, including full-history fallback, with conversation/account isolation and reasoning/tool ordering retained.
+- Keep Codex conversation affinity stable when instructions, tools, or tool choice change while preserving stricter checks for previous-response reuse.
+- Add safe replay diagnostics, exclude hidden continuation metadata from visible-thinking timing, and prevent malformed stream diagnostics from exposing raw payloads.
+- Expand continuation regression coverage and document verified replay/cache behavior and the limits of latency measurements.
+
+## 0.1.53 (2026-10-23)
+
+- Fix GPT-6 Astra Fast Codex OAuth requests rejected with `Unsupported service_tier: fast` by translating the configured `fast` alias to the backend-compatible `priority` tier while preserving `fast` for public OpenAI API-key Responses requests.
+- Clarify the Fast mode transport mapping in the preset source note and README, and add regression coverage for both Codex OAuth and public Responses request shaping.
+
+## 0.1.52 (2026-10-23)
+
+- Add an opt-in GPT-6 Astra Fast Codex OAuth Quick Setup card that sends `service_tier: "fast"` while retaining the Standard Astra card.
+- Expose the selected OpenAI service tier in request-body diagnostics and document Fast mode usage, availability, and latency expectations.
+- Add regression coverage for the Fast preset and its Codex OAuth Responses request body.
+
+## 0.1.51 (2026-10-20)
+
+- Harden configuration import and export: omit API keys by default, redact credential-bearing custom headers, restore matching redacted headers safely on import, validate the full payload before applying it, and roll back configuration, provider, and secret changes on failure.
+- Fix Responses state handling by retaining replacement state only for missing stored responses, scoping state by provider identity, and disabling `previous_response_id` after unsupported or unrecognized fallback errors so they do not fail on every turn.
+- Preserve Anthropic signed and redacted thinking blocks in their original order, honor `extra.thinking` overrides, and validate manual thinking budgets for tool continuations.
+- Correct streaming edge cases across OpenAI, Responses, Anthropic, Gemini, and Ollama, including failed-stream errors and usage reporting, final unterminated SSE lines, Gemini delta/thinking accounting, and provider-specific thinking payloads.
+- Add bounded destination validation, HTTPS enforcement, timeouts, response-size limits, and clearer key handling for provider usage checks; reject unsafe TokenRouter, LiteLLM, and xAI request targets.
+- Fix OAuth refresh and sign-out races for OpenAI and xAI, bound xAI requests, align the Grok model-override header with the request body, and filter unsupported commit-generation models.
+- Improve Ollama discovery authentication and model limits, Anthropic output-token precedence, retry cancellation, Git commit cancellation, and legacy model capability reporting.
+- Expand regression coverage for adapter streams, configuration lifecycle and rollback, Responses fallback, OAuth, usage checks, token accounting, and release-adjacent request shaping.
+
+## 0.1.50 (2026-10-19)
+
+- Fix direct DeepSeek thinking-mode agent requests rejected with HTTP 400 by replaying `reasoning_content` for every historical assistant turn when tools are advertised, including turns without a tool call.
+- Backfill an empty `reasoning_content` only when VS Code no longer supplies a reasoning part, and send empty assistant `content` for tool-call messages without visible text.
+- Preserve available thinking text exactly, including surrounding whitespace, even when `include_reasoning_in_request` is false or omitted on direct DeepSeek thinking-plus-tools requests; keep the fallback scoped to the official DeepSeek endpoint.
+- Document the replay requirement in English and Chinese, and add regression coverage for missing and exact reasoning, tool-call content, replay-flag handling, provider scoping, and non-tool paths.
+
 ## 0.1.49 (2026-10-18)
 
 - Add live estimated tokens per second beside the status-bar context percentage, refreshed every 500 ms while receiving answer or thinking text.
