@@ -5,6 +5,13 @@ This file provides guidance to agents when working with code in this repository.
 ## Memory
 - Before non-trivial work in this repo, also review `/home/opc/.codex/memories/oaiproxy.md` when available. Keep durable OAIProxy-specific workflow rules mirrored in this `AGENTS.md`; do not import unrelated memories from other projects.
 
+## Syncing upstream: merge only, never cherry-pick
+- Fetch upstream with `git fetch origin-main --tags`, then sync with `git merge origin-main/main`. Do **not** use `git cherry-pick`, `git rebase --onto`, or replay upstream commits one at a time.
+- Call this rule out to the user at the start of every upstream sync before doing any work.
+- Reason: replaying upstream commits one by one copies upstream's whole-file `package.json` replacements verbatim. That has already wiped this fork's `%key%` localization placeholders and its fork-only `oaicopilot.visionBridge*` declarations twice (see the `release: v0.1.46` / `v0.1.47` incidents). A merge produces one merge commit, so conflicts stay concentrated and can be resolved once, with the local side winning where required.
+- Upstream `release: vX.Y.Z` commits only bump `version`. For those, keep the local `package.json` (`git checkout HEAD -- package.json`) and edit the version by hand; never accept upstream's whole `package.json`.
+- Because early history was synced with cherry-pick, commit hashes differ from upstream. Do not judge sync state from `git log A..B` or hashes; compare content, or use `git log --oneline --grep='<commit subject>'`.
+
 ## Build/Test/Lint Commands
 ```bash
 npm run compile        # Build TypeScript

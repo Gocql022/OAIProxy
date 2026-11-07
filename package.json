@@ -168,6 +168,7 @@
                 "description": "%config.models.apiMode.description%",
                 "enum": [
                   "openai",
+                  "openai-compatible",
                   "azure-foundry",
                   "litellm",
                   "openai-responses",
@@ -860,5 +861,5 @@
     "vscode:prepublish": "npm run compile",
     "watch": "tsc -watch -p ./"
   },
-  "version": "0.1.54"
+  "version": "0.1.55"
 }

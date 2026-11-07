@@ -72,6 +72,9 @@ const KIMI_CN_BALANCE_ENDPOINT = "https://api.moonshot.cn/v1/users/me/balance";
 const MINIMAX_TOKEN_PLAN_ENDPOINT = "https://api.minimax.io/v1/token_plan/remains";
 const OPENAI_COSTS_ENDPOINT = "https://api.openai.com/v1/organization/costs";
 const ANTHROPIC_COST_REPORT_ENDPOINT = "https://api.anthropic.com/v1/organizations/cost_report";
+const ANTHROPIC_ANALYTICS_COST_ENDPOINT = "https://api.anthropic.com/v1/organizations/analytics/cost";
+const ANTHROPIC_ANALYTICS_BETA = "analytics-usage-cost-2026-08-24";
+const NO_COST_DATA_SUMMARY = "No cost data returned for reported period";
 const FIREWORKS_ACCOUNTS_ENDPOINT = "https://api.fireworks.ai/v1/accounts";
 const TOKENROUTER_MANAGEMENT_BASE_URL = "https://api.tokenrouter.com";
 const DEFAULT_LITELLM_ORIGIN = "https://ai.nube.sh";
@@ -85,6 +88,9 @@ const ZAI_USAGE_UNSUPPORTED_REASON = vscode.l10n.t(
 );
 const AZURE_FOUNDRY_USAGE_UNSUPPORTED_REASON = vscode.l10n.t(
 	"Azure Foundry usage checks are unavailable with an inference API key; use Azure Monitor or Cost Management with Azure RBAC."
+);
+const OPENAI_COMPATIBLE_USAGE_UNSUPPORTED_REASON = vscode.l10n.t(
+	"OpenAI Compatible usage checks are unavailable because a generic gateway has no fixed public usage, balance, or cost endpoint; check the gateway's own dashboard or billing API."
 );
 export const TOKENROUTER_DASHBOARD_URL = "https://www.tokenrouter.com/console";
 
@@ -165,6 +171,11 @@ export function isZaiProvider(provider: string, baseUrl?: string): boolean {
 	);
 }
 
+export function isOpenAICompatibleProvider(provider: string): boolean {
+	const normalizedProvider = provider.trim().toLowerCase();
+	return normalizedProvider === "openai-compatible" || normalizedProvider === "openai-compatible-gateway";
+}
+
 export function isTokenRouterProvider(provider: string, baseUrl?: string): boolean {
 	const normalizedProvider = provider.trim().toLowerCase();
 	return normalizedProvider === "tokenrouter" || hasHostname(baseUrl, "api.tokenrouter.com");
@@ -185,11 +196,19 @@ export function getProviderUsageUnsupportedReason(provider: string, baseUrl?: st
 	if (isZaiProvider(provider, baseUrl)) {
 		return ZAI_USAGE_UNSUPPORTED_REASON;
 	}
+	if (isOpenAICompatibleProvider(provider)) {
+		return OPENAI_COMPATIBLE_USAGE_UNSUPPORTED_REASON;
+	}
 	return undefined;
 }
 
 export function getProviderUsageAdapter(provider: string, baseUrl?: string): ProviderUsageAdapter | undefined {
 	const normalizedProvider = provider.trim().toLowerCase();
+	if (isOpenAICompatibleProvider(provider)) {
+		// A generic gateway must not inherit another provider's usage adapter just because it
+		// happens to proxy the same upstream host.
+		return undefined;
+	}
 	if (normalizedProvider === "xai" && isXaiGrokOAuthBaseUrl(baseUrl)) {
 		return "xai";
 	}
@@ -285,9 +304,7 @@ export async function checkProviderUsage(request: ProviderUsageRequest): Promise
 			throw error;
 		}
 	} else if (adapter === "anthropic") {
-		parsed = parseAnthropicCostReport(
-			await fetchJson(buildAnthropicCostReportEndpoint(), "Anthropic", anthropicAdminHeaders(request.apiKey))
-		);
+		parsed = await checkAnthropicUsage(request.apiKey);
 	} else if (adapter === "tokenrouter") {
 		parsed = parseTokenRouterWallet(
 			await fetchJson(buildTokenRouterWalletEndpoint(request.baseUrl), "TokenRouter", bearerHeaders(request.apiKey))
@@ -666,6 +683,78 @@ export function parseOpenAICosts(payload: unknown): ParsedProviderUsage {
 	};
 }
 
+/**
+ * Reads Anthropic cost from the Usage and Cost Analytics API, falling back to the legacy cost
+ * report when the analytics export has no rows for the range yet.
+ *
+ * The analytics export refreshes roughly every four hours, while the legacy report refreshes in
+ * minutes. The fallback keeps a fresh spend check working while the current API is preferred
+ * whenever it has data.
+ */
+async function checkAnthropicUsage(apiKey: string): Promise<ParsedProviderUsage> {
+	let analytics: ParsedProviderUsage | undefined;
+	let analyticsFailure: string | undefined;
+	try {
+		analytics = parseAnthropicAnalyticsCost(
+			await fetchJson(
+				buildAnthropicAnalyticsCostEndpoint(),
+				"Anthropic",
+				anthropicAdminHeaders(apiKey, ANTHROPIC_ANALYTICS_BETA)
+			)
+		);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		analyticsFailure = message.length > 300 ? `${message.slice(0, 300)}…` : message;
+	}
+
+	if (analytics && analytics.summary !== NO_COST_DATA_SUMMARY) {
+		return analytics;
+	}
+
+	const legacy = parseAnthropicCostReport(
+		await fetchJson(buildAnthropicCostReportEndpoint(), "Anthropic", anthropicAdminHeaders(apiKey))
+	);
+	return {
+		summary: legacy.summary,
+		details: [
+			analyticsFailure
+				? `Analytics export unavailable (${analyticsFailure}); using the legacy cost report.`
+				: "Analytics export returned no cost rows yet; using the legacy cost report.",
+			...legacy.details,
+		],
+	};
+}
+
+export function parseAnthropicAnalyticsCost(payload: unknown): ParsedProviderUsage {
+	const obj = asRecord(payload, "Anthropic analytics cost response");
+	const rows = asArray(obj.data, "Anthropic analytics cost data");
+	const totals = new Map<string, number>();
+	const modelTotals = new Map<string, Map<string, number>>();
+
+	for (const rowItem of rows) {
+		const row = asRecord(rowItem, "Anthropic analytics cost row");
+		const cost = asRecord(row.cost, "Anthropic analytics cost");
+		const currency = optionalString(cost.currency)?.toUpperCase() ?? "USD";
+		const value = asNumber(cost.amount, "Anthropic analytics cost amount") / 100;
+		const group = row.group === undefined ? {} : asRecord(row.group, "Anthropic analytics cost group");
+		const model = optionalString(group.model) ?? "Unattributed";
+		addCurrencyTotal(totals, currency, value);
+		addBreakdownTotal(modelTotals, model, currency, value);
+	}
+
+	const refreshedAt = optionalString(obj.data_refreshed_at);
+	return {
+		summary: formatCostSummary(totals),
+		details: [
+			"Source: Anthropic Usage and Cost Analytics API.",
+			"Amounts converted from fractional cents (post-discount, pre-credit).",
+			refreshedAt ? `Data refreshed at ${refreshedAt}.` : "Analytics export has no data for the reported range.",
+			"Remaining credit balance: not exposed by the Anthropic usage/cost API.",
+			...formatBreakdownTotals(modelTotals),
+		],
+	};
+}
+
 export function parseAnthropicCostReport(payload: unknown): ParsedProviderUsage {
 	const obj = asRecord(payload, "Anthropic cost report response");
 	const buckets = asArray(obj.data, "Anthropic cost report data");
@@ -900,7 +989,7 @@ function formatCurrencyTotals(totals: Map<string, number>): string {
 
 function formatCostSummary(totals: Map<string, number>): string {
 	if (totals.size === 0) {
-		return "No cost data returned for reported period";
+		return NO_COST_DATA_SUMMARY;
 	}
 	return `${formatCurrencyTotals(totals)} spent in reported period (remaining credit not exposed)`;
 }
@@ -953,13 +1042,17 @@ function openAICodexUsageHeaders(apiKey: string, accountId?: string): Record<str
 	};
 }
 
-function anthropicAdminHeaders(apiKey: string): Record<string, string> {
-	return {
+function anthropicAdminHeaders(apiKey: string, beta?: string): Record<string, string> {
+	const headers: Record<string, string> = {
 		Accept: "application/json",
 		"anthropic-version": "2023-06-01",
 		"Content-Type": "application/json",
 		"x-api-key": apiKey,
 	};
+	if (beta) {
+		headers["anthropic-beta"] = beta;
+	}
+	return headers;
 }
 
 function buildOpenAICostsEndpoint(): string {
@@ -974,8 +1067,21 @@ function buildOpenAICostsEndpoint(): string {
 	return `${OPENAI_COSTS_ENDPOINT}?${params.toString()}`;
 }
 
-function buildAnthropicCostReportEndpoint(): string {
-	const { start, end } = getMonthToDateRange();
+export function buildAnthropicAnalyticsCostEndpoint(now = new Date()): string {
+	const { start } = getMonthToDateRange(now);
+	const params = new URLSearchParams({
+		starting_at: toRfc3339(start),
+		limit: "1000",
+	});
+	params.append("group_by[]", "model");
+	return `${ANTHROPIC_ANALYTICS_COST_ENDPOINT}?${params.toString()}`;
+}
+
+export function buildAnthropicCostReportEndpoint(now = new Date()): string {
+	const { start } = getMonthToDateRange(now);
+	// Cost buckets are UTC days and the API returns only buckets that end before ending_at, so a
+	// month-to-date window ending at "now" hides today's spend until the next UTC day.
+	const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 1));
 	const params = new URLSearchParams({
 		starting_at: toRfc3339(start),
 		ending_at: toRfc3339(end),
