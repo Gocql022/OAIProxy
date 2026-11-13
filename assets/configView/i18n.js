@@ -68,6 +68,16 @@
 			"用于描述图像的自定义提示词。留空则使用默认提示词。",
 		"Describe this image. Include visible text, code, UI, diagrams, and other important details.":
 			"描述这张图片。包括可见的文字、代码、界面、图表以及其他重要细节。",
+		"Prompt Routing": "提示词转接",
+		"Prompt Routing Model": "转接目标模型",
+		"Requests whose system prompt matches a rule below are sent to this model. Leave empty to disable routing.":
+			"系统提示匹配下方规则的请求会发送到该模型。留空则关闭转接。",
+		"Prompt Routing Rules": "转接规则",
+		"Rules are edited in Settings because they are an ordered pattern map. The first matching pattern wins: true routes the request, false blocks it, null ignores the pattern.":
+			"规则是有序的模式映射，因此在设置中编辑。第一个匹配的模式生效：true 表示转接，false 表示禁止转接，null 表示忽略该模式。",
+		"Open Settings to Edit": "转到设置编辑",
+		"Disabled (no model selected)": "未启用（未选择模型）",
+		"No rules configured": "未配置规则",
 		"Save Global Configuration": "保存全局配置",
 
 		// Provider management

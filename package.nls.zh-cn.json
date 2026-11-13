@@ -86,5 +86,8 @@
 	"config.tokenEstimation.perModel.description": "按基础模型 ID 或完整 modelId::configId 提供的覆盖项；完整 ID 优先。",
 	"config.visionBridgeEnabled.description": "启用视觉桥接：使用具备视觉能力的模型为纯文本模型描述图像。默认启用。",
 	"config.visionBridgeModel.description": "用于为纯文本模型描述图像的视觉桥接模型。可以是任意已注册的语言模型 ID（例如 'Qwen/Qwen2.5-VL-72B-Instruct'）。留空将自动选择第一个配置了 \"vision\": true 的模型。",
-	"config.visionBridgePrompt.description": "视觉桥接用于描述图像的自定义提示。留空则使用默认提示：'Describe this image. Include visible text, code, UI, diagrams, and other important details.'"
+	"config.visionBridgePrompt.description": "视觉桥接用于描述图像的自定义提示。留空则使用默认提示：'Describe this image. Include visible text, code, UI, diagrams, and other important details.'",
+	"config.promptRouting.description": "将系统提示匹配某个模式的请求发送到 'oaicopilot.promptRoutingModel' 指定的模型。键为模式，值为 true（转接）、false（禁止转接）或 null（忽略该模式）。第一个匹配的模式生效。写成 /body/flags 的模式按带显式标志的正则表达式处理；其它模式按不区分大小写的正则表达式处理。没有系统消息的请求不会被转接。",
+	"config.promptRouting.markdownDescription": "将系统提示匹配某个模式的请求发送到 `oaicopilot.promptRoutingModel` 指定的模型。键为模式，值为 `true`（转接）、`false`（禁止转接）或 `null`（忽略该模式）。第一个匹配的模式生效，因此顺序有意义。\n\n| 模式 | 含义 |\n| --- | --- |\n| `^You judge one proposed` | 转接以该文本开头的提示 |\n| `/^summarize/i` | 带显式标志的正则表达式 |\n| `.*` | 转接所有带系统消息的请求 |\n\n每一项都是正则表达式，且匹配是子串查找，需要锚定行首请加 `^`，按字面匹配时转义元字符（例如 `pgvector 0\\\\.8`）。`g` 与 `y` 标志会被忽略，因为布尔匹配不能保留状态。没有系统消息的请求不会被转接。`oaicopilot.promptRoutingModel` 为空时转接不生效。",
+	"config.promptRoutingModel.description": "接收 'oaicopilot.promptRouting' 匹配到的所有请求的模型。可在 OAIProxy 配置面板的转接目标模型下拉框中直接选择，也可填写模型列表中显示的 ID；模型带 configId 时需写成 id::configId。留空则关闭提示词转接。"
 }

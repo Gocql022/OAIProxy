@@ -28,6 +28,7 @@ import {
 	parseModelId,
 	createRetryConfig,
 	executeWithRetry,
+	mapRole,
 	normalizeUserModels,
 	isImageMimeType,
 	isVideoMimeType,
@@ -48,6 +49,13 @@ import {
 
 import { prepareLanguageModelChatInformation } from "./provideModel";
 import { countMessageTokens } from "./provideToken";
+import { resolveModelTokenLimits } from "./modelTokenLimits";
+import {
+	PROMPT_ROUTING_MODEL_SETTING,
+	PROMPT_ROUTING_RULES_SETTING,
+	getRoutedModelId,
+	resolvePromptRoutingTarget,
+} from "./promptRouting";
 import { beginStatusBarRequest, endStatusBarRequests, updateContextStatusBar, updateStatusBarThroughput } from "./statusBar";
 import { OllamaApi } from "./ollama/ollamaApi";
 import { OpenaiApi } from "./openai/openaiApi";
@@ -331,13 +339,15 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 	}
 
 	private async executeLanguageModelChatResponse(
-		model: LanguageModelChatInformation,
+		selectedModel: LanguageModelChatInformation,
 		messages: readonly LanguageModelChatRequestMessage[],
 		options: ProvideLanguageModelChatResponseOptions,
 		progress: Progress<LanguageModelResponsePart2>,
 		token: CancellationToken,
 		executionOptions: ChatExecutionOptions = {}
 	): Promise<void> {
+		// Prompt routing may replace the model after the prompt is inspected.
+		let model = selectedModel;
 		const requestId = randomUUID();
 		const isVisionBridgeRequest = options.modelOptions?.[VISION_BRIDGE_REQUEST_OPTION] === true;
 		const showRequestStatistics = !executionOptions.diagnostic && !isVisionBridgeRequest;
@@ -409,7 +419,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 			const providerConfigs = normalizeProviderConfigs(this.globalState.get<unknown>(PROVIDER_CONFIG_STORAGE_KEY, []));
 
 			// Parse model ID to handle config ID
-			const parsedModelId = parseModelId(model.id);
+			let parsedModelId = parseModelId(model.id);
 
 			// Find matching user model configuration
 			// Prioritize matching models with same base ID and config ID
@@ -434,6 +444,31 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider, 
 				throw new Error(missingProviderSetupMessage);
 			}
 			um = resolveProviderBackedModel(um, userModels, providerConfigs);
+
+			// Prompt routing: send requests whose system prompt matches a configured
+			// pattern to one shared model. Model tests and prompt inspection that
+			// happens before this point keep using the model the user selected.
+			if (!executionOptions.diagnostic) {
+				const routingTarget = resolvePromptRoutingTarget({
+					rulesValue: config.get<unknown>(PROMPT_ROUTING_RULES_SETTING, {}),
+					targetModelId: config.get<string>(PROMPT_ROUTING_MODEL_SETTING, ""),
+					models: userModels,
+					systemText: extractSystemPromptText(messages),
+				});
+				if (routingTarget) {
+					logger.info("request.routing", {
+						requestId,
+						fromModelId: model.id,
+						toModelId: routingTarget.modelId,
+						pattern: routingTarget.pattern,
+						messageCount: messages.length,
+					});
+					model = createRoutedModelInformation(model, routingTarget.model);
+					um = routingTarget.model;
+					parsedModelId = parseModelId(model.id);
+				}
+			}
+
 			um = applyModelConfiguration(um, options.modelConfiguration, options.modelOptions);
 
 			// Check if using Ollama native API mode
@@ -1338,6 +1373,46 @@ function applyModelConfiguration(
 	}
 
 	return next;
+}
+
+/**
+ * First system prompt in the request, used only to match routing patterns.
+ * Requests without a system message are never routed.
+ */
+function extractSystemPromptText(messages: readonly LanguageModelChatRequestMessage[]): string | undefined {
+	for (const message of messages) {
+		if (mapRole(message) !== "system") {
+			continue;
+		}
+		const text = (message.content ?? [])
+			.filter((part): part is vscode.LanguageModelTextPart => part instanceof vscode.LanguageModelTextPart)
+			.map((part) => part.value)
+			.join("\n")
+			.trim();
+		if (text) {
+			return text;
+		}
+	}
+	return undefined;
+}
+
+/** Selected model information re-pointed at the routing target. */
+function createRoutedModelInformation(
+	selected: LanguageModelChatInformation,
+	target: HFModelItem
+): LanguageModelChatInformation {
+	const limits = resolveModelTokenLimits(target);
+	return {
+		...selected,
+		id: getRoutedModelId(target),
+		name: target.displayName || target.id,
+		maxInputTokens: limits.maxInputTokens,
+		maxOutputTokens: limits.maxOutputTokens,
+		capabilities: {
+			toolCalling: target.toolCalling ?? true,
+			imageInput: target.vision ?? false,
+		},
+	};
 }
 
 function waitForDelayOrCancellation(delayMs: number, token: CancellationToken): Promise<void> {

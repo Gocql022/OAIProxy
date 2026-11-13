@@ -755,6 +755,31 @@
           "default": "",
           "description": "%config.visionBridgePrompt.description%",
           "type": "string"
+        },
+        "oaicopilot.promptRouting": {
+          "default": {
+            "^You judge one proposed developer-tool action": true,
+            "^You are an expert in crafting ultra-compact titles": true,
+            "^Summarize the following": true
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "%config.promptRouting.description%",
+          "markdownDescription": "%config.promptRouting.markdownDescription%",
+          "type": "object"
+        },
+        "oaicopilot.promptRoutingModel": {
+          "default": "",
+          "description": "%config.promptRoutingModel.description%",
+          "type": "string"
         }
       },
       "title": "%configuration.title%"

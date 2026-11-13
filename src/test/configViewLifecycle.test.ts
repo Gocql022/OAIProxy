@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { ConfigViewPanel } from "../views/configView";
 import { isCommitGenerationCompatibleModel, PROVIDER_CONFIG_STORAGE_KEY } from "../providerTransport";
+import { PROMPT_ROUTING_MODEL_SETTING, PROMPT_ROUTING_RULES_SETTING } from "../promptRouting";
 import type { HFModelItem, ProviderConfigItem } from "../types";
 
 function deferred<T>() {
@@ -373,10 +374,34 @@ suite("configuration panel lifecycle", () => {
 			visionBridgeEnabled: true,
 			visionBridgeModel: "",
 			visionBridgePrompt: "",
+			promptRoutingModel: "",
 		});
 
 		const models = configuration["oaicopilot.models"] as HFModelItem[];
 		assert.strictEqual(models[0].useForCommitGeneration, undefined);
+	});
+
+	test("saves the prompt routing model from the panel", async () => {
+		const view = open();
+
+		await view.handleMessage({
+			type: "saveGlobalConfig",
+			baseUrl: "",
+			apiKey: "",
+			delay: 0,
+			readFileLines: 0,
+			retry: {},
+			commitModel: "",
+			commitLanguage: "English",
+			visionBridgeEnabled: true,
+			visionBridgeModel: "",
+			visionBridgePrompt: "",
+			promptRoutingModel: "  hy3  ",
+		});
+
+		assert.strictEqual(configuration[PROMPT_ROUTING_MODEL_SETTING], "hy3");
+		// The rules map is edited in Settings, so saving the panel must not touch it.
+		assert.strictEqual(configuration[PROMPT_ROUTING_RULES_SETTING], undefined);
 	});
 
 	test("excludes OAuth, Gemini, and provider-placeholder models from commit generation", () => {

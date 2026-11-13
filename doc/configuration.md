@@ -358,6 +358,45 @@ In this example, you'll have two different configurations of the glm-4.6 model a
 - `glm-4.6::thinking` - use GLM-4.6 with thinking
 - `glm-4.6::no-thinking` - use GLM-4.6 without thinking
 
+## Prompt routing
+
+Some built-in VS Code flows send requests with the selected model outside the visible chat turn. Their cache hit rate stays low because every request rebuilds a different prefix, which makes them a large share of the bill. Prompt routing sends those requests to one cheaper model instead.
+
+Two settings control it:
+
+- `oaicopilot.promptRoutingModel`: the model that receives routed requests. Pick it from the **Prompt Routing Model** dropdown in the configuration panel, or set it in Settings. Use the id shown in the model list, adding `::configId` when the model has one. **Routing is off while this is empty.**
+- `oaicopilot.promptRouting`: an ordered pattern map, shaped like `chat.tools.terminal.autoApprove`. This is an object, so it is edited in Settings: the panel shows the current rules and an **Open Settings to Edit** button.
+
+```jsonc
+"oaicopilot.promptRoutingModel": "hy3",
+"oaicopilot.promptRouting": {
+  "^You judge one proposed developer-tool action": true,
+  "^You are an expert in crafting ultra-compact titles": true,
+  "^Summarize the following": true,
+  "/^summarize/i": false,
+  "^Unrelated pattern": null
+}
+```
+
+| Value | Meaning |
+| --- | --- |
+| `true` | Route the request to `oaicopilot.promptRoutingModel` |
+| `false` | Never route the request, even if another pattern would match |
+| `null` | Ignore this pattern, useful for overriding a rule set at a wider scope |
+
+How matching works:
+
+- Only the **first system message** of the request is matched. A request without a system message is never routed.
+- The first matching pattern wins, so entry order matters.
+- A pattern written as `/body/flags` is a regular expression with explicit flags. Any other pattern is a case-insensitive regular expression, so `^You judge one proposed` works as written. Every entry is a regular expression, and `test()` semantics apply: matching is a substring search, so add `^` to anchor the start. Escape regular expression metacharacters (`.`, `(`, `)`, `+`, `[`, `\`, ...) when you mean them literally, for example `pgvector 0\\.8`.
+- The `g` and `y` flags are ignored, because a boolean match test must not keep search state between requests. Duplicate flags are deduplicated.
+- An invalid regular expression falls back to a case-insensitive literal substring check instead of failing the request.
+- The routed request uses the target model's context window and output limits, and OAIProxy logs a `request.routing` entry with the source model, target model and matched pattern.
+
+Model connection tests in the panel never route, so testing a model always exercises the model you selected.
+
+> **Cost and safety trade-off.** Routing a security-sensitive flow such as Assisted Permissions to a weaker model can let a risky command be auto-approved. Prefer a fast but capable target, and change new sessions to `manual` approvals if you would rather skip those requests entirely.
+
 ## Prompt digest diagnostics
 
 Some built-in VS Code flows send requests with the selected model outside the visible chat turn, and their cache hit rate stays low because each request rebuilds a different prefix. To identify which flow sent a request, enable `oaicopilot.logLevel: "debug"` together with `oaicopilot.debug.requestDigest: true`:

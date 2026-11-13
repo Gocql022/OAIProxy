@@ -18,6 +18,7 @@ suite("prepared request preflight integration", () => {
 	let logs: Array<{ tag: string; data: Record<string, unknown> }>;
 	const originalConfig = vscode.workspace.getConfiguration;
 	const originalDebug = logger.debug;
+	const originalInfo = logger.info;
 	let state: Map<string, unknown>;
 	let contextBudget: number;
 	let incomplete: boolean;
@@ -82,6 +83,9 @@ suite("prepared request preflight integration", () => {
 		logger.debug = (tag, data) => {
 			logs.push({ tag, data });
 		};
+		logger.info = (tag, data) => {
+			logs.push({ tag, data });
+		};
 		provider = new HuggingFaceChatModelProvider(
 			{ get: async () => "local-test-only" } as unknown as vscode.SecretStorage,
 			{
@@ -98,6 +102,7 @@ suite("prepared request preflight integration", () => {
 		provider?.dispose();
 		vscode.workspace.getConfiguration = originalConfig;
 		logger.debug = originalDebug;
+		logger.info = originalInfo;
 		server.closeAllConnections();
 		await new Promise<void>((resolve) => {
 			server.close(() => resolve());
@@ -309,6 +314,39 @@ suite("prepared request preflight integration", () => {
 			await run([msg(1, [new vscode.LanguageModelTextPart("hello")])]);
 		}
 		assert.strictEqual(await provider.provideTokenCount(model(), "hello", token), before * 2);
+	});
+
+	test("prompt routing sends matched requests to the configured model", async () => {
+		const models = configuration["oaicopilot.models"] as Array<Record<string, unknown>>;
+		models.push({ id: "route-target", owned_by: "test", baseUrl, context_length: 32000, max_tokens: 8000 });
+		configuration["oaicopilot.promptRouting"] = { "^You judge one proposed": true };
+		configuration["oaicopilot.promptRoutingModel"] = "route-target";
+
+		const judge = msg(3, [
+			new vscode.LanguageModelTextPart("You judge one proposed developer-tool action. Reply with JSON."),
+		]);
+		await run([judge, msg(1, [new vscode.LanguageModelTextPart("command")])]);
+		assert.strictEqual(received.at(-1)!.model, "route-target");
+		const routing = logs.filter((entry) => entry.tag === "request.routing").at(-1)!;
+		assert.strictEqual(routing.data.fromModelId, "gpt-6-astra");
+		assert.strictEqual(routing.data.toModelId, "route-target");
+
+		configuration["oaicopilot.promptRouting"] = { "^Something else": true };
+		await run([judge, msg(1, [new vscode.LanguageModelTextPart("command")])]);
+		assert.strictEqual(received.at(-1)!.model, "gpt-6-astra");
+	});
+
+	test("prompt routing never applies to model connection tests", async () => {
+		const models = configuration["oaicopilot.models"] as Array<Record<string, unknown>>;
+		models.push({ id: "route-target", owned_by: "test", baseUrl });
+		configuration["oaicopilot.promptRouting"] = { ".*": true };
+		configuration["oaicopilot.promptRoutingModel"] = "route-target";
+		await provider.testModelConnection(
+			"gpt-6-astra",
+			new vscode.CancellationTokenSource().token
+		);
+		assert.strictEqual(received.at(-1)!.model, "gpt-6-astra");
+		assert.ok(!logs.some((entry) => entry.tag === "request.routing"));
 	});
 
 	test("Responses delta still budgets full history and disables calibration", async () => {

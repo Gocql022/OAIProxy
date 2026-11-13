@@ -352,6 +352,45 @@ MiniMax M3 应使用精确模型 ID `MiniMax-M3`。MiniMax 官方文档列出 1,
 - `glm-4.6::thinking` - 使用 GLM-4.6 并开启思维链
 - `glm-4.6::no-thinking` - 使用 GLM-4.6 并关闭思维链
 
+## 提示词转接
+
+部分 VS Code 内置流程会在可见对话轮次之外，用当前选中的模型发起请求。这类请求每轮都会重建不同的前缀，缓存命中率始终偏低，因而在账单中占比很大。提示词转接可以把这类请求改投到一个更便宜的模型。
+
+由两个设置控制：
+
+- `oaicopilot.promptRoutingModel`：接收转接请求的模型。可在配置面板的**转接目标模型**下拉框中直接选择，也可在设置中填写。使用模型列表中显示的 ID；模型带 `configId` 时写成 `id::configId`。**留空即关闭转接。**
+- `oaicopilot.promptRouting`：有序的模式映射，形态与 `chat.tools.terminal.autoApprove` 一致。因为它是对象，需在设置中编辑：面板会显示当前规则，并提供**转到设置编辑**按钮。
+
+```jsonc
+"oaicopilot.promptRoutingModel": "hy3",
+"oaicopilot.promptRouting": {
+  "^You judge one proposed developer-tool action": true,
+  "^You are an expert in crafting ultra-compact titles": true,
+  "^Summarize the following": true,
+  "/^summarize/i": false,
+  "^Unrelated pattern": null
+}
+```
+
+| 值 | 含义 |
+| --- | --- |
+| `true` | 把请求转接到 `oaicopilot.promptRoutingModel` |
+| `false` | 永不转接，即使其它模式会匹配 |
+| `null` | 忽略该模式，用于覆盖更广作用域设置的规则 |
+
+匹配规则：
+
+- 只匹配请求的**第一条 system 消息**。没有 system 消息的请求不会被转接。
+- 第一个匹配的模式生效，因此条目顺序有意义。
+- 写成 `/body/flags` 的模式按带显式标志的正则表达式处理。其它模式按不区分大小写的正则表达式处理，所以 `^You judge one proposed` 可直接使用。每一项都是正则表达式，且采用 `test()` 语义：匹配是子串查找，需要锚定行首请自己加 `^`。想按字面匹配时需转义正则元字符（`.`、`(`、`)`、`+`、`[`、`\` 等），例如 `pgvector 0\\.8`。
+- `g` 与 `y` 标志会被忽略，因为布尔匹配不能在请求之间保留搜索状态。重复的标志会被去重。
+- 正则表达式非法时会退化为不区分大小写的字面包含匹配，而不是让请求失败。
+- 转接后的请求使用目标模型的上下文窗口与输出上限，并且 OAIProxy 会写入一条 `request.routing` 日志，记录源模型、目标模型与命中的模式。
+
+面板中的模型连接测试永不转接，因此测试某个模型时验证的就是你选中的那个模型。
+
+> **成本与安全的取舍。** 把协助权限（Assisted Permissions）这类安全相关流程转接到更弱的模型，可能让有风险的命令被自动批准。建议选择响应快但判断力足够的模型；如果希望彻底跳过这些请求，可把新会话的批准方式改为 `manual`。
+
 ## 提示词摘要诊断
 
 部分 VS Code 内置流程会在可见对话轮次之外，用当前选中的模型发起请求。这类请求每轮都会重建不同的前缀，因此缓存命中率始终偏低。要识别请求来自哪个流程，请同时启用 `oaicopilot.logLevel: "debug"` 和 `oaicopilot.debug.requestDigest: true`：

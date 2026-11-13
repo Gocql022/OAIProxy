@@ -111,6 +111,9 @@ const commitLanguageInput = document.getElementById("commitLanguage");
 const visionBridgeEnabledInput = document.getElementById("visionBridgeEnabled");
 const visionBridgeModelInput = document.getElementById("visionBridgeModel");
 const visionBridgePromptInput = document.getElementById("visionBridgePrompt");
+const promptRoutingModelInput = document.getElementById("promptRoutingModel");
+const promptRoutingRulesValue = document.getElementById("promptRoutingRulesValue");
+const openPromptRoutingSettingsBtn = document.getElementById("openPromptRoutingSettings");
 const advancedSettingsContent = document.getElementById("advancedSettingsContent");
 
 // Error message element
@@ -146,6 +149,7 @@ document.getElementById("saveBase").addEventListener("click", () => {
 		visionBridgeEnabled: visionBridgeEnabledInput.checked,
 		visionBridgeModel: visionBridgeModelInput.value,
 		visionBridgePrompt: visionBridgePromptInput.value,
+		promptRoutingModel: promptRoutingModelInput.value,
 	});
 });
 
@@ -153,6 +157,10 @@ const configurationContent = document.getElementById("configurationContent");
 const configurationLoading = document.getElementById("configurationLoading");
 const configurationLoadingText = document.getElementById("configurationLoadingText");
 const retryInitialization = document.getElementById("retryInitialization");
+
+openPromptRoutingSettingsBtn.addEventListener("click", () => {
+	vscode.postMessage({ type: "openPromptRoutingSettings" });
+});
 
 const handleRefresh = () => {
 	configurationContent.inert = true;
@@ -1662,6 +1670,8 @@ window.addEventListener("message", (event) => {
 				visionBridgeEnabled,
 				visionBridgeModel,
 				visionBridgePrompt,
+				promptRoutingModel,
+				promptRoutingRules,
 			} = message.payload;
 			state.baseUrl = baseUrl;
 			state.apiKey = apiKey;
@@ -1703,6 +1713,9 @@ window.addEventListener("message", (event) => {
 			visionBridgeEnabledInput.checked = message.payload.visionBridgeEnabled !== false;
 			setVisionBridgeModelValue(visionBridgeModel);
 			visionBridgePromptInput.value = visionBridgePrompt || "";
+			populatePromptRoutingModelOptions();
+			setPromptRoutingModelValue(promptRoutingModel);
+			renderPromptRoutingRules(promptRoutingRules);
 
 			// Render provider and model management
 			renderProviders();
@@ -2527,6 +2540,64 @@ function setVisionBridgeModelValue(value) {
 		visionBridgeModelInput.appendChild(option);
 	}
 	visionBridgeModelInput.value = trimmed;
+}
+
+// Show the routing rules as a read-only list; rules are edited in Settings.
+function renderPromptRoutingRules(promptRoutingRules) {
+	const rules = promptRoutingRules && typeof promptRoutingRules === "object" && !Array.isArray(promptRoutingRules)
+		? promptRoutingRules
+		: {};
+	const entries = Object.entries(rules);
+	if (entries.length === 0) {
+		promptRoutingRulesValue.textContent = configView_l10n_t("No rules configured");
+		return;
+	}
+	promptRoutingRulesValue.textContent = entries
+		.map(([pattern, value]) => `${pattern} \u2192 ${value === null ? "null" : String(value)}`)
+		.join("\n");
+}
+
+// Populate the routing model select with every configured model.
+function populatePromptRoutingModelOptions() {
+	while (promptRoutingModelInput.children.length > 0) {
+		promptRoutingModelInput.removeChild(promptRoutingModelInput.lastChild);
+	}
+
+	const disabledOption = document.createElement("option");
+	disabledOption.value = "";
+	disabledOption.textContent = configView_l10n_t("Disabled (no model selected)");
+	promptRoutingModelInput.appendChild(disabledOption);
+
+	state.models
+		.filter((model) => !isProviderPlaceholderModel(model))
+		.slice()
+		.sort((a, b) => (a.displayName || a.id).localeCompare(b.displayName || b.id))
+		.forEach((model) => {
+			const option = document.createElement("option");
+			const fullModelId = `${model.id}${model.configId ? "::" + model.configId : ""}`;
+			option.value = fullModelId;
+			option.textContent = model.displayName || fullModelId;
+			promptRoutingModelInput.appendChild(option);
+		});
+}
+
+// Apply a saved routing model id. A value that is no longer configured is kept as
+// an extra option so saving the panel does not silently drop it.
+function setPromptRoutingModelValue(value) {
+	const trimmed = (value || "").trim();
+	if (!trimmed) {
+		promptRoutingModelInput.value = "";
+		return;
+	}
+
+	const isListedModel = Array.from(promptRoutingModelInput.options).some((option) => option.value === trimmed);
+	if (!isListedModel) {
+		const option = document.createElement("option");
+		option.value = trimmed;
+		option.textContent = trimmed;
+		promptRoutingModelInput.appendChild(option);
+	}
+	promptRoutingModelInput.value = trimmed;
 }
 
 // Dropdown visibility functions

@@ -154,6 +154,30 @@
 					</div>
 				</div>
 			</div>
+			<div class="retry-config">
+				<h3 data-i18n="Prompt Routing">Prompt Routing</h3>
+				<div class="row">
+					<div class="field">
+						<label for="promptRoutingModel" data-i18n="Prompt Routing Model">Prompt Routing Model</label>
+						<div class="field-description" data-i18n="Requests whose system prompt matches a rule below are sent to this model. Leave empty to disable routing.">
+							Requests whose system prompt matches a rule below are sent to this model. Leave empty to disable routing.
+						</div>
+						<select id="promptRoutingModel" class="model-input">
+							<option value="" data-i18n="Disabled (no model selected)">Disabled (no model selected)</option>
+						</select>
+					</div>
+				</div>
+				<div class="row">
+					<div class="field">
+						<label data-i18n="Prompt Routing Rules">Prompt Routing Rules</label>
+						<div class="field-description" data-i18n="Rules are edited in Settings because they are an ordered pattern map. The first matching pattern wins: true routes the request, false blocks it, null ignores the pattern.">
+							Rules are edited in Settings because they are an ordered pattern map. The first matching pattern wins: true routes the request, false blocks it, null ignores the pattern.
+						</div>
+						<div class="prompt-routing-value" id="promptRoutingRulesValue"></div>
+						<button id="openPromptRoutingSettings" class="secondary" data-i18n="Open Settings to Edit">Open Settings to Edit</button>
+					</div>
+				</div>
+			</div>
 			<div class="block-gap">
 				<button id="saveBase" data-i18n="Save Global Configuration">Save Global Configuration</button>
 			</div>

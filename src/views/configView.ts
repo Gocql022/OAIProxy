@@ -7,6 +7,7 @@ import { fetchModels } from "../provideModel";
 import { VersionManager } from "../versionManager";
 import { PROVIDER_PRESETS, type ProviderPreset } from "../providerPresets";
 import { MODEL_PRESETS, type ModelPreset } from "../modelPresets";
+import { PROMPT_ROUTING_MODEL_SETTING, PROMPT_ROUTING_RULES_SETTING } from "../promptRouting";
 import {
 	deleteProviderConfig,
 	findProviderPlaceholderModel,
@@ -55,6 +56,8 @@ interface InitPayload {
 	visionBridgeEnabled: boolean;
 	visionBridgeModel: string;
 	visionBridgePrompt: string;
+	promptRoutingModel: string;
+	promptRoutingRules: unknown;
 	models: HFModelItem[];
 	providers: ProviderConfigItem[];
 	providerKeys: Record<string, string>;
@@ -361,6 +364,8 @@ interface ExportConfig {
 	visionBridgeEnabled?: boolean;
 	visionBridgeModel?: string;
 	visionBridgePrompt?: string;
+	promptRoutingModel?: string;
+	promptRoutingRules?: Record<string, boolean | null>;
 }
 
 function optionalBoolean(value: unknown, field: string): boolean | undefined {
@@ -404,6 +409,28 @@ function optionalStringMap(value: unknown, field: string): Record<string, string
 	for (const [key, entry] of Object.entries(value)) {
 		if (typeof entry !== "string") {
 			throw new Error(vscode.l10n.t("Invalid configuration file: {0}.{1} must be a string", field, key));
+		}
+		result[key] = entry;
+	}
+	return result;
+}
+
+function optionalPromptRoutingRules(
+	value: unknown,
+	field: string
+): Record<string, boolean | null> | undefined {
+	if (value === undefined) {
+		return undefined;
+	}
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		throw new Error(vscode.l10n.t("Invalid configuration file: {0} must be an object", field));
+	}
+	const result: Record<string, boolean | null> = {};
+	for (const [key, entry] of Object.entries(value)) {
+		if (entry !== true && entry !== false && entry !== null) {
+			throw new Error(
+				vscode.l10n.t("Invalid configuration file: {0}.{1} must be true, false or null", field, key)
+			);
 		}
 		result[key] = entry;
 	}
@@ -551,11 +578,14 @@ export function validateImportedConfig(value: unknown): ExportConfig {
 		visionBridgeEnabled: optionalBoolean(obj.visionBridgeEnabled, "visionBridgeEnabled"),
 		visionBridgeModel: optionalString(obj.visionBridgeModel, "visionBridgeModel"),
 		visionBridgePrompt: optionalString(obj.visionBridgePrompt, "visionBridgePrompt"),
+		promptRoutingModel: optionalString(obj.promptRoutingModel, "promptRoutingModel"),
+		promptRoutingRules: optionalPromptRoutingRules(obj.promptRoutingRules, "promptRoutingRules"),
 	};
 }
 
 type IncomingMessage =
 	| { type: "requestInit" }
+	| { type: "openPromptRoutingSettings" }
 	| { type: "loginXaiOAuth" }
 	| { type: "logoutXaiOAuth" }
 	| { type: "loginOpenAIOAuth" }
@@ -572,6 +602,7 @@ type IncomingMessage =
 			visionBridgeEnabled: boolean;
 			visionBridgeModel: string;
 			visionBridgePrompt: string;
+			promptRoutingModel: string;
 	  }
 	| {
 			type: "fetchModels";
@@ -766,6 +797,12 @@ export class ConfigViewPanel {
 				logger.debug("config.ready", { panelId: this.panelId, elapsedMs: performance.now() - this.openedAt });
 				await this.sendInit(false);
 				break;
+			case "openPromptRoutingSettings":
+				await vscode.commands.executeCommand(
+					"workbench.action.openSettings",
+					`@id:${PROMPT_ROUTING_RULES_SETTING}`
+				);
+				break;
 			case "loginXaiOAuth":
 				await vscode.commands.executeCommand("oaiproxy.loginXaiOAuth");
 				await this.sendInit();
@@ -793,7 +830,8 @@ export class ConfigViewPanel {
 					message.commitLanguage,
 					message.visionBridgeEnabled,
 					message.visionBridgeModel,
-					message.visionBridgePrompt
+					message.visionBridgePrompt,
+					message.promptRoutingModel
 				);
 				break;
 			case "fetchModels": {
@@ -1075,6 +1113,8 @@ export class ConfigViewPanel {
 		const visionBridgeEnabled = config.get<boolean>("oaicopilot.visionBridgeEnabled", true);
 		const visionBridgeModel = config.get<string>("oaicopilot.visionBridgeModel", "");
 		const visionBridgePrompt = config.get<string>("oaicopilot.visionBridgePrompt", "");
+		const promptRoutingModel = config.get<string>(PROMPT_ROUTING_MODEL_SETTING, "");
+		const promptRoutingRules = config.get<unknown>(PROMPT_ROUTING_RULES_SETTING, {});
 		const payload: InitPayload = {
 			baseUrl,
 			apiKey,
@@ -1086,6 +1126,8 @@ export class ConfigViewPanel {
 			visionBridgeEnabled,
 			visionBridgeModel,
 			visionBridgePrompt,
+			promptRoutingModel,
+			promptRoutingRules,
 			models,
 			providers: providerConfigs,
 			providerKeys,
@@ -1108,7 +1150,8 @@ export class ConfigViewPanel {
 		commitLanguage: string,
 		visionBridgeEnabled: boolean,
 		visionBridgeModel: string,
-		visionBridgePrompt: string
+		visionBridgePrompt: string,
+		promptRoutingModel: string
 	) {
 		const baseUrl = rawBaseUrl.trim();
 		const apiKey = rawApiKey.trim();
@@ -1131,6 +1174,11 @@ export class ConfigViewPanel {
 		await config.update(
 			"oaicopilot.visionBridgePrompt",
 			visionBridgePrompt.trim(),
+			vscode.ConfigurationTarget.Global
+		);
+		await config.update(
+			PROMPT_ROUTING_MODEL_SETTING,
+			promptRoutingModel.trim(),
 			vscode.ConfigurationTarget.Global
 		);
 		if (apiKey) {
@@ -1657,6 +1705,8 @@ export class ConfigViewPanel {
 			const visionBridgeEnabled = config.get<boolean>("oaicopilot.visionBridgeEnabled", true);
 			const visionBridgeModel = config.get<string>("oaicopilot.visionBridgeModel", "");
 			const visionBridgePrompt = config.get<string>("oaicopilot.visionBridgePrompt", "");
+			const promptRoutingModel = config.get<string>(PROMPT_ROUTING_MODEL_SETTING, "");
+			const promptRoutingRules = config.get<Record<string, boolean | null>>(PROMPT_ROUTING_RULES_SETTING, {});
 
 			const foundModel = models.find(
 				(model) =>
@@ -1706,6 +1756,8 @@ export class ConfigViewPanel {
 				visionBridgeEnabled,
 				visionBridgeModel,
 				visionBridgePrompt,
+				promptRoutingModel,
+				promptRoutingRules,
 			};
 
 			const uri = await vscode.window.showSaveDialog({
@@ -1807,6 +1859,12 @@ export class ConfigViewPanel {
 			}
 			if (importData.visionBridgePrompt !== undefined) {
 				configUpdates.push({ key: "oaicopilot.visionBridgePrompt", value: importData.visionBridgePrompt.trim() });
+			}
+			if (importData.promptRoutingModel !== undefined) {
+				configUpdates.push({ key: PROMPT_ROUTING_MODEL_SETTING, value: importData.promptRoutingModel.trim() });
+			}
+			if (importData.promptRoutingRules !== undefined) {
+				configUpdates.push({ key: PROMPT_ROUTING_RULES_SETTING, value: importData.promptRoutingRules });
 			}
 			// Newer exports are explicit: only touch secrets when the file actually
 			// contains them (includeApiKey: true). Plain exports never modify keys.
