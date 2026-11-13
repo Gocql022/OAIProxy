@@ -352,6 +352,16 @@ MiniMax M3 应使用精确模型 ID `MiniMax-M3`。MiniMax 官方文档列出 1,
 - `glm-4.6::thinking` - 使用 GLM-4.6 并开启思维链
 - `glm-4.6::no-thinking` - 使用 GLM-4.6 并关闭思维链
 
+## 提示词摘要诊断
+
+部分 VS Code 内置流程会在可见对话轮次之外，用当前选中的模型发起请求。这类请求每轮都会重建不同的前缀，因此缓存命中率始终偏低。要识别请求来自哪个流程，请同时启用 `oaicopilot.logLevel: "debug"` 和 `oaicopilot.debug.requestDigest: true`：
+
+- `request.body.requestBody.promptDigest.roles`：紧凑的角色序列，超过 16 条时截断。
+- `promptDigest.systemPreview`：压缩空白后的 system/developer 提示，最多 300 字符。
+- `promptDigest.firstMessages` / `promptDigest.lastMessage`：前三条与最后一条消息的角色、名称、字符数以及 300 字符预览。
+
+该设置默认关闭。预览会被截断，也不会包含 base64 图片数据，但开启期间对话片段仍会出现在 OAIProxy 日志中，排查结束后请关闭。
+
 ## 连接失败
 
 如果模型 Test 操作和聊天都失败并提示 `fetch failed`，请检查 **输出 → OAIProxy**。启用调试日志后，`request.timing` 条目可以区分发生在 HTTP 响应头之前的传输层失败与 API 响应。`transportError` 和 `request.error` 中嵌套的错误摘要会包含 `ETIMEDOUT`、`ENETUNREACH`、`ENOTFOUND` 等错误码，但不会把错误消息、URL 或请求头复制进这些摘要。

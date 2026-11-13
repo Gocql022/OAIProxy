@@ -358,6 +358,16 @@ In this example, you'll have two different configurations of the glm-4.6 model a
 - `glm-4.6::thinking` - use GLM-4.6 with thinking
 - `glm-4.6::no-thinking` - use GLM-4.6 without thinking
 
+## Prompt digest diagnostics
+
+Some built-in VS Code flows send requests with the selected model outside the visible chat turn, and their cache hit rate stays low because each request rebuilds a different prefix. To identify which flow sent a request, enable `oaicopilot.logLevel: "debug"` together with `oaicopilot.debug.requestDigest: true`:
+
+- `request.body.requestBody.promptDigest.roles`: compact role sequence, truncated after 16 entries.
+- `promptDigest.systemPreview`: whitespace-collapsed system/developer prompt, at most 300 characters.
+- `promptDigest.firstMessages` / `promptDigest.lastMessage`: role, name, character count, and a 300-character preview for the first three and the last message.
+
+The setting is off by default. Previews are truncated and never include base64 image payloads, but conversation fragments do appear in the OAIProxy log while it is enabled, so turn it off after the investigation.
+
 ## Connection failures
 
 If both the model Test action and chat fail with `fetch failed`, check **Output → OAIProxy**. With debug logging enabled, `request.timing` entries distinguish a transport failure before HTTP headers from an API response. Nested error summaries in `transportError` and `request.error` include codes such as `ETIMEDOUT`, `ENETUNREACH`, and `ENOTFOUND`, without copying error messages, URLs, or headers into those summaries.

@@ -75,6 +75,7 @@
 	"config.commitLanguage.description": "Language for generated Git commit messages. Default is English.",
 	"config.commitMessagePrompt.description": "Custom system prompt for commit message generation. If not provided, uses the default prompt.",
 	"config.readFileLines.description": "Number of lines to read when using `read_file` tool. Large lines may cost more tokens. Default is 0, let model decide lines.",
+	"config.debug.requestDigest.description": "With logLevel debug, add truncated prompt previews to request.body for the first three and the last message, plus the system prompt. Use this to identify which built-in flow sent a request. Previews are whitespace-collapsed and capped at 300 characters, but conversation fragments still appear in the OAIProxy log.",
 	"config.debug.tokenBreakdown.description": "With logLevel debug, log token categories, largest parts and provider usage comparisons. Logs contain types, IDs and sizes only.",
 	"config.tokenEstimation.description": "Shared token estimation. Text uses the bundled tokenizer; image costs remain estimates. See the Token Estimation guide.",
 	"config.tokenEstimation.bridgeTokens.description": "Provisional allowance for an image awaiting a Vision Bridge description.",

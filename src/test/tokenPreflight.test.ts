@@ -198,6 +198,32 @@ suite("prepared request preflight integration", () => {
 		assert.ok(!JSON.stringify(received[0]).includes("base64"));
 	});
 
+	test("request digest exposes truncated prompt shapes only when enabled", async () => {
+		const longText = `first-user-marker ${"filler ".repeat(200)}`;
+		const messages = [
+			msg(1, [new vscode.LanguageModelTextPart(longText)]),
+			msg(2, [new vscode.LanguageModelTextPart("assistant-1")]),
+			msg(1, [new vscode.LanguageModelTextPart("second-user")]),
+			msg(2, [new vscode.LanguageModelTextPart("assistant-2")]),
+			msg(1, [new vscode.LanguageModelTextPart("latest-user-marker")]),
+		];
+		const bodyOf = () => logs.filter((entry) => entry.tag === "request.body").at(-1)!.data.requestBody as Record<string, unknown>;
+
+		await run(messages);
+		assert.strictEqual(bodyOf().promptDigest, undefined);
+
+		configuration["oaicopilot.debug.requestDigest"] = true;
+		await run(messages);
+		const digest = bodyOf().promptDigest as Record<string, unknown>;
+		assert.strictEqual(digest.roles, "user,assistant,user,assistant,user");
+		const first = (digest.firstMessages as Array<Record<string, unknown>>)[0];
+		assert.ok(String(first.preview).startsWith("first-user-marker"));
+		assert.ok(String(first.preview).length <= 301);
+		// chars 反映原文长度而不是截断后的预览长度。
+		assert.ok(Number(first.chars) > 1400);
+		assert.ok(String((digest.lastMessage as Record<string, unknown>).preview).includes("latest-user-marker"));
+	});
+
 	test("incomplete streams never train calibration", async () => {
 		incomplete = true;
 		await run([msg(1, [new vscode.LanguageModelTextPart("hello")])]);

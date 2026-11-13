@@ -75,6 +75,7 @@
 	"config.commitLanguage.description": "生成的 Git 提交消息使用的语言。默认 English。",
 	"config.commitMessagePrompt.description": "用于生成提交消息的自定义系统提示。如果未提供，则使用默认提示。",
 	"config.readFileLines.description": "使用 `read_file` 工具时读取的行数。行数过多可能消耗更多 token。默认 0，由模型决定读取的行数。",
+	"config.debug.requestDigest.description": "在 logLevel 为 debug 时，为 request.body 附加截断的提示词片段：前三条和最后一条消息，以及 system 提示。用于识别请求来自哪个内置流程。片段会压缩空白并截断到 300 字符，但对话内容仍会出现在 OAIProxy 日志中。",
 	"config.debug.tokenBreakdown.description": "在 logLevel 为 debug 时，记录 token 分类、最大的内容块以及供应商用量对比。日志仅包含类型、ID 和大小。",
 	"config.tokenEstimation.description": "共享的 token 估算。文本使用内置分词器；图片开销仍为估算值。详见 Token Estimation 指南。",
 	"config.tokenEstimation.bridgeTokens.description": "图片等待视觉桥接描述时的暂定预留量。",

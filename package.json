@@ -114,6 +114,11 @@
           "description": "%config.commitMessagePrompt.description%",
           "type": "string"
         },
+        "oaicopilot.debug.requestDigest": {
+          "default": false,
+          "description": "%config.debug.requestDigest.description%",
+          "type": "boolean"
+        },
         "oaicopilot.debug.tokenBreakdown": {
           "default": false,
           "description": "%config.debug.tokenBreakdown.description%",

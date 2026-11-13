@@ -89,6 +89,9 @@ export interface ModelConnectionTestResult {
 
 const MODEL_CONNECTION_TEST_TIMEOUT_MS = 60_000;
 const MODEL_CONNECTION_TEST_PROMPT = "Reply only with OK.";
+const PROMPT_DIGEST_PREVIEW_CHARS = 300;
+const PROMPT_DIGEST_FIRST_MESSAGES = 3;
+const PROMPT_DIGEST_MAX_ROLES = 16;
 
 /**
  * VS Code Chat provider backed by Hugging Face Inference Providers.
@@ -1430,8 +1433,120 @@ function logRequestBody(
 		requestBody: {
 			...summarizeRequestBody(requestBody),
 			...(extraSummary ?? {}),
+			...(isRequestDigestEnabled() ? { promptDigest: summarizePromptDigest(requestBody) } : {}),
 		},
 	});
+}
+
+function isRequestDigestEnabled(): boolean {
+	return vscode.workspace.getConfiguration().get<boolean>("oaicopilot.debug.requestDigest", false);
+}
+
+/**
+ * 截断的提示词片段，用于识别请求来自哪个内置流程（标题、摘要、进度提示等）。
+ * 仅在 oaicopilot.debug.requestDigest 开启时记录，每段都做空白归一化并截断，
+ * 不会写入完整正文。
+ */
+function summarizePromptDigest(requestBody: unknown): Record<string, unknown> {
+	const body = isRecord(requestBody) ? requestBody : {};
+	const messages = collectDigestMessages(body);
+	const declaredSystem = firstDigestText([body.system, body.instructions, body.systemInstruction]);
+	const firstMessages = messages.slice(0, PROMPT_DIGEST_FIRST_MESSAGES).map(describeDigestMessage);
+	const lastMessage = messages.length > PROMPT_DIGEST_FIRST_MESSAGES
+		? describeDigestMessage(messages[messages.length - 1])
+		: undefined;
+
+	return {
+		roles: summarizeDigestRoles(messages),
+		systemPreview: declaredSystem ? truncateDigestText(declaredSystem) : undefined,
+		firstMessages: firstMessages.length > 0 ? firstMessages : undefined,
+		lastMessage,
+	};
+}
+
+function collectDigestMessages(body: Record<string, unknown>): unknown[] {
+	for (const candidate of [body.messages, body.input, body.contents]) {
+		if (Array.isArray(candidate) && candidate.length > 0) {
+			return candidate;
+		}
+	}
+	return [];
+}
+
+function describeDigestMessage(message: unknown): Record<string, unknown> {
+	if (!isRecord(message)) {
+		return { role: "unknown", chars: 0 };
+	}
+	const text = extractDigestText(message.content ?? message.parts ?? message.text);
+	return {
+		role: digestRole(message),
+		name: typeof message.name === "string" ? message.name : undefined,
+		chars: text.length,
+		preview: truncateDigestText(text),
+	};
+}
+
+function digestRole(message: Record<string, unknown>): string {
+	if (typeof message.role === "string") {
+		return message.role;
+	}
+	return typeof message.type === "string" ? message.type : "unknown";
+}
+
+function summarizeDigestRoles(messages: unknown[]): string {
+	const roles = messages.map((message) => (isRecord(message) ? digestRole(message) : "?"));
+	if (roles.length <= PROMPT_DIGEST_MAX_ROLES) {
+		return roles.join(",");
+	}
+	return `${roles.slice(0, PROMPT_DIGEST_MAX_ROLES).join(",")},+${roles.length - PROMPT_DIGEST_MAX_ROLES}`;
+}
+
+function firstDigestText(values: unknown[]): string {
+	for (const value of values) {
+		const text = extractDigestText(value);
+		if (text.trim().length > 0) {
+			return text;
+		}
+	}
+	return "";
+}
+
+function extractDigestText(value: unknown, depth = 0): string {
+	if (depth > 4 || value === undefined || value === null) {
+		return "";
+	}
+	if (typeof value === "string") {
+		return value;
+	}
+	if (Array.isArray(value)) {
+		return value
+			.map((item) => extractDigestText(item, depth + 1))
+			.filter((part) => part.length > 0)
+			.join("\n");
+	}
+	if (!isRecord(value)) {
+		return "";
+	}
+	if (typeof value.text === "string") {
+		return value.text;
+	}
+	if (typeof value.content === "string") {
+		return value.content;
+	}
+	if (value.content !== undefined) {
+		return extractDigestText(value.content, depth + 1);
+	}
+	if (value.parts !== undefined) {
+		return extractDigestText(value.parts, depth + 1);
+	}
+	return "";
+}
+
+function truncateDigestText(text: string): string {
+	const collapsed = text.replace(/\s+/gu, " ").trim();
+	return collapsed.length > PROMPT_DIGEST_PREVIEW_CHARS
+		? `${collapsed.slice(0, PROMPT_DIGEST_PREVIEW_CHARS)}…`
+		: collapsed;
 }
 
 function summarizeRequestBody(requestBody: unknown): Record<string, unknown> {
